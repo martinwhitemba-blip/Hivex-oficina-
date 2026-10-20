@@ -1,7 +1,7 @@
 # Dependencias
 node_modules/
 
-# Builds (se regeneran con `npm run build`)
+# Builds
 dist/
 dist-single/
 
@@ -20,3 +20,11 @@ Thumbs.db
 
 # Capturas temporales de depuración
 screenshots/_tmp*
+
+# Datos locales
+*.db
+*.db-journal
+uploads/
+apps/server/uploads/
+apps/server/prisma/*.db
+apps/server/prisma/*.db-journal

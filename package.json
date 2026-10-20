@@ -1,18 +1,26 @@
 {
-  "name": "hivex-oficina-virtual",
+  "name": "hivex",
   "private": true,
-  "version": "0.1.0",
-  "type": "module",
+  "version": "0.9.0",
+  "description": "HIVEX beta: oficina virtual y gestión de empresa",
+  "workspaces": [
+    "apps/web",
+    "apps/server"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build && vite build --mode single && node scripts/rename-single.mjs",
-    "preview": "vite preview",
-    "screenshots": "node scripts/screenshots.mjs"
+    "dev": "concurrently -n server,web -c yellow,cyan \"npm run dev -w @hivex/server\" \"npm run dev -w @hivex/web\"",
+    "build": "npm run build -w @hivex/server && npm run build -w @hivex/web",
+    "test": "npm run test -w @hivex/server",
+    "lint": "npm run lint -w @hivex/server && npm run lint -w @hivex/web",
+    "typecheck": "npm run typecheck -w @hivex/server && npm run typecheck -w @hivex/web",
+    "setup": "npm run setup -w @hivex/server",
+    "seed": "npm run seed -w @hivex/server",
+    "start": "npm run start -w @hivex/server"
   },
   "devDependencies": {
-    "playwright-core": "^1.64.1",
-    "typescript": "^7.0.2",
-    "vite": "^5.4.21",
-    "vite-plugin-singlefile": "^2.3.4"
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

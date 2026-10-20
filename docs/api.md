@@ -1,0 +1,73 @@
+# API de HIVEX (beta)
+
+Todas las rutas de datos empiezan por `/api` y exigen `Authorization: Bearer <token>`, salvo el alta, el acceso, aceptar una invitación y el webhook de métricas. Cada fila de negocio lleva `companyId`. Un token de una empresa no lee ni escribe datos de otra.
+
+`GET /api/salud` → `{ "ok": true, "servicio": "hivex-beta" }`.
+
+## Sesión
+
+- `POST /api/auth/registro` `{ email, password, name, companyName }` crea la empresa, el propietario y un plan Starter en prueba de 14 días.
+- `POST /api/auth/entrar` `{ email, password }`.
+- `GET /api/auth/yo` devuelve la sesión.
+- `POST /api/invitaciones` crea un código de 14 días. La respuesta incluye `enlace` (`#/unirse?code=`).
+- `POST /api/invitaciones/:code/aceptar` `{ name, password }`.
+
+Si el plan no admite más personas, la respuesta es **409** con un texto en español que indica el tope y remite a Plan y uso.
+
+## Métricas desde fuera
+
+El propietario ve la clave en Ajustes de integración (`GET /api/integraciones`) o, en la demo, usa `hx_demo_clave_publica`.
+
+```http
+POST /api/integraciones/metricas
+X-API-Key: hx_demo_clave_publica
+Content-Type: application/json
+
+{
+  "email": "hugo@hivex.demo",
+  "date": "2026-10-20",
+  "metrics": { "llamadas": 12, "citas": 2 },
+  "note": "Desde el CRM"
+}
+```
+
+La clave identifica a la empresa. El correo tiene que ser de una persona de esa empresa. Las claves de métrica tienen que existir en el área de esa persona.
+
+## Panel del dueño
+
+- `GET /api/dueno` estado en vivo (personas, áreas, tareas).
+- `GET /api/dueno/auditoria`
+- `POST /api/dueno/tareas/:id/reasignar` `{ assigneeId }`
+- `POST /api/dueno/personas/:id/area` `{ areaId }` (solo propietario)
+- El mismo estado llega por el socket en el evento `panel:state` después de `panel:sync` o de cualquier cambio.
+
+## Planes
+
+- `GET /api/plan` uso frente a límites.
+- `POST /api/plan` `{ code: "starter" | "pro" | "empresa" }` cambia el plan **sin cobro**.
+
+`PaymentProvider` (`apps/server/src/payments.ts`) reserva `createCheckout` y `handleWebhook` para una pasarela posterior (Stripe). La implementación actual lanza un error claro y no cobra.
+
+## Captación (sin marcador)
+
+- `GET /api/captacion` contadores vacíos y el texto de «Próximamente».
+- `POST /api/captacion/activar` crea el área plantilla Llamadas y una zona, si el plan lo permite.
+
+`TelephonyProvider` (`apps/server/src/telephony.ts`) reserva:
+
+- `placeCall` para salir por Zadarma o Twilio
+- `handleWebhook` para el estado de la llamada
+- `assignLead` para el reparto
+
+Hoy el proveedor está desactivado y no abre llamadas.
+
+## Oficina en vivo
+
+Socket.IO con `auth.token` igual al JWT.
+
+- `office:join` / `office:state` / `office:leave` presencia del avatar
+- `office:lock` puerta del despacho
+- `chat:send` `{ body, areaId }` (`areaId` vacío = general)
+- `webrtc:signal` retransmite la señal de audio directo
+- `presence:ping` suma tiempo conectado (como máximo 60 s por aviso)
+- `panel:sync` pide un `panel:state`

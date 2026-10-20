@@ -1,0 +1,329 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+}
+
+model Company {
+  id          String           @id @default(cuid())
+  name        String
+  slug        String           @unique
+  officeName  String           @default("Oficina principal")
+  apiKey      String           @unique
+  isDemo         Boolean          @default(false)
+  moduloLlamadas Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  subscription   Subscription?
+  audits         AuditLog[]
+  leads          Lead[]
+  campaigns      Campaign[]
+  calls          Call[]
+  areas          Area[]
+  titles      JobTitle[]
+  memberships Membership[]
+  invites     Invite[]
+  rooms       OfficeRoom[]
+  desks       DeskAssignment[]
+  tasks       Task[]
+  messages    ChatMessage[]
+  reports     DailyReport[]
+}
+
+model Membership {
+  id            String         @id @default(cuid())
+  userId        String
+  companyId     String
+  role          String
+  jobTitleId    String?
+  areaId        String?
+  name          String
+  phone         String         @default("")
+  startDate     String?
+  schedule      String         @default("L–V 09:00–18:00")
+  bio           String         @default("")
+  status        String         @default("en_linea")
+  photoPath     String?
+  points        Int            @default(0)
+  lookJson         String         @default("{}")
+  active           Boolean        @default(true)
+  currentTaskTitle String        @default("")
+  currentTaskSince DateTime?
+  currentTaskId    String?
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobTitle      JobTitle?      @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)
+  area          Area?          @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  reports       DailyReport[]
+  clocks        ClockEntry[]
+  presence      PresenceDay[]
+  tasks         Task[]         @relation("assignee")
+  badges        Badge[]
+  messages      ChatMessage[]
+  desks         DeskAssignment[]
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+}
+
+model Area {
+  id        String          @id @default(cuid())
+  companyId String
+  name      String
+  color     String          @default("#F5C518")
+  teamName  String          @default("")
+  template  String          @default("general")
+  company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  members   Membership[]
+  kpis      KpiDefinition[]
+  tasks     Task[]
+  invites   Invite[]
+  rooms     OfficeRoom[]
+  messages  ChatMessage[]
+
+  @@unique([companyId, name])
+}
+
+model JobTitle {
+  id        String       @id @default(cuid())
+  companyId String
+  name      String
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  members   Membership[]
+  invites   Invite[]
+
+  @@unique([companyId, name])
+}
+
+model KpiDefinition {
+  id             String        @id @default(cuid())
+  areaId         String
+  key            String
+  label          String
+  unit           String        @default("")
+  targetDaily    Float?
+  higherIsBetter Boolean       @default(true)
+  sort           Int           @default(0)
+  area           Area          @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  values         ReportValue[]
+
+  @@unique([areaId, key])
+}
+
+model DailyReport {
+  id            String        @id @default(cuid())
+  companyId     String
+  membershipId  String
+  date          String
+  note          String        @default("")
+  source        String        @default("manual")
+  isDemo        Boolean       @default(false)
+  pointsAwarded Int           @default(0)
+  createdAt     DateTime      @default(now())
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  membership    Membership    @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  values        ReportValue[]
+
+  @@unique([membershipId, date])
+  @@index([companyId, date])
+}
+
+model ReportValue {
+  id       String         @id @default(cuid())
+  reportId String
+  kpiId    String
+  value    Float
+  report   DailyReport    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  kpi      KpiDefinition  @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, kpiId])
+}
+
+model ClockEntry {
+  id           String     @id @default(cuid())
+  membershipId String
+  clockIn      DateTime
+  clockOut     DateTime?
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId])
+}
+
+model PresenceDay {
+  id            String     @id @default(cuid())
+  membershipId  String
+  date          String
+  activeSeconds Int        @default(0)
+  membership    Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, date])
+}
+
+model Task {
+  id           String      @id @default(cuid())
+  companyId    String
+  areaId       String
+  assigneeId   String?
+  title        String
+  description  String      @default("")
+  status       String      @default("pendiente")
+  createdAt    DateTime    @default(now())
+  doneAt       DateTime?
+  company      Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  area         Area        @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  assignee     Membership? @relation("assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+}
+
+model Invite {
+  id         String    @id @default(cuid())
+  companyId  String
+  email      String
+  role       String    @default("empleado")
+  areaId     String?
+  jobTitleId String?
+  code       String    @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  area       Area?     @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  jobTitle   JobTitle? @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)
+}
+
+model OfficeRoom {
+  id        String  @id @default(cuid())
+  companyId String
+  mapRoomId String
+  name      String
+  label     String  @default("")
+  areaId    String?
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  area      Area?   @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, mapRoomId])
+}
+
+model DeskAssignment {
+  id           String      @id @default(cuid())
+  companyId    String
+  seatId       String
+  membershipId String?
+  company      Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  membership   Membership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, seatId])
+}
+
+model ChatMessage {
+  id           String     @id @default(cuid())
+  companyId    String
+  areaId       String?
+  membershipId String
+  body         String
+  createdAt    DateTime   @default(now())
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  area         Area?      @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  author       Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  code          String         @unique
+  name          String
+  maxWorkers    Int
+  maxAreas      Int
+  description   String         @default("")
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id          String    @id @default(cuid())
+  companyId   String    @unique
+  planId      String
+  status      String    @default("trial")
+  trialEndsAt DateTime?
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan        Plan      @relation(fields: [planId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  companyId String
+  actorId   String?
+  action    String
+  summary   String
+  metadata  String   @default("{}")
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+}
+
+model Campaign {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leads     Lead[]
+
+  @@index([companyId])
+}
+
+model Lead {
+  id         String    @id @default(cuid())
+  companyId  String
+  campaignId String?
+  assigneeId String?
+  name       String
+  phone      String    @default("")
+  email      String    @default("")
+  status     String    @default("nuevo")
+  createdAt  DateTime  @default(now())
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  calls      Call[]
+
+  @@index([companyId])
+}
+
+model Call {
+  id           String    @id @default(cuid())
+  companyId    String
+  leadId       String?
+  membershipId String?
+  direction    String    @default("saliente")
+  outcome      String    @default("")
+  provider     String    @default("")
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead         Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+}
+
+model Badge {
+  id           String     @id @default(cuid())
+  membershipId String
+  code         String
+  label        String
+  earnedAt     DateTime   @default(now())
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, code])
+}
