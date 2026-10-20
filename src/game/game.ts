@@ -1,0 +1,442 @@
+/**
+ * Game: orquesta mundo, entidades, cámara, render dinámico, proximidad y red.
+ * La UI (HTML) se comunica con el juego solo mediante métodos públicos y eventos.
+ */
+import { PROXIMITY_RADIUS, TILE, BRAND } from '../config';
+import { SAMPLE_MEMBERS, SAMPLE_PLAYER } from '../data/sampleData';
+import { honk } from '../audio/horn';
+import type { ProximityMediaProvider, PeerAudio } from '../media/proximityMedia';
+import type { PresenceTransport } from '../net/transport';
+import { drawAvatar, drawBubble, drawCar, drawNameTag } from './avatarRenderer';
+import { Camera } from './camera';
+import { circle, fillRR, text, type Ctx } from './draw';
+import { Avatar } from './entities';
+import { Input } from './input';
+import { MapRenderer } from './mapRenderer';
+import { Npc, SeatPool } from './npc';
+import type { AvatarState, MapDefinition, RoomDef, StatusId } from './types';
+import { World } from './world';
+
+export interface GameEvents {
+  proximity: { peers: PeerAudio[] };
+  room: { room: RoomDef | null };
+  car: { on: boolean };
+  lock: { locked: boolean };
+  follow: { id: string | null; name?: string };
+  toast: { text: string };
+}
+type Listener<K extends keyof GameEvents> = (e: GameEvents[K]) => void;
+
+export interface GameOptions {
+  transport: PresenceTransport;
+  media: ProximityMediaProvider;
+  emblem?: HTMLImageElement;
+}
+
+export class Game {
+  readonly world: World;
+  readonly camera: Camera;
+  readonly player: Avatar;
+  readonly npcs: Npc[] = [];
+  readonly remotes = new Map<string, { avatar: Avatar; target: AvatarState }>();
+  readonly mapRenderer: MapRenderer;
+  private ctx: Ctx;
+  private input = new Input();
+  private listeners: { [K in keyof GameEvents]?: Listener<K>[] } = {};
+  private last = performance.now();
+  private t = 0;
+  private dpr = 1;
+  private followId: string | null = null;
+  private clickMarker: { x: number; y: number; until: number } | null = null;
+  private honkUntil = 0;
+  private currentRoomId: string | null | undefined = undefined;
+  private peersKey = '';
+  private sendAcc = 0;
+  peers: PeerAudio[] = [];
+
+  constructor(private canvas: HTMLCanvasElement, map: MapDefinition, private opts: GameOptions) {
+    this.ctx = canvas.getContext('2d')!;
+    this.world = new World(map);
+    this.camera = new Camera(map.width * TILE, map.height * TILE);
+    this.player = new Avatar(SAMPLE_PLAYER.id, SAMPLE_PLAYER.name, SAMPLE_PLAYER.role, SAMPLE_PLAYER.look, (map.spawn.x + 0.5) * TILE, (map.spawn.y + 0.5) * TILE + 6);
+    this.player.dir = 'up';
+    this.mapRenderer = new MapRenderer(this.world);
+    if (opts.emblem) this.mapRenderer.setEmblem(opts.emblem);
+    this.mapRenderer.render();
+
+    const pool = new SeatPool(this.world);
+    const now = performance.now();
+    for (const seed of SAMPLE_MEMBERS) this.npcs.push(new Npc(this.world, pool, seed, now));
+
+    this.bindInput();
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+    window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 250));
+    this.camera.follow(this.player.x, this.player.y, 0, true);
+
+    // Red + media (hoy: local / simulado)
+    void opts.transport.connect(this.player.toState());
+    opts.transport.onRemoteState((s) => this.onRemoteState(s));
+    opts.transport.onRemoteLeave((id) => this.remotes.delete(id));
+    void opts.media.connect(this.player.id);
+  }
+
+  // ───────────── eventos ─────────────
+  on<K extends keyof GameEvents>(ev: K, fn: Listener<K>) {
+    ((this.listeners[ev] ??= []) as Listener<K>[]).push(fn);
+  }
+  private emit<K extends keyof GameEvents>(ev: K, e: GameEvents[K]) {
+    (this.listeners[ev] as Listener<K>[] | undefined)?.forEach((f) => f(e));
+  }
+
+  // ───────────── API pública para la UI ─────────────
+  start() {
+    if (this.canvas.parentElement) new ResizeObserver(() => this.resize()).observe(this.canvas.parentElement);
+    this.resize();
+    // Zoom inicial según tamaño de pantalla (móvil más alejado para ver más oficina).
+    this.camera.setZoom(Math.min(window.innerWidth, window.innerHeight) < 560 ? 0.72 : 0.85);
+    this.camera.follow(this.player.x, this.player.y - 10, 0, true);
+    requestAnimationFrame(this.loop);
+  }
+
+  allAvatars(): Avatar[] { return [this.player, ...this.npcs.map((n) => n.avatar), ...[...this.remotes.values()].map((r) => r.avatar)]; }
+
+  setPlayerStatus(s: StatusId) { this.player.status = s; }
+
+  toggleCar(on = this.player.mode !== 'car') {
+    this.player.mode = on ? 'car' : 'walk';
+    if (on && !this.world.canStand(this.player.x, this.player.y, 12)) { /* sigue igual: se ajusta al moverse */ }
+    this.emit('car', { on });
+    this.emit('toast', { text: on ? `🚗 Modo coche activado · ${matchMedia('(pointer: coarse)').matches ? 'toca 📯' : 'pulsa H'} para pitar` : '🚶 Modo a pie' });
+  }
+
+  honk() {
+    if (this.player.mode !== 'car') { this.emit('toast', { text: 'Activa el modo Coche para pitar 🚗' }); return; }
+    honk();
+    this.honkUntil = performance.now() + 600;
+    this.player.say('¡Piii piii! 📯', 1200);
+    // Los compañeros cercanos reaccionan
+    for (const n of this.npcs) if (dist(n.avatar, this.player) < PROXIMITY_RADIUS * 1.6) n.avatar.say(['😂', '😮', '¡Cuidado!', '🙉'][Math.floor(Math.random() * 4)], 1500);
+  }
+
+  setPrivateLocked(locked: boolean) {
+    this.world.setPrivateLocked(locked);
+    this.emit('lock', { locked });
+    this.emit('toast', { text: locked ? '🔒 Despacho privado cerrado' : '🔓 Despacho privado abierto' });
+  }
+
+  focusMember(id: string) {
+    if (id === this.player.id) { this.followId = null; this.emit('follow', { id: null }); return; }
+    const a = this.allAvatars().find((x) => x.id === id);
+    if (!a) return;
+    this.followId = id;
+    this.emit('follow', { id, name: a.name });
+  }
+
+  stopFollow() { if (this.followId) { this.followId = null; this.emit('follow', { id: null }); } }
+
+  /** Ir andando hasta un compañero. */
+  walkTo(id: string) {
+    const a = this.allAvatars().find((x) => x.id === id);
+    if (!a) return;
+    this.stopFollow();
+    this.moveTo(a.x, a.y + TILE);
+  }
+
+  moveTo(wx: number, wy: number) {
+    if (this.player.goTo(this.world, wx, wy)) this.clickMarker = { x: wx, y: wy, until: performance.now() + 900 };
+    else this.emit('toast', { text: 'No se puede llegar ahí' });
+  }
+
+  react(emoji: string) { this.player.say(emoji, 2500); }
+
+  zoomBy(f: number) { this.camera.setZoom(this.camera.zoom * f); }
+
+  /** Utilidad para depurar / capturas: teletransporta al jugador (en tiles). */
+  teleport(tx: number, ty: number) {
+    this.player.x = (tx + 0.5) * TILE; this.player.y = (ty + 0.5) * TILE + 6; this.player.path = [];
+    this.camera.follow(this.player.x, this.player.y, 0, true);
+  }
+
+  // ───────────── entrada ─────────────
+  private bindInput() {
+    this.input.on('h', () => this.honk());
+    this.input.on('c', () => this.toggleCar());
+    this.input.on('e', () => this.tryToggleDoor());
+    this.input.on('escape', () => this.stopFollow());
+    this.input.on('+', () => this.zoomBy(1.15));
+    this.input.on('-', () => this.zoomBy(1 / 1.15));
+    this.bindPointer();
+  }
+
+  /** Ratón y táctil: toque/clic = ir hasta ahí; dos dedos = pellizco para zoom. */
+  private bindPointer() {
+    const c = this.canvas;
+    const pts = new Map<number, { x: number; y: number; sx: number; sy: number; t: number }>();
+    let pinch: { d: number; z: number } | null = null;
+    let moved = false;
+    c.addEventListener('pointerdown', (e) => {
+      c.setPointerCapture(e.pointerId);
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now() });
+      moved = false;
+      if (pts.size === 2) {
+        const [a, b] = [...pts.values()];
+        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: this.camera.zoom };
+      }
+    });
+    c.addEventListener('pointermove', (e) => {
+      const p = pts.get(e.pointerId);
+      if (!p) return;
+      p.x = e.clientX; p.y = e.clientY;
+      if (Math.hypot(p.x - p.sx, p.y - p.sy) > 10) moved = true;
+      if (pinch && pts.size === 2) {
+        const [a, b] = [...pts.values()];
+        this.camera.setZoom(pinch.z * (Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, pinch.d)));
+      }
+    });
+    const up = (e: PointerEvent) => {
+      const p = pts.get(e.pointerId);
+      pts.delete(e.pointerId);
+      if (pts.size < 2 && pinch) { pinch = null; moved = true; return; }
+      if (!p || moved || pinch || performance.now() - p.t > 600 || e.type === 'pointercancel') return;
+      this.tapAt(e.clientX, e.clientY);
+    };
+    c.addEventListener('pointerup', up);
+    c.addEventListener('pointercancel', up);
+    c.addEventListener('wheel', (e) => { e.preventDefault(); this.zoomBy(e.deltaY < 0 ? 1.1 : 1 / 1.1); }, { passive: false });
+  }
+
+  private tapAt(clientX: number, clientY: number) {
+    const r = this.canvas.getBoundingClientRect();
+    const p = this.camera.screenToWorld(clientX - r.left, clientY - r.top);
+    // ¿toque sobre un avatar? → ir hasta él
+    const hit = this.allAvatars().find((a) => a !== this.player && Math.abs(a.x - p.x) < 14 && p.y < a.y + 6 && p.y > a.y - 36);
+    if (hit) { this.walkTo(hit.id); return; }
+    this.stopFollow();
+    this.moveTo(p.x, p.y);
+  }
+
+  setVirtualAxis(x: number, y: number) { this.input.virtual = { x, y }; }
+
+  private tryToggleDoor() {
+    for (const { door } of this.world.lockedDoors) {
+      const dx = (door.x + 0.5) * TILE - this.player.x, dy = (door.y + (door.h ?? 1) / 2) * TILE - this.player.y;
+      if (Math.hypot(dx, dy) < TILE * 2.5) { this.setPrivateLocked(!this.world.isPrivateLocked()); return; }
+    }
+    this.emit('toast', { text: 'Acércate a la puerta del despacho para abrir/cerrar (E)' });
+  }
+
+  private resize() {
+    const parent = this.canvas.parentElement;
+    const rect = parent ? parent.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
+    if (!rect.width || !rect.height) return;
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.canvas.width = Math.round(rect.width * this.dpr);
+    this.canvas.height = Math.round(rect.height * this.dpr);
+    this.canvas.style.width = rect.width + 'px';
+    this.canvas.style.height = rect.height + 'px';
+    this.camera.resize(rect.width, rect.height);
+    this.camera.clamp();
+  }
+
+  // ───────────── bucle ─────────────
+  private loop = (now: number) => {
+    const dt = Math.min(0.05, (now - this.last) / 1000);
+    this.last = now;
+    this.t += dt;
+    this.update(dt, now);
+    this.render(now);
+    requestAnimationFrame(this.loop);
+  };
+
+  private update(dt: number, now: number) {
+    this.updatePlayer(dt);
+    for (const n of this.npcs) n.update(dt, now);
+    for (const r of this.remotes.values()) {
+      const a = r.avatar, s = r.target;
+      a.x += (s.x - a.x) * Math.min(1, dt * 10);
+      a.y += (s.y - a.y) * Math.min(1, dt * 10);
+      a.dir = s.dir; a.moving = s.moving; a.status = s.status; a.mode = s.mode; a.sitting = !!s.sitting;
+    }
+    // cámara
+    const target = this.followId ? this.allAvatars().find((a) => a.id === this.followId) ?? this.player : this.player;
+    this.camera.follow(target.x, target.y - 10, dt);
+    this.updateProximity();
+    this.updateRoom();
+    // red: ~10 Hz
+    this.sendAcc += dt;
+    if (this.sendAcc > 0.1) { this.sendAcc = 0; this.opts.transport.sendState(this.player.toState()); }
+  }
+
+  private updatePlayer(dt: number) {
+    const p = this.player;
+    const ax = this.input.axis();
+    const rad = p.mode === 'car' ? 12 : 9;
+    if (ax.x || ax.y) {
+      p.path = [];
+      p.sitting = false;
+      this.stopFollow();
+      const len = Math.hypot(ax.x, ax.y);
+      const mag = Math.min(1, len); // joystick analógico
+      const vx = (ax.x / len) * p.speed * mag * dt, vy = (ax.y / len) * p.speed * mag * dt;
+      p.faceTowards(ax.x, ax.y);
+      // deslizamiento por ejes separados
+      if (this.world.canStand(p.x + vx, p.y, rad)) p.x += vx;
+      if (this.world.canStand(p.x, p.y + vy, rad)) p.y += vy;
+      p.moving = true;
+    } else {
+      p.followPath(dt);
+    }
+  }
+
+  private updateProximity() {
+    const me = this.player;
+    const myRoom = this.world.roomAt(me.x, me.y);
+    const enclosed = myRoom && myRoom.walls && (myRoom.kind === 'meeting' || myRoom.kind === 'private');
+    const peers: PeerAudio[] = [];
+    for (const a of this.allAvatars()) {
+      if (a === me || a.status === 'ausente') continue;
+      const d = dist(a, me);
+      const room = this.world.roomAt(a.x, a.y);
+      if (enclosed) {
+        // En salas cerradas todos los presentes están en la misma conversación.
+        if (room?.id === myRoom!.id) peers.push({ id: a.id, name: a.name, volume: 1 });
+      } else if (d < PROXIMITY_RADIUS && (room?.walls ?? false) === (myRoom?.walls ?? false) && (!room?.walls || room.id === myRoom?.id)) {
+        peers.push({ id: a.id, name: a.name, volume: +(1 - d / PROXIMITY_RADIUS).toFixed(2) });
+      }
+    }
+    this.peers = peers;
+    this.opts.media.updatePeers(peers);
+    const key = peers.map((p) => p.id).join(',');
+    if (key !== this.peersKey) { this.peersKey = key; this.emit('proximity', { peers }); }
+  }
+
+  private updateRoom() {
+    const r = this.world.roomAt(this.player.x, this.player.y);
+    const id = r?.id ?? null;
+    if (id !== this.currentRoomId) { this.currentRoomId = id; this.emit('room', { room: r }); }
+  }
+
+  private onRemoteState(s: AvatarState) {
+    const r = this.remotes.get(s.id);
+    if (r) r.target = s;
+    else this.remotes.set(s.id, { avatar: Object.assign(new Avatar(s.id, s.name, s.role, s.look, s.x, s.y), { status: s.status }), target: s });
+  }
+
+  // ───────────── render ─────────────
+  private render(now: number) {
+    const ctx = this.ctx, cam = this.camera, z = cam.zoom * this.dpr;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = '#74C254';
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.setTransform(z, 0, 0, z, -cam.left * z, -cam.top * z);
+    ctx.imageSmoothingEnabled = true;
+
+    // Capa estática (solo la porción visible)
+    const s = this.mapRenderer.scale;
+    const vw = cam.viewW / cam.zoom, vh = cam.viewH / cam.zoom;
+    const sx = Math.max(0, cam.left), sy = Math.max(0, cam.top);
+    const sw = Math.min(vw, this.world.w * TILE - sx), sh = Math.min(vh, this.world.h * TILE - sy);
+    ctx.drawImage(this.mapRenderer.canvas, sx * s, sy * s, sw * s, sh * s, sx, sy, sw, sh);
+
+    this.drawDynamicMap(ctx, now);
+    this.drawProximity(ctx);
+
+    if (this.clickMarker && now < this.clickMarker.until) {
+      const k = (this.clickMarker.until - now) / 900;
+      ctx.save();
+      ctx.globalAlpha = k;
+      circle(ctx, this.clickMarker.x, this.clickMarker.y, 10 * (1.4 - k * 0.4), 'rgba(245,197,24,0.15)', BRAND.goldDeep, 2);
+      ctx.restore();
+    }
+    // Ruta del jugador
+    if (this.player.path.length) {
+      ctx.fillStyle = 'rgba(224,168,0,0.8)';
+      this.player.path.forEach((p) => { ctx.beginPath(); ctx.arc(p.x, p.y - 4, 2.6, 0, Math.PI * 2); ctx.fill(); });
+      const end = this.player.path[this.player.path.length - 1];
+      const pulse = 1 + Math.sin(now / 150) * 0.12;
+      circle(ctx, end.x, end.y - 4, 9 * pulse, 'rgba(245,197,24,0.2)', BRAND.goldDeep, 2);
+    }
+
+    // Avatares ordenados por Y
+    const avatars = this.allAvatars().sort((a, b) => a.y - b.y);
+    for (const a of avatars) {
+      if (a.mode === 'car') drawCar(ctx, a.x, a.y, a.carAngle, this.t, a === this.player && now < this.honkUntil);
+      else drawAvatar(ctx, a.x, a.y, { look: a.look, dir: a.dir, moving: a.moving, sitting: a.sitting, t: this.t + a.x * 0.01, dim: a.status === 'ausente' });
+    }
+    for (const a of avatars) {
+      drawNameTag(ctx, a.x, a.y + (a.mode === 'car' ? 12 : 0), a === this.player ? `${a.name.split(' ')[0]} (tú)` : a.name.split(' ')[0], a.status, a === this.player);
+      if (a.status === 'en_llamada' && a !== this.player) drawStatusIcon(ctx, a.x + 11, a.y - 34, '📞');
+      if (a.bubble) {
+        if (now > a.bubble.until) a.bubble = null;
+        else drawBubble(ctx, a.x, a.y - (a.mode === 'car' ? 34 : 38), a.bubble.text, Math.min(1, (a.bubble.until - now) / 300));
+      }
+    }
+  }
+
+  private drawDynamicMap(ctx: Ctx, now: number) {
+    // Pulso de la plaza
+    const p = this.world.def.plaza;
+    const pr = ((now / 1000) % 3) / 3;
+    ctx.save();
+    ctx.globalAlpha = 0.35 * (1 - pr);
+    circle(ctx, p.cx * TILE, p.cy * TILE, p.r * TILE * (0.4 + pr * 0.6), 'rgba(0,0,0,0)', '#2BB3A3', 2);
+    ctx.restore();
+    // Puerta del despacho (cerrada / abierta) + candado
+    const locked = this.world.isPrivateLocked();
+    for (const { door } of this.world.lockedDoors) {
+      const x = door.x * TILE, y = door.y * TILE, w = (door.w ?? 1) * TILE, h = (door.h ?? 1) * TILE;
+      if (locked) {
+        fillRR(ctx, x + 10, y + 1, w - 20, h - 2, 3, '#1A1A1D', BRAND.goldDeep, 1.5);
+      } else {
+        ctx.fillStyle = 'rgba(34,197,94,0.18)';
+        ctx.fillRect(x, y, w, h);
+      }
+      drawLock(ctx, x - 14, y + h / 2, locked);
+    }
+  }
+
+  private drawProximity(ctx: Ctx) {
+    const me = this.player;
+    const active = this.peers.length > 0;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(me.x, me.y - 8, PROXIMITY_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = active ? 'rgba(245,197,24,0.12)' : 'rgba(43,179,163,0.06)';
+    ctx.fill();
+    ctx.setLineDash([6, 5]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = active ? 'rgba(224,168,0,0.85)' : 'rgba(43,179,163,0.45)';
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (active) {
+      ctx.strokeStyle = 'rgba(224,168,0,0.6)';
+      ctx.lineWidth = 1.5;
+      for (const peer of this.peers) {
+        const a = this.allAvatars().find((x) => x.id === peer.id);
+        if (!a || dist(a, me) > PROXIMITY_RADIUS * 1.2) continue;
+        ctx.beginPath(); ctx.moveTo(me.x, me.y - 14); ctx.lineTo(a.x, a.y - 14); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+}
+
+function dist(a: { x: number; y: number }, b: { x: number; y: number }) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+function drawStatusIcon(ctx: Ctx, x: number, y: number, emoji: string) {
+  circle(ctx, x, y, 7, '#FFFFFF', 'rgba(139,92,246,0.8)', 1.5);
+  text(ctx, emoji, x, y + 0.5, 8, '#000', 400);
+}
+
+function drawLock(ctx: Ctx, x: number, y: number, locked: boolean) {
+  circle(ctx, x, y, 10, locked ? '#111113' : '#16A34A', BRAND.gold, 1.5);
+  ctx.strokeStyle = BRAND.gold;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  if (locked) ctx.arc(x, y - 2, 3.5, Math.PI, 0);
+  else ctx.arc(x + 3, y - 3, 3.5, Math.PI, -0.2);
+  ctx.stroke();
+  fillRR(ctx, x - 5, y - 1.5, 10, 7, 1.5, BRAND.gold);
+  circle(ctx, x, y + 2, 1.2, '#111');
+}
