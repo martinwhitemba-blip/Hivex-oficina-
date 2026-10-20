@@ -1,0 +1,22 @@
+# Dependencias
+node_modules/
+
+# Builds (se regeneran con `npm run build`)
+dist/
+dist-single/
+
+# Logs / sistema / editores
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.local
+.env
+.env.*
+!.env.example
+
+# Capturas temporales de depuración
+screenshots/_tmp*
