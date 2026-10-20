@@ -57,6 +57,7 @@ export function allowedOrigins(): Set<string> {
     }
   };
   add(process.env.WEB_ORIGIN);
+  // Render inyecta la URL pública del servicio. No hace falta pedir WEB_ORIGIN al crear el blueprint.
   add(process.env.RENDER_EXTERNAL_URL);
   if (process.env.RAILWAY_PUBLIC_DOMAIN) add(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
   return list;

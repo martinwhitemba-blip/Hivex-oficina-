@@ -5,6 +5,7 @@ import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import Fastify from 'fastify';
 import { Server } from 'socket.io';
+import { ACCESS_REALM, installAccessGate, requestAllowed } from './accessGate';
 import { allowedOrigins, env } from './env';
 import { HttpError } from './http';
 import { registerRoutes } from './routes';
@@ -18,6 +19,13 @@ export async function buildApp() {
       if (!origin) return cb(null, true);
       cb(null, origins().has(origin.replace(/\/$/, '')));
     },
+  });
+  app.addHook('onRequest', async (req, reply) => {
+    if (requestAllowed(req.raw)) return;
+    return reply
+      .code(401)
+      .header('WWW-Authenticate', `Basic realm="${ACCESS_REALM}", charset="UTF-8"`)
+      .send({ error: 'Acceso restringido' });
   });
   await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
   fs.mkdirSync(env.uploadDir, { recursive: true });
@@ -52,5 +60,6 @@ export async function buildApp() {
     },
   });
   attachSocket(io);
+  installAccessGate(app.server);
   return { app, io };
 }

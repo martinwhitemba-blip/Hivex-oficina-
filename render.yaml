@@ -1,9 +1,10 @@
-# Despliegue de un solo servicio. Render asigna una URL de staging *.onrender.com.
-# No declares aquí un dominio propio: se añade después, en el panel del hosting.
+# Un solo servicio en el plan gratuito. Render asigna una URL *.onrender.com.
+# No declares aquí un dominio propio.
 services:
   - type: web
     name: hivex
     runtime: docker
+    plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/salud
     envVars:
@@ -19,10 +20,12 @@ services:
         value: "1"
       - key: SEED_ON_BOOT
         value: "1"
-      - key: WEB_ORIGIN
-        sync: false
+      - key: ACCESS_USER
+        value: hivex
+      - key: ACCESS_PASSWORD
+        generateValue: true
 databases:
   - name: hivex-db
-    plan: basic-256mb
+    plan: free
     databaseName: hivex
     user: hivex

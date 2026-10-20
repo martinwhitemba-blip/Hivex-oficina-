@@ -123,7 +123,7 @@ async function startOffice(current: Session, hud: Hud) {
   canvas.id = 'game';
   document.body.append(canvas);
 
-  socket = io({ auth: { token: getToken() }, transports: ['websocket', 'polling'] });
+  socket = io({ auth: { token: getToken() }, transports: ['websocket', 'polling'], withCredentials: true });
   const media: ProximityMediaProvider = hud.media.mode === 'livekit'
     ? new LiveKitMediaProvider()
     : new P2PMediaProvider(socket, current.membership.id);
