@@ -64,13 +64,13 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
 }
 
 export async function renderView(root: HTMLElement, view: string, session: Session, socket: Socket | null) {
-  const id = view.split('/')[1] || '';
+  const [section, id = ''] = view.split('/');
   try {
-    if (view === 'menu') root.innerHTML = shell('menu', 'Gestión', session.membership.company.name, `<div class="grid cards">${NAV.map(([key, label]) => `<a class="cardx" href="#/${key}"><strong>${label}</strong></a>`).join('')}</div>`);
-    else if (view === 'dueno' || view.startsWith('dueno')) await renderOwner(root, session, socket);
-    else if (view === 'negocio') await renderBusiness(root);
-    else if (view === 'equipo' && id) await renderEmployee(root, id, session);
-    else if (view === 'equipo') await renderTeam(root, session);
+    if (section === 'menu') root.innerHTML = shell('menu', 'Gestión', session.membership.company.name, `<div class="grid cards">${NAV.map(([key, label]) => `<a class="cardx" href="#/${key}"><strong>${label}</strong></a>`).join('')}</div>`);
+    else if (section === 'dueno') await renderOwner(root, session, socket);
+    else if (section === 'negocio') await renderBusiness(root);
+    else if (section === 'equipo' && id) await renderEmployee(root, id, session);
+    else if (section === 'equipo') await renderTeam(root, session);
     else if (view === 'areas') await renderAreas(root, session);
     else if (view === 'mapa') await renderMapEditor(root, session);
     else if (view === 'tareas') await renderTasks(root, session);
@@ -95,9 +95,9 @@ async function renderOwner(root: HTMLElement, session: Session, socket: Socket |
       <button class="btn" id="mode" type="button">Ocultar plano</button>
       ${canOwn ? '<button class="btn primary" id="new-area" type="button" style="width:auto">Nueva área</button>' : ''}
     </div>
-    <div id="floor-wrap" class="cardx"><h2 style="margin:0 0 8px">Mapa de áreas</h2><p class="muted">Cada zona es un área activa. Pulsa una para ver quién está y los indicadores de hoy.</p><div class="floor" id="floor"></div></div>
     <h2>Personas ahora</h2>
     <div id="live" class="grid cards"></div>
+    <div id="floor-wrap" class="cardx"><h2 style="margin:0 0 8px">Mapa de áreas</h2><p class="muted">Cada zona es un área activa. Pulsa una para ver quién está y los indicadores de hoy.</p><div class="floor" id="floor"></div></div>
     <h2>Áreas</h2>
     <div id="areas" class="grid cards"></div>
     <div id="detail"></div>

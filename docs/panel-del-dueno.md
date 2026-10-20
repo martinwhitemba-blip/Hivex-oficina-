@@ -12,16 +12,16 @@ La pantalla vive en `#/dueno`. El plano esquemático y la rejilla de áreas est�
 │ Panel del dueño                                                     │
 │ Qué está haciendo cada persona, en este momento.                    │
 │ [Buscar] [Área ▾] [Estado ▾] [Ocultar plano] [Nueva área]           │
+│ Personas ahora                                                      │
+│ ┌ Martín Soto · Proveeduría · Buscando proveedores ─────────────┐  │
+│ │ foto   En línea · 47 min en esta tarea                        │  │
+│ │        [Rendimiento] [Mover]                                  │  │
+│ └────────────────────────────────────────────────────────────────┘  │
 │ ┌ Mapa de áreas ─────────────────────────────────────────────────┐  │
 │ │  Ventas          Operaciones         Proveeduría               │  │
 │ │  2 en línea      1 en línea          1 en línea                │  │
 │ │  RR. HH.         Soporte              Marketing  Facturación   │  │
 │ │  Logística       Finanzas             (el resto de zonas)      │  │
-│ └────────────────────────────────────────────────────────────────┘  │
-│ Personas ahora                                                      │
-│ ┌ Martín Soto · Proveeduría · Buscando proveedores ─────────────┐  │
-│ │ foto   En línea · 47 min en esta tarea                        │  │
-│ │        [Rendimiento] [Mover]                                  │  │
 │ └────────────────────────────────────────────────────────────────┘  │
 │ Áreas (tarjetas: aforo, quién está, zona del plano)                │
 │ Detalle del área pulsada (personas + indicadores de hoy)           │

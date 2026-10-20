@@ -46,7 +46,7 @@ body.auth-mode { overflow: auto; touch-action: auto; user-select: text; }
 .barline i { display: block; height: 8px; border-radius: 99px; background: linear-gradient(90deg, #E0A800, #F5C518); }
 .track { height: 8px; background: #232327; border-radius: 99px; overflow: hidden; }
 .split { display: grid; grid-template-columns: 1.4fr .8fr; gap: 12px; }
-.floor { position: relative; height: 460px; background: #17140f; border-radius: 16px; border: 1px solid rgba(245,197,24,.25); overflow: hidden; }
+.floor { position: relative; height: 380px; background: #17140f; border-radius: 16px; border: 1px solid rgba(245,197,24,.25); overflow: hidden; }
 .zone { position: absolute; border: 1px dashed rgba(245,197,24,.7); border-radius: 10px; padding: 6px; overflow: hidden; background: rgba(255,255,255,.03); cursor: pointer; }
 .zone strong { display: block; font-size: 11px; }
 .zone .mini { font-size: 10px; color: #F7DC6F; }
