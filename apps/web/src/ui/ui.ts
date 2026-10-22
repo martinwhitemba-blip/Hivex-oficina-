@@ -187,10 +187,12 @@ export class UI {
       const b = h('button', 'bb ' + cls, html) as HTMLButtonElement; b.title = title; b.onclick = () => fn(b); bar.append(b); return b;
     };
     mk('hide-sm', `<img class="me-pic" src="${this.portrait(this.game.player)}">`, 'Tu avatar', () => this.game.focusMember(this.game.player.id));
-    mk('on', ICONS.mic, 'Micrófono', (b) => {
-      this.media.setMicEnabled(!this.media.mic);
-      b.className = 'bb ' + (this.media.mic ? 'on' : 'off'); b.innerHTML = this.media.mic ? ICONS.mic : ICONS.micOff;
-      this.toast(this.media.mic ? 'Micrófono activado' : 'Micrófono silenciado');
+    mk('off', ICONS.micOff, 'Micrófono', (b) => {
+      void Promise.resolve(this.media.setMicEnabled(!this.media.mic)).then(() => {
+        b.className = 'bb ' + (this.media.mic ? 'on' : 'off');
+        b.innerHTML = this.media.mic ? ICONS.mic : ICONS.micOff;
+        this.toast(this.media.mic ? 'Micrófono activado' : 'Micrófono silenciado');
+      });
     });
     mk('off', ICONS.camOff, 'Cámara', (b) => {
       this.media.setCameraEnabled(!this.media.cam);
@@ -247,8 +249,16 @@ export class UI {
 
     // Atajo ⌘K / Ctrl+K → buscar
     window.addEventListener('keydown', (e) => {
+      const typing = e.target instanceof HTMLElement && !!e.target.closest('input, textarea, select, [contenteditable="true"]');
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.toggleSidebar(true); sb.querySelector('input')!.focus(); }
-      if (e.key === '?') this.showHelp(true);
+      if (e.key === '?' && !typing) this.showHelp(true);
+    });
+    document.addEventListener('pointerdown', (event) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (!target || this.root.hidden) return;
+      if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (!document.getElementById('pages')?.classList.contains('hidden')) return;
+      this.game.focusKeyboard();
     });
     document.addEventListener('click', (e) => { if (!(e.target as HTMLElement).closest('.bottombar')) emojiPop.classList.remove('show'); });
     // En pantallas estrechas el panel empieza cerrado (drawer).

@@ -74,9 +74,8 @@ function showAuth() {
   appEl.hidden = true;
   pagesEl.classList.add('hidden');
   const hash = location.hash;
-  if (!hash.startsWith('#/registro') && !hash.startsWith('#/unirse') && !hash.startsWith('#/entrar') && !hash.startsWith('#/codigo')) {
-    location.hash = '#/entrar';
-  }
+  const keep = ['#/registro', '#/unirse', '#/entrar', '#/codigo', '#/oficina'];
+  if (!keep.some((prefix) => hash.startsWith(prefix))) location.hash = '#/entrar';
   renderAuth(authEl, () => { void enter(); });
 }
 
@@ -182,6 +181,7 @@ function logout() {
 
 function currentView() {
   const raw = location.hash.replace(/^#\//, '').split('?')[0];
+  if (raw === 'oficina') return 'oficina';
   if (!raw || raw === 'entrar' || raw === 'registro' || raw === 'unirse' || raw === 'codigo') {
     return session?.membership.role === 'empleado' ? 'oficina' : 'dueno';
   }
@@ -200,11 +200,14 @@ function route() {
   const view = currentView();
   if (view === 'oficina') {
     pagesEl.classList.add('hidden');
+    pagesEl.hidden = true;
     appEl.hidden = false;
     ui.setActive('oficina');
     window.dispatchEvent(new Event('resize'));
+    game.focusKeyboard();
     return;
   }
+  pagesEl.hidden = false;
   appEl.hidden = true;
   pagesEl.classList.remove('hidden');
   ui.setActive(view.split('/')[0]);

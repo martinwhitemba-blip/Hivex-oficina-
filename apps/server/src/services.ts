@@ -33,7 +33,7 @@ export function parseLook(json: string) {
 export async function savePhoto(companyId: string, membershipId: string, bytes: Buffer) {
   let png: Buffer;
   try {
-    png = await sharp(bytes).rotate().resize(256, 256, { fit: 'cover' }).png().toBuffer();
+    png = await sharp(bytes).rotate().resize(1024, 1024, { fit: 'cover' }).png().toBuffer();
   } catch {
     throw new HttpError(400, 'No pudimos leer la imagen. Usa JPG, PNG o WebP.');
   }

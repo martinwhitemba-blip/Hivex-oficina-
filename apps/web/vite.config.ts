@@ -17,6 +17,15 @@ export default defineConfig(({ mode }) => {
         '/socket.io': { target: 'http://127.0.0.1:8787', ws: true },
       },
     },
+    preview: {
+      port: 4173,
+      strictPort: true,
+      proxy: {
+        '/api': 'http://127.0.0.1:8787',
+        '/uploads': 'http://127.0.0.1:8787',
+        '/socket.io': { target: 'http://127.0.0.1:8787', ws: true },
+      },
+    },
     build: {
       outDir: single ? 'dist-single' : 'dist',
       emptyOutDir: true,

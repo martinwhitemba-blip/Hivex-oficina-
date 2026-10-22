@@ -11,7 +11,7 @@ import { drawAvatar, drawBubble, drawCar, drawNameTag } from './avatarRenderer';
 import { Camera } from './camera';
 import { circle, fillRR, text, type Ctx } from './draw';
 import { Avatar } from './entities';
-import { Input } from './input';
+import { Input, isTextField } from './input';
 import { MapRenderer } from './mapRenderer';
 import { Npc, SeatPool } from './npc';
 import type { AvatarLook, AvatarState, MapDefinition, RoomDef, StatusId } from './types';
@@ -105,13 +105,28 @@ export class Game {
 
   // ───────────── API pública para la UI ─────────────
   start() {
+    this.canvas.tabIndex = 0;
+    this.canvas.setAttribute('aria-label', 'Oficina');
     if (this.canvas.parentElement) new ResizeObserver(() => this.resize()).observe(this.canvas.parentElement);
     this.resize();
     // Zoom inicial según tamaño de pantalla (móvil más alejado para ver más oficina).
     this.camera.setZoom(Math.min(window.innerWidth, window.innerHeight) < 560 ? 0.72 : 0.85);
     this.camera.follow(this.player.x, this.player.y - 10, 0, true);
-    this.stage = Stage3D.mount(this.canvas);
+    this.stage = Stage3D.mount(this.canvas, this.world);
+    this.focusKeyboard();
     requestAnimationFrame(this.loop);
+  }
+
+  /** El lienzo recibe WASD aunque antes hubiera un input del panel. */
+  focusKeyboard() {
+    const active = document.activeElement as HTMLElement | null;
+    if (active && active !== this.canvas && (isTextField(active) || active.closest('#pages'))) active.blur();
+    this.canvas.focus({ preventScroll: true });
+  }
+
+  /** Para comprobar en capturas que se está usando la escena 3D y no el plano 2D. */
+  debugView() {
+    return { mode: this.stage?.ok ? '3d' as const : '2d' as const, characterPx: this.stage?.characterPx ?? 0, zoom: this.camera.zoom };
   }
 
   allAvatars(): Avatar[] { return [this.player, ...this.npcs.map((n) => n.avatar), ...[...this.remotes.values()].map((r) => r.avatar)]; }
@@ -191,6 +206,7 @@ export class Game {
     let pinch: { d: number; z: number } | null = null;
     let moved = false;
     c.addEventListener('pointerdown', (e) => {
+      this.focusKeyboard();
       c.setPointerCapture(e.pointerId);
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now() });
       moved = false;
@@ -223,9 +239,13 @@ export class Game {
 
   private tapAt(clientX: number, clientY: number) {
     const r = this.canvas.getBoundingClientRect();
-    const p = this.camera.screenToWorld(clientX - r.left, clientY - r.top);
-    // ¿toque sobre un avatar? → ir hasta él
-    const hit = this.allAvatars().find((a) => a !== this.player && Math.abs(a.x - p.x) < 18 && p.y < a.y + 8 && p.y > a.y - 52);
+    const picked = this.stage?.ok ? this.stage.pick(clientX, clientY, r) : null;
+    const p = picked ?? this.camera.screenToWorld(clientX - r.left, clientY - r.top);
+    const hit = picked?.avatarId
+      ? this.allAvatars().find((a) => a.id === picked.avatarId && a !== this.player)
+      : this.stage?.ok
+        ? undefined
+        : this.allAvatars().find((a) => a !== this.player && Math.abs(a.x - p.x) < 18 && p.y < a.y + 8 && p.y > a.y - 52);
     if (hit) {
       if (this.remotes.has(hit.id)) this.emit('dm', { id: hit.id, name: hit.name });
       else this.emit('toast', { text: 'Ese personaje de demostración no recibe mensajes' });
@@ -358,8 +378,9 @@ export class Game {
       const vx = (ax.x / len) * p.speed * mag * pace * dt;
       const vy = (ax.y / len) * p.speed * mag * pace * dt;
       p.faceTowards(ax.x, ax.y);
-      if (this.world.canStand(p.x + vx, p.y, rad)) p.x += vx;
-      if (this.world.canStand(p.x, p.y + vy, rad)) p.y += vy;
+      const stuck = !this.world.canStand(p.x, p.y, rad);
+      if (stuck || this.world.canStand(p.x + vx, p.y, rad)) p.x += vx;
+      if (stuck || this.world.canStand(p.x, p.y + vy, rad)) p.y += vy;
       p.moving = true;
     } else if (p.path.length) {
       p.glide(dt, true);
@@ -417,7 +438,32 @@ export class Game {
   }
 
   // ───────────── render ─────────────
+  private loggedRender = false;
+
   private render(now: number) {
+    const app = this.canvas.closest('#app') as HTMLElement | null;
+    if (app?.hasAttribute('hidden')) return;
+    if (this.camera.viewW < 2 || this.camera.viewH < 2) return;
+    try {
+      if (this.stage?.ok) {
+        this.stage.render(this.allAvatars(), this.camera, this.dpr, this.t, (look) => this.faceOf(look), {
+          selfId: this.player.id,
+          path: this.player.path,
+          marker: this.clickMarker && now < this.clickMarker.until ? { x: this.clickMarker.x, y: this.clickMarker.y } : null,
+          proximity: this.peers.length > 0,
+        });
+        return;
+      }
+      this.draw2d(now);
+    } catch (error) {
+      if (!this.loggedRender) {
+        console.error(error);
+        this.loggedRender = true;
+      }
+    }
+  }
+
+  private draw2d(now: number) {
     const ctx = this.ctx, cam = this.camera, z = cam.zoom * this.dpr;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#74C254';
@@ -458,9 +504,22 @@ export class Game {
       if (a.mode === 'car') drawCar(ctx, a.x, a.y, a.carAngle, this.t, a === this.player && now < this.honkUntil);
       else if (!stageOn) drawAvatar(ctx, a.x, a.y, { look: a.look, dir: a.dir, moving: a.moving, sitting: a.sitting, t: this.t + a.x * 0.01, dim: a.status === 'ausente', face: this.faceOf(a.look) });
     }
-    this.stage?.render(avatars, this.camera, this.dpr, this.t, (look) => this.faceOf(look));
-    for (const a of avatars) {
-      drawNameTag(ctx, a.x, a.y + (a.mode === 'car' ? 12 : 0), a === this.player ? `${a.name.split(' ')[0]} (tú)` : a.name.split(' ')[0], a.status, a === this.player);
+    const labels = avatars.map((a) => {
+      const name = a === this.player ? `${a.name.split(' ')[0]} (tú)` : a.name.split(' ')[0];
+      return { a, name, x: a.x, y: a.y + (a.mode === 'car' ? 12 : 4), w: name.length * 6.4 + 22 };
+    });
+    labels.sort((a, b) => a.y - b.y || a.x - b.x);
+    const placed: { x: number; y: number; w: number }[] = [];
+    for (const label of labels) {
+      let y = label.y;
+      for (let n = 0; n < 6; n++) {
+        const hit = placed.find((p) => Math.abs(p.x - label.x) < (p.w + label.w) / 2 && Math.abs(p.y - y) < 16);
+        if (!hit) break;
+        y = hit.y + 16;
+      }
+      placed.push({ x: label.x, y, w: label.w });
+      drawNameTag(ctx, label.x, y, label.name, label.a.status, label.a === this.player);
+      const a = label.a;
       if (a.status === 'en_llamada' && a !== this.player) drawStatusIcon(ctx, a.x + 14, a.y - 52, '📞');
       if (a.bubble) {
         if (now > a.bubble.until) a.bubble = null;

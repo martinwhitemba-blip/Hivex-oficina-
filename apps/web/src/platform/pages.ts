@@ -75,7 +75,8 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
       const path = mode === 'registro' ? '/api/auth/registro' : mode === 'unirse' ? `/api/invitaciones/${data.code}/aceptar` : mode === 'codigo' ? '/api/acceso-codigo' : '/api/auth/entrar';
       const result = await api<{ token: string }>(path, { method: 'POST', body: JSON.stringify(data) });
       localStorage.setItem('hivex_token', result.token);
-      location.hash = mode === 'unirse' || mode === 'codigo' ? '#/oficina' : '#/dueno';
+      const here = location.hash.replace(/^#\//, '').split('?')[0];
+      if (here !== 'oficina') location.hash = mode === 'unirse' || mode === 'codigo' ? '#/oficina' : '#/dueno';
       onDone();
     } catch (error) {
       err.hidden = false;

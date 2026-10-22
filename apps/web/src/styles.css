@@ -89,6 +89,9 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 /* ───────── Escenario ───────── */
 .stage { position: relative; flex: 1; min-width: 0; overflow: hidden; background: #74C254; }
 #game { position: absolute; inset: 0; display: block; cursor: crosshair; }
+#game:focus { outline: none; }
+#stage3d { z-index: 1; }
+.overlay { z-index: 2; }
 .overlay { position: absolute; pointer-events: none; }
 .overlay > * { pointer-events: auto; }
 

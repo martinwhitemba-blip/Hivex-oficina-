@@ -9,6 +9,7 @@ export class P2PMediaProvider implements ProximityMediaProvider {
   notice = 'Audio de proximidad en modo directo entre navegadores. Para varias personas a la vez, configura LIVEKIT_URL, LIVEKIT_API_KEY y LIVEKIT_API_SECRET.';
   mic = false;
   cam = false;
+  private opening: Promise<void> | null = null;
   private pcs = new Map<string, RTCPeerConnection>();
   private audios = new Map<string, HTMLAudioElement>();
   private local: MediaStream | null = null;
@@ -17,13 +18,8 @@ export class P2PMediaProvider implements ProximityMediaProvider {
 
   async connect() {
     this.socket.on('webrtc:signal', (msg: Signal) => { void this.onSignal(msg); });
-    try {
-      this.local = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-      this.mic = true;
-    } catch {
-      this.mic = false;
-      this.notice = 'No se pudo abrir el micrófono. El audio de proximidad está desactivado en este navegador.';
-    }
+    this.mic = false;
+    this.notice = 'El micrófono está apagado. Actívalo cuando quieras hablar con quien tengas cerca.';
   }
 
   updatePeers(peers: PeerAudio[]) {
@@ -36,9 +32,32 @@ export class P2PMediaProvider implements ProximityMediaProvider {
     }
   }
 
-  setMicEnabled(on: boolean) {
-    this.mic = on;
-    this.local?.getAudioTracks().forEach((track) => { track.enabled = on; });
+  async setMicEnabled(on: boolean) {
+    if (!on) {
+      this.mic = false;
+      this.local?.getAudioTracks().forEach((track) => { track.enabled = false; });
+      return;
+    }
+    if (!this.local) {
+      this.opening ??= this.openMic();
+      await this.opening;
+      this.opening = null;
+      return;
+    }
+    this.mic = true;
+    this.local.getAudioTracks().forEach((track) => { track.enabled = true; });
+  }
+
+  private async openMic() {
+    try {
+      this.local = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      this.mic = true;
+      this.notice = 'Audio de proximidad en modo directo entre navegadores. Para varias personas a la vez, configura LIVEKIT_URL, LIVEKIT_API_KEY y LIVEKIT_API_SECRET.';
+    } catch {
+      this.mic = false;
+      this.local = null;
+      this.notice = 'No se pudo abrir el micrófono. El audio de proximidad está desactivado en este navegador.';
+    }
   }
 
   setCameraEnabled(on: boolean) {

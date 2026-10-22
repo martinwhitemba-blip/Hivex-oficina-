@@ -101,12 +101,35 @@ function initials(name: string) {
 }
 
 async function avatar(companyId: string, membershipId: string, name: string, color: string) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="${color}"/><text x="128" y="158" text-anchor="middle" font-family="Arial, sans-serif" font-size="92" font-weight="700" fill="#0B0B0C">${initials(name)}</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"><rect width="1024" height="1024" fill="${color}"/><text x="512" y="640" text-anchor="middle" font-family="Arial, sans-serif" font-size="420" font-weight="700" fill="#0B0B0C">${initials(name)}</text></svg>`;
   const relative = `${companyId}/${membershipId}.png`;
   const absolute = path.join(env.uploadDir, relative);
   fs.mkdirSync(path.dirname(absolute), { recursive: true });
   await sharp(Buffer.from(svg)).png().toFile(absolute);
   return relative;
+}
+
+/** Reescribe fotos diminutas de la demo. No borra personas, mensajes ni el código. */
+async function refreshSmallPhotos(companyId: string) {
+  const people = await prisma.membership.findMany({ where: { companyId }, include: { area: true } });
+  let updated = 0;
+  for (const person of people) {
+    if (!person.photoPath) continue;
+    const absolute = path.join(env.uploadDir, person.photoPath);
+    let small = !fs.existsSync(absolute);
+    if (!small) {
+      try {
+        const meta = await sharp(absolute).metadata();
+        small = (meta.width ?? 0) < 512;
+      } catch {
+        small = true;
+      }
+    }
+    if (!small) continue;
+    await avatar(companyId, person.id, person.name, person.area?.color || '#F5C518');
+    updated += 1;
+  }
+  if (updated) console.log(`Fotos de la demo actualizadas a 1024 px: ${updated}.`);
 }
 
 async function main() {
@@ -120,6 +143,7 @@ async function main() {
       });
       console.log('Código de acceso de la demo: HIVEX2026.');
     }
+    await refreshSmallPhotos(existing.id);
     console.log('La empresa de demostración ya existe. No se toca: invitaciones, personas y mensajes siguen ahí.');
     return;
   }

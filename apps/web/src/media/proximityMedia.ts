@@ -16,7 +16,7 @@ export interface ProximityMediaProvider {
   cam: boolean;
   connect(selfId: string): Promise<void>;
   updatePeers(peers: PeerAudio[]): void;
-  setMicEnabled(on: boolean): void;
+  setMicEnabled(on: boolean): void | Promise<void>;
   setCameraEnabled(on: boolean): void;
   disconnect(): void;
 }

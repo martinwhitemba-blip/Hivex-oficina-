@@ -36,7 +36,7 @@ a.btn.block { display: block; width: 100%; margin-top: 14px; box-sizing: border-
 
 #pages { position: absolute; inset: 0; z-index: 24; overflow: auto; color: #F2F2F3; touch-action: auto; user-select: text; -webkit-user-select: text; background:
   radial-gradient(900px 280px at 80% -10%, rgba(245,197,24,.14), transparent 55%), #0B0B0C; }
-#pages.hidden { display: none; }
+#pages.hidden, #pages[hidden] { display: none !important; }
 .page { padding: 16px 16px 88px; max-width: 1200px; margin: 0 auto; }
 .pn { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; overflow: auto; padding: 8px 0 12px; background: linear-gradient(#0B0B0C, #0B0B0C 80%, transparent); }
 .pn a { flex: none; text-decoration: none; color: #C9CDD2; border: 1px solid rgba(255,255,255,.08); background: rgba(20,20,22,.8); border-radius: 999px; padding: 7px 10px; font-size: 12px; font-weight: 700; transition: transform .15s ease, background .15s ease, color .15s ease; }
