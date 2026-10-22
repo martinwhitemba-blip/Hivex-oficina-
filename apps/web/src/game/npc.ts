@@ -26,7 +26,7 @@ export class SeatPool {
   release(id: string | null) { if (id) this.taken.delete(id); }
 }
 
-type Goal = { kind: 'seat'; seatId: string } | { kind: 'spot'; x: number; y: number } | { kind: 'wander' };
+type Goal = { kind: 'seat'; seatId: string } | { kind: 'spot'; x: number; y: number } | { kind: 'wander' } | { kind: 'roam' };
 
 export class Npc {
   readonly avatar: Avatar;
@@ -42,9 +42,13 @@ export class Npc {
     this.avatar.status = seed.status;
     this.avatar.isNew = !!seed.isNew;
     seats.reserve(seed.desk);
-    this.nextStatusAt = now + (seed.behaviour === 'chat' ? 90 : 25 + Math.random() * 45) * 1000;
+    this.nextStatusAt = now + (8 + Math.random() * 14) * 1000;
     this.nextLineAt = now + 3000 + Math.random() * 8000;
-    this.resolveGoal(true);
+    this.resolveGoal(seed.status === 'ausente');
+    if (this.avatar.status === 'en_linea') {
+      this.goal = { kind: 'roam' };
+      this.nextWanderAt = now + 250 + Math.random() * 1600;
+    }
   }
 
   setStatus(s: StatusId) {
@@ -68,10 +72,8 @@ export class Npc {
     } else if (a.status === 'cafe') {
       this.tempSeat = this.seats.claim('cafe-');
       goal = this.tempSeat ? { kind: 'seat', seatId: this.tempSeat } : { kind: 'wander' };
-    } else if (a.status === 'en_linea' && this.seed.behaviour === 'chat' && this.seed.chatSpot) {
-      goal = { kind: 'spot', x: this.seed.chatSpot.x * TILE, y: this.seed.chatSpot.y * TILE };
-    } else if (a.status === 'en_linea' && this.seed.behaviour === 'wander') {
-      goal = { kind: 'wander' };
+    } else if (a.status === 'en_linea') {
+      goal = { kind: 'roam' };
     } else {
       goal = { kind: 'seat', seatId: this.seed.desk };
     }
@@ -81,21 +83,35 @@ export class Npc {
       const seat = this.world.seats.get(goal.seatId);
       if (!seat) return;
       if (teleport) a.sitAt(seat); else a.goTo(this.world, seat.x, seat.y, true);
-    } else if (goal.kind === 'spot') {
-      if (teleport) { a.x = goal.x; a.y = goal.y; a.sitting = false; } else a.goTo(this.world, goal.x, goal.y, true);
     } else {
-      if (teleport) {
-        const p = this.world.randomWalkable({ x: 27, y: 16, w: 18, h: 13 });
-        a.x = (p.x + 0.5) * TILE; a.y = (p.y + 0.5) * TILE + 6;
-      }
-      this.nextWanderAt = performance.now() + 1500;
+      this.nextWanderAt = performance.now() + (teleport ? 200 : 500);
     }
+  }
+
+  private walkToAnotherRoom() {
+    const rooms = this.world.def.rooms.filter((room) => room.rect.w > 4 && room.rect.h > 4);
+    const here = this.world.roomAt(this.avatar.x, this.avatar.y);
+    const choices = rooms.filter((room) => room.id !== here?.id);
+    const pool = choices.length ? choices : rooms;
+    const room = pool[Math.floor(Math.random() * pool.length)];
+    if (!room) return;
+    const rect = {
+      x: room.rect.x + 2,
+      y: room.rect.y + 2,
+      w: Math.max(1, room.rect.w - 4),
+      h: Math.max(1, room.rect.h - 4),
+    };
+    const spot = this.world.randomWalkable(rect);
+    const x = (spot.x + 0.5) * TILE;
+    const y = (spot.y + 0.5) * TILE + 6;
+    if (!this.avatar.goTo(this.world, x, y)) this.nextWanderAt = performance.now() + 700;
+    else this.nextWanderAt = Infinity;
   }
 
   update(dt: number, now: number) {
     const a = this.avatar;
     if (now > this.nextStatusAt) {
-      this.nextStatusAt = now + (35 + Math.random() * 50) * 1000;
+      this.nextStatusAt = now + (12 + Math.random() * 16) * 1000;
       this.setStatus(pickStatus());
     }
     const arrived = a.followPath(dt);
@@ -106,13 +122,11 @@ export class Npc {
       } else if (this.goal.kind === 'spot') {
         a.dir = this.seed.id === 'javier' ? 'right' : 'left';
       } else {
-        this.nextWanderAt = now + 2500 + Math.random() * 5000;
+        this.nextWanderAt = now + 1400 + Math.random() * 2600;
       }
     }
-    if (this.goal.kind === 'wander' && !a.path.length && now > this.nextWanderAt) {
-      const p = this.world.randomWalkable();
-      if (!a.goTo(this.world, (p.x + 0.5) * TILE, (p.y + 0.5) * TILE + 6)) this.nextWanderAt = now + 1000;
-      else this.nextWanderAt = Infinity;
+    if ((this.goal.kind === 'roam' || this.goal.kind === 'wander') && !a.path.length && now > this.nextWanderAt) {
+      this.walkToAnotherRoom();
     }
     // frases ocasionales
     if (now > this.nextLineAt) {

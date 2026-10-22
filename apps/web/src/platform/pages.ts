@@ -29,10 +29,27 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const mode = location.hash.startsWith('#/registro') ? 'registro' : location.hash.startsWith('#/unirse') ? 'unirse' : location.hash.startsWith('#/codigo') ? 'codigo' : 'entrar';
   const title = mode === 'registro' ? 'Crea tu empresa' : mode === 'unirse' ? 'Únete al equipo' : mode === 'codigo' ? 'Entrar con código' : 'Entra en tu oficina';
-  root.innerHTML = `<form class="auth-card">
+  const lead = mode === 'codigo'
+    ? 'Escribe el código de la empresa, tu nombre y una contraseña. Entrarás en la oficina como empleado.'
+    : mode === 'unirse'
+      ? 'La invitación no envía correo. Elige tu nombre y la contraseña con la que entrarás después.'
+      : 'Cada empresa tiene su oficina. Tú ves, en el momento, qué está haciendo cada persona.';
+  const action = (hash: string, label: string, current: string) => `<a class="btn ${mode === current ? 'on' : ''}" href="${hash}">${label}</a>`;
+  root.innerHTML = `<div class="auth-shell">
+    <section class="auth-hero">
+      <p class="eyebrow">HIVEX · Oficina virtual</p>
+      <h1>Tu equipo, <span>en la oficina</span>.</h1>
+      <p class="pitch">Una oficina que se ve, con personas de verdad, áreas y puestos. Oro sobre negro, hecha para el día a día.</p>
+      <div class="auth-actions">
+        ${action('#/entrar', 'Entrar', 'entrar')}
+        ${action('#/registro', 'Crear empresa', 'registro')}
+        ${action('#/codigo', 'Entrar con código', 'codigo')}
+      </div>
+    </section>
+    <form class="auth-card">
     <img class="logo" src="${logoUrl}" alt="HIVEX">
     <h1>${title}</h1>
-    <p class="lead">${mode === 'codigo' ? 'Escribe el código de la empresa, tu nombre y una contraseña. Entrarás en la oficina como empleado.' : 'HIVEX es el sistema operativo de capital humano: cada empresa configura sus áreas y ves, en el momento, qué está haciendo cada persona.'}</p>
+    <p class="lead">${lead}</p>
     <div class="err" hidden role="alert"></div>
     ${mode === 'codigo' ? '<label>Código</label><input name="code" required value="' + esc(params.get('c') || '') + '" autocomplete="off">' : ''}
     ${mode === 'unirse' ? '<label>Código de invitación</label><input name="code" required value="' + esc(params.get('code') || '') + '">' : ''}
@@ -40,15 +57,14 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
     ${mode !== 'entrar' ? '<label>Tu nombre</label><input name="name" required>' : ''}
     ${mode === 'registro' ? '<label>Nombre de la empresa</label><input name="companyName" required>' : ''}
     <label>Contraseña</label><input name="password" type="password" required minlength="${mode === 'entrar' ? '1' : '8'}" autocomplete="${mode === 'entrar' ? 'current-password' : 'new-password'}">
-    ${mode === 'entrar' ? '<a class="btn block" href="#/codigo">Entrar con código</a>' : ''}
-    <button class="btn primary" type="submit">${mode === 'entrar' ? 'Entrar' : 'Continuar'}</button>
+    <button class="btn primary" type="submit">${mode === 'entrar' ? 'Entrar' : mode === 'codigo' ? 'Entrar en la oficina' : 'Continuar'}</button>
     <div class="auth-links">
       <a href="#/entrar">Ya tengo cuenta</a>
       <a href="#/codigo">Entrar con código</a>
       <a href="#/registro">Crear empresa</a>
     </div>
-    <div class="demo-box">Prueba la demo: <b>martin@hivex.demo</b> / <b>hivex-demo</b>. También puedes entrar como Hugo, Martín, Luis, Naomi o Maite con el mismo dominio de correo de la demo y la misma contraseña.${mode === 'entrar' ? '<br>Si te invitaron, entra con el correo de la invitación y la contraseña que elegiste al unirte.' : ''}</div>
-  </form>`;
+    <div class="demo-box">Prueba la demo: <b>martin@hivex.demo</b> / <b>hivex-demo</b>. Código abierto: <b>HIVEX2026</b>. Si te invitaron, usa el correo de la invitación y la contraseña que elegiste.</div>
+  </form></div>`;
   const form = root.querySelector('form')!;
   const err = root.querySelector('.err') as HTMLElement;
   form.onsubmit = async (event) => {

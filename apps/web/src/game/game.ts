@@ -16,6 +16,7 @@ import { MapRenderer } from './mapRenderer';
 import { Npc, SeatPool } from './npc';
 import type { AvatarLook, AvatarState, MapDefinition, RoomDef, StatusId } from './types';
 import { SAMPLE_RANKINGS } from '../data/sampleData';
+import { Stage3D } from './stage3d';
 import { World } from './world';
 
 export interface GameEvents {
@@ -62,6 +63,7 @@ export class Game {
   private sendAcc = 0;
   private running = true;
   private faces = new Map<string, HTMLImageElement>();
+  private stage: Stage3D | null = null;
   peers: PeerAudio[] = [];
   demoOn = false;
 
@@ -108,6 +110,7 @@ export class Game {
     // Zoom inicial según tamaño de pantalla (móvil más alejado para ver más oficina).
     this.camera.setZoom(Math.min(window.innerWidth, window.innerHeight) < 560 ? 0.72 : 0.85);
     this.camera.follow(this.player.x, this.player.y - 10, 0, true);
+    this.stage = Stage3D.mount(this.canvas);
     requestAnimationFrame(this.loop);
   }
 
@@ -258,6 +261,8 @@ export class Game {
   // ───────────── bucle ─────────────
   stop() {
     this.running = false;
+    this.stage?.dispose();
+    this.stage = null;
     this.opts.transport.disconnect();
     this.opts.media.disconnect();
   }
@@ -448,10 +453,12 @@ export class Game {
 
     // Avatares ordenados por Y
     const avatars = this.allAvatars().sort((a, b) => a.y - b.y);
+    const stageOn = Boolean(this.stage?.ok);
     for (const a of avatars) {
       if (a.mode === 'car') drawCar(ctx, a.x, a.y, a.carAngle, this.t, a === this.player && now < this.honkUntil);
-      else drawAvatar(ctx, a.x, a.y, { look: a.look, dir: a.dir, moving: a.moving, sitting: a.sitting, t: this.t + a.x * 0.01, dim: a.status === 'ausente', face: this.faceOf(a.look) });
+      else if (!stageOn) drawAvatar(ctx, a.x, a.y, { look: a.look, dir: a.dir, moving: a.moving, sitting: a.sitting, t: this.t + a.x * 0.01, dim: a.status === 'ausente', face: this.faceOf(a.look) });
     }
+    this.stage?.render(avatars, this.camera, this.dpr, this.t, (look) => this.faceOf(look));
     for (const a of avatars) {
       drawNameTag(ctx, a.x, a.y + (a.mode === 'car' ? 12 : 0), a === this.player ? `${a.name.split(' ')[0]} (tú)` : a.name.split(' ')[0], a.status, a === this.player);
       if (a.status === 'en_llamada' && a !== this.player) drawStatusIcon(ctx, a.x + 14, a.y - 52, '📞');
