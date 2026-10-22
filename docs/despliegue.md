@@ -43,7 +43,7 @@ Abre http://localhost:8787 . El mismo servidor entrega la web y la API. Con `SEE
 2. Usa el archivo `render.yaml` (Blueprint). El servicio web y la base PostgreSQL quedan en `plan: free`. No pide `WEB_ORIGIN`: la web y la API salen del mismo servicio, y el servidor usa la variable `RENDER_EXTERNAL_URL` que Render rellena solo. Si más adelante separas la web, entonces sí puedes añadir `WEB_ORIGIN`.
 3. Al terminar, Render muestra una URL `https://….onrender.com`. La actual del blueprint es https://hivex.onrender.com. Ábrela y entra en la aplicación: no hay contraseña de sitio.
 4. Salud del servicio: `/api/salud` responde `{"ok":true}` sin sesión, para que el chequeo de Render no falle.
-5. Dentro de la app, entra con `martin@hivex.demo` / `hivex-demo`.
+5. Dentro de la app, entra con `martin@hivex.demo` / `hivex-demo`. La oficina de demostración también se abre con el código `HIVEX2026` en https://hivex.onrender.com/#/codigo?c=HIVEX2026 . Quien lo use elige su contraseña y entra como empleado. Si la empresa demo ya existía, el arranque solo rellena ese código cuando todavía no tenía uno: no pisa un código regenerado ni borra personas.
 
 El arranque aplica el esquema con `prisma db push` (también la tabla de mensajes directos; el SQL está en `apps/server/prisma/migrations/`). `SEED_ON_BOOT=1` crea la empresa de demostración la primera vez. Si esa empresa ya está —aunque sea la que estás usando de verdad—, un redespliegue o un despertar del plan gratuito no la borra: se quedan las invitaciones, las personas que aceptaron, las áreas, los chats y los mensajes directos.
 

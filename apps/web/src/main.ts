@@ -74,7 +74,7 @@ function showAuth() {
   appEl.hidden = true;
   pagesEl.classList.add('hidden');
   const hash = location.hash;
-  if (!hash.startsWith('#/registro') && !hash.startsWith('#/unirse') && !hash.startsWith('#/entrar')) {
+  if (!hash.startsWith('#/registro') && !hash.startsWith('#/unirse') && !hash.startsWith('#/entrar') && !hash.startsWith('#/codigo')) {
     location.hash = '#/entrar';
   }
   renderAuth(authEl, () => { void enter(); });
@@ -182,7 +182,7 @@ function logout() {
 
 function currentView() {
   const raw = location.hash.replace(/^#\//, '').split('?')[0];
-  if (!raw || raw === 'entrar' || raw === 'registro' || raw === 'unirse') {
+  if (!raw || raw === 'entrar' || raw === 'registro' || raw === 'unirse' || raw === 'codigo') {
     return session?.membership.role === 'empleado' ? 'oficina' : 'dueno';
   }
   return raw;

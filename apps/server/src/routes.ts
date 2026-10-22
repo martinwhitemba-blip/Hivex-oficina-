@@ -28,6 +28,7 @@ import { assignFreeZone } from './zones';
 import { directDirectory, directThread, sendDirect } from './direct';
 import { broadcastPanel, pushDirect } from './socket';
 import { registerOwnerRoutes } from './ownerRoutes';
+import { assertJoinRate, clientIp } from './rateLimit';
 
 const emailSchema = z.string().trim().email('El correo no es válido').transform((v) => v.toLowerCase());
 const passwordSchema = z.string().min(8, 'La contraseña debe tener al menos 8 caracteres');
@@ -87,6 +88,53 @@ export function registerRoutes(app: FastifyInstance) {
       throw new HttpError(401, 'Correo o contraseña incorrectos');
     }
     return { token: signToken(user.id) };
+  });
+
+  app.post('/api/acceso-codigo', async (req) => {
+    assertJoinRate(clientIp(req));
+    const body = parseBody(z.object({
+      code: z.string().trim().min(1, 'Escribe el código'),
+      name: z.string().trim().min(2, 'Escribe tu nombre'),
+      email: emailSchema,
+      password: passwordSchema,
+    }), req.body);
+    const code = body.code.toUpperCase();
+    const company = await prisma.company.findUnique({ where: { joinCode: code } });
+    if (!company || !company.joinCodeEnabled) {
+      throw new HttpError(404, 'Ese código de acceso no es válido o está desactivado');
+    }
+    const user = await prisma.user.findUnique({ where: { email: body.email }, include: { memberships: true } });
+    const here = user?.memberships.find((membership) => membership.companyId === company.id);
+    if (here) {
+      if (!(await verifyPassword(body.password, user!.passwordHash))) {
+        throw new HttpError(401, 'La contraseña no coincide con la de esa cuenta');
+      }
+      if (!here.active) throw new HttpError(403, 'Tu acceso a esta empresa está desactivado');
+      return { token: signToken(user!.id) };
+    }
+    if (user?.memberships.some((membership) => membership.companyId !== company.id)) {
+      throw new HttpError(409, 'Ese correo ya pertenece a otra empresa');
+    }
+    await assertCanAddWorker(company.id);
+    let userId = user?.id;
+    if (!user) {
+      const created = await prisma.user.create({
+        data: { email: body.email, passwordHash: await hashPassword(body.password) },
+      });
+      userId = created.id;
+    } else if (!(await verifyPassword(body.password, user.passwordHash))) {
+      throw new HttpError(401, 'Ese correo ya existe. Usa la misma contraseña para unirte.');
+    }
+    await prisma.membership.create({
+      data: {
+        userId: userId!,
+        companyId: company.id,
+        role: 'empleado',
+        name: body.name,
+        lookJson: JSON.stringify({ skin: '#F3D2B8', hair: '#5B3A29', hairStyle: 1, shirt: '#2563EB', pants: '#1F2937' }),
+      },
+    });
+    return { token: signToken(userId!) };
   });
 
   app.get('/api/auth/yo', async (req) => {
@@ -197,6 +245,55 @@ export function registerRoutes(app: FastifyInstance) {
     }), req.body);
     const company = await prisma.company.update({ where: { id: actor.company.id }, data: body });
     return { id: company.id, name: company.name, officeName: company.officeName };
+  });
+
+  function canManageJoin(role: string) {
+    return role === 'propietario' || role === 'administrador';
+  }
+
+  function joinPayload(company: { joinCode: string | null; joinCodeEnabled: boolean }) {
+    return {
+      code: company.joinCode,
+      enabled: company.joinCodeEnabled,
+      enlace: company.joinCode ? `#/codigo?c=${encodeURIComponent(company.joinCode)}` : '',
+    };
+  }
+
+  app.get('/api/empresa/codigo-acceso', async (req) => {
+    const actor = await auth(req);
+    if (!canManageJoin(actor.membership.role)) throw new HttpError(403, 'Solo dirección puede ver el código de acceso');
+    const company = await prisma.company.findUnique({ where: { id: actor.company.id } });
+    if (!company) throw new HttpError(404, 'Empresa no encontrada');
+    return joinPayload(company);
+  });
+
+  app.patch('/api/empresa/codigo-acceso', async (req) => {
+    const actor = await auth(req);
+    if (!canManageJoin(actor.membership.role)) throw new HttpError(403, 'Solo dirección puede cambiar el código de acceso');
+    const body = parseBody(z.object({ enabled: z.boolean() }), req.body);
+    const company = await prisma.company.update({
+      where: { id: actor.company.id },
+      data: { joinCodeEnabled: body.enabled },
+    });
+    return joinPayload(company);
+  });
+
+  app.post('/api/empresa/codigo-acceso/regenerar', async (req) => {
+    const actor = await auth(req);
+    if (!canManageJoin(actor.membership.role)) throw new HttpError(403, 'Solo dirección puede regenerar el código');
+    const current = await prisma.company.findUnique({ where: { id: actor.company.id } });
+    if (!current) throw new HttpError(404, 'Empresa no encontrada');
+    let code = randomCode(8);
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const clash = await prisma.company.findUnique({ where: { joinCode: code } });
+      if (!clash) break;
+      code = randomCode(8);
+    }
+    const company = await prisma.company.update({
+      where: { id: actor.company.id },
+      data: { joinCode: code, joinCodeEnabled: current.joinCode ? current.joinCodeEnabled : true },
+    });
+    return joinPayload(company);
   });
 
   app.get('/api/areas', async (req) => {

@@ -20,9 +20,11 @@ model Company {
   name        String
   slug        String           @unique
   officeName  String           @default("Oficina principal")
-  apiKey      String           @unique
-  isDemo         Boolean          @default(false)
-  moduloLlamadas Boolean       @default(false)
+  apiKey         String    @unique
+  isDemo         Boolean   @default(false)
+  moduloLlamadas Boolean   @default(false)
+  joinCode       String?   @unique
+  joinCodeEnabled Boolean  @default(false)
   createdAt      DateTime      @default(now())
   subscription   Subscription?
   audits         AuditLog[]

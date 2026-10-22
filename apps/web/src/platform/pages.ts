@@ -27,19 +27,24 @@ export function shell(view: string, title: string, subtitle: string, body: strin
 
 export function renderAuth(root: HTMLElement, onDone: () => void) {
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
-  const mode = location.hash.startsWith('#/registro') ? 'registro' : location.hash.startsWith('#/unirse') ? 'unirse' : 'entrar';
+  const mode = location.hash.startsWith('#/registro') ? 'registro' : location.hash.startsWith('#/unirse') ? 'unirse' : location.hash.startsWith('#/codigo') ? 'codigo' : 'entrar';
+  const title = mode === 'registro' ? 'Crea tu empresa' : mode === 'unirse' ? 'Únete al equipo' : mode === 'codigo' ? 'Entrar con código' : 'Entra en tu oficina';
   root.innerHTML = `<form class="auth-card">
     <img class="logo" src="${logoUrl}" alt="HIVEX">
-    <h1>${mode === 'registro' ? 'Crea tu empresa' : mode === 'unirse' ? 'Únete al equipo' : 'Entra en tu oficina'}</h1>
-    <p class="lead">HIVEX es el sistema operativo de capital humano: cada empresa configura sus áreas y ves, en el momento, qué está haciendo cada persona.</p>
+    <h1>${title}</h1>
+    <p class="lead">${mode === 'codigo' ? 'Escribe el código de la empresa, tu nombre y una contraseña. Entrarás en la oficina como empleado.' : 'HIVEX es el sistema operativo de capital humano: cada empresa configura sus áreas y ves, en el momento, qué está haciendo cada persona.'}</p>
     <div class="err" hidden role="alert"></div>
-    ${mode !== 'unirse' ? '<label>Correo</label><input name="email" type="email" required autocomplete="username">' : '<label>Código de invitación</label><input name="code" required value="' + esc(params.get('code') || '') + '">'}
+    ${mode === 'codigo' ? '<label>Código</label><input name="code" required value="' + esc(params.get('c') || '') + '" autocomplete="off">' : ''}
+    ${mode === 'unirse' ? '<label>Código de invitación</label><input name="code" required value="' + esc(params.get('code') || '') + '">' : ''}
+    ${mode === 'entrar' || mode === 'registro' || mode === 'codigo' ? '<label>Correo</label><input name="email" type="email" required autocomplete="username">' : ''}
     ${mode !== 'entrar' ? '<label>Tu nombre</label><input name="name" required>' : ''}
     ${mode === 'registro' ? '<label>Nombre de la empresa</label><input name="companyName" required>' : ''}
-    <label>Contraseña</label><input name="password" type="password" required minlength="8" autocomplete="${mode === 'entrar' ? 'current-password' : 'new-password'}">
+    <label>Contraseña</label><input name="password" type="password" required minlength="${mode === 'entrar' ? '1' : '8'}" autocomplete="${mode === 'entrar' ? 'current-password' : 'new-password'}">
+    ${mode === 'entrar' ? '<a class="btn block" href="#/codigo">Entrar con código</a>' : ''}
     <button class="btn primary" type="submit">${mode === 'entrar' ? 'Entrar' : 'Continuar'}</button>
     <div class="auth-links">
       <a href="#/entrar">Ya tengo cuenta</a>
+      <a href="#/codigo">Entrar con código</a>
       <a href="#/registro">Crear empresa</a>
     </div>
     <div class="demo-box">Prueba la demo: <b>martin@hivex.demo</b> / <b>hivex-demo</b>. También puedes entrar como Hugo, Martín, Luis, Naomi o Maite con el mismo dominio de correo de la demo y la misma contraseña.${mode === 'entrar' ? '<br>Si te invitaron, entra con el correo de la invitación y la contraseña que elegiste al unirte.' : ''}</div>
@@ -51,10 +56,10 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
     err.hidden = true;
     const data = Object.fromEntries(new FormData(form).entries());
     try {
-      const path = mode === 'registro' ? '/api/auth/registro' : mode === 'unirse' ? `/api/invitaciones/${data.code}/aceptar` : '/api/auth/entrar';
+      const path = mode === 'registro' ? '/api/auth/registro' : mode === 'unirse' ? `/api/invitaciones/${data.code}/aceptar` : mode === 'codigo' ? '/api/acceso-codigo' : '/api/auth/entrar';
       const result = await api<{ token: string }>(path, { method: 'POST', body: JSON.stringify(data) });
       localStorage.setItem('hivex_token', result.token);
-      location.hash = mode === 'unirse' ? '#/oficina' : '#/dueno';
+      location.hash = mode === 'unirse' || mode === 'codigo' ? '#/oficina' : '#/dueno';
       onDone();
     } catch (error) {
       err.hidden = false;
@@ -294,6 +299,7 @@ async function renderTeam(root: HTMLElement, session: Session) {
   const can = session.membership.role !== 'empleado';
   root.innerHTML = shell('equipo', 'Equipo', 'Fotos, puestos y áreas. En la oficina el personaje de juego sale por defecto.', `
     ${can ? `<form id="import" class="cardx"><b>Importar CSV o Excel</b><p class="muted">Columnas: nombre, email, puesto, area, telefono, fecha_inicio, horario. <button class="btn" id="plantilla" type="button">Descargar plantilla</button></p><input name="file" type="file" accept=".csv,.xlsx" required><button class="btn primary" type="submit">Importar</button><div id="import-out" class="muted"></div></form>` : ''}
+    ${can ? await joinCodeBox() : ''}
     <div class="grid cards">${people.map((person) => `<a class="cardx person" href="#/equipo/${person.id}">${avatar(person.photoUrl, person.name)}<div><div class="nm">${esc(person.name)}</div><div class="muted">${esc(person.area?.name || 'Sin área')} · ${esc(person.puesto || person.roleLabel)}</div></div></a>`).join('')}</div>
     ${can ? await inviteBox() : ''}
   `);
@@ -311,6 +317,7 @@ async function renderTeam(root: HTMLElement, session: Session) {
     } catch (error) { noteError(out, error); }
   });
   root.querySelector('#plantilla')?.addEventListener('click', () => void downloadFile('/api/empleados/plantilla.csv', 'plantilla-equipo.csv').catch((error) => noteError(root.querySelector('#import-out'), error)));
+  wireJoinCode(root);
   const invite = root.querySelector('#invite') as HTMLFormElement | null;
   invite?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -331,6 +338,61 @@ async function renderTeam(root: HTMLElement, session: Session) {
       });
     } catch (error) { noteError(out, error); }
   });
+}
+
+function wireJoinCode(root: HTMLElement) {
+  const out = root.querySelector('#join-out') as HTMLElement | null;
+  const codeInput = root.querySelector('#join-code-value') as HTMLInputElement | null;
+  const linkInput = root.querySelector('#join-link') as HTMLInputElement | null;
+  const enabled = root.querySelector('#join-enabled') as HTMLInputElement | null;
+  const paint = (access: { code: string | null; enabled: boolean; enlace: string }) => {
+    const url = access.enlace ? `${location.origin}${location.pathname}${access.enlace}` : '';
+    if (codeInput) codeInput.value = access.code || 'Sin código';
+    if (linkInput) linkInput.value = url;
+    if (enabled) enabled.checked = access.enabled;
+  };
+  root.querySelector('#copy-join')?.addEventListener('click', async () => {
+    const url = linkInput?.value || '';
+    if (!url) return;
+    await copyText(url);
+    if (out) { out.className = 'muted'; out.textContent = 'Enlace copiado.'; }
+  });
+  root.querySelector('#regen-join')?.addEventListener('click', async () => {
+    try {
+      const access = await api<{ code: string | null; enabled: boolean; enlace: string }>('/api/empresa/codigo-acceso/regenerar', { method: 'POST' });
+      paint(access);
+      if (out) { out.className = 'muted'; out.textContent = 'Código nuevo. El anterior deja de servir.'; }
+    } catch (error) { noteError(out, error); }
+  });
+  enabled?.addEventListener('change', async () => {
+    try {
+      const access = await api<{ code: string | null; enabled: boolean; enlace: string }>('/api/empresa/codigo-acceso', { method: 'PATCH', body: JSON.stringify({ enabled: enabled.checked }) });
+      paint(access);
+      if (out) { out.className = 'muted'; out.textContent = access.enabled ? 'Código activo.' : 'Código desactivado.'; }
+    } catch (error) {
+      enabled.checked = !enabled.checked;
+      noteError(out, error);
+    }
+  });
+}
+
+async function joinCodeBox() {
+  const access = await api<{ code: string | null; enabled: boolean; enlace: string }>('/api/empresa/codigo-acceso');
+  const url = access.enlace ? `${location.origin}${location.pathname}${access.enlace}` : '';
+  return `<form id="join-code" class="cardx form" data-join-code>
+    <h2>Código de acceso</h2>
+    <p class="muted">Quien tenga el código entra en la oficina como empleado, sin área ni puesto. No se envía ningún correo. Comparte el enlace o el código.</p>
+    <label>Código</label>
+    <input id="join-code-value" readonly value="${esc(access.code || 'Sin código')}">
+    <label>Enlace para compartir</label>
+    <input id="join-link" readonly value="${esc(url)}">
+    <div class="join-actions">
+      <button class="btn" id="copy-join" type="button">Copiar enlace</button>
+      <button class="btn" id="regen-join" type="button">Regenerar código</button>
+    </div>
+    <label><input id="join-enabled" type="checkbox" ${access.enabled ? 'checked' : ''}> Código activo</label>
+    <p id="join-out" class="muted"></p>
+  </form>`;
 }
 
 async function inviteBox() {

@@ -35,6 +35,7 @@ Abre http://localhost:5173
 | | |
 |---|---|
 | Dueño de la demo | `martin@hivex.demo` / `hivex-demo` |
+| Entrar con código | `HIVEX2026` en `#/codigo?c=HIVEX2026` |
 | También | `hugo@`, `lucia@`, `carmen@`, `martin.soto@`, `luis@`, `naomi@`, `maite@` en `hivex.demo`, misma contraseña |
 | Clave de métricas | `hx_demo_clave_publica` |
 

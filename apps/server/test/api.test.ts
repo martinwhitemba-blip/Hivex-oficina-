@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app';
 import { ensurePlans } from '../src/billing';
 import { prisma } from '../src/prisma';
+import { resetJoinRate } from '../src/rateLimit';
 
 let app: FastifyInstance;
 
@@ -156,5 +157,109 @@ describe('API de empresa', () => {
 
     const self = await json('POST', `/api/directos/${anaId}`, tokenA, { body: 'yo' });
     expect(self.status).toBe(400);
+  });
+
+  it('abre la oficina con un código, respeta el plan y no duplica a quien ya está', async () => {
+    resetJoinRate();
+    const owner = await json('POST', '/api/auth/registro', undefined, {
+      name: 'Clara Dueña', email: 'clara@codigo.test', password: 'clave-segura', companyName: 'Codigo SA',
+    });
+    expect(owner.status).toBe(200);
+    const token = owner.body.token as string;
+    const before = await json('GET', '/api/empresa/codigo-acceso', token);
+    expect(before.status).toBe(200);
+    expect(before.body.code).toBeNull();
+
+    const created = await json('POST', '/api/empresa/codigo-acceso/regenerar', token);
+    expect(created.status).toBe(200);
+    const code = created.body.code as string;
+    expect(created.body.enabled).toBe(true);
+    expect(created.body.enlace).toContain(`#/codigo?c=${code}`);
+
+    const joined = await json('POST', '/api/acceso-codigo', undefined, {
+      code, name: 'Nuria Código', email: 'nuria@codigo.test', password: 'clave-segura',
+    });
+    expect(joined.status).toBe(200);
+    const again = await json('POST', '/api/acceso-codigo', undefined, {
+      code: code.toLowerCase(), name: 'Nuria Código', email: 'nuria@codigo.test', password: 'clave-segura',
+    });
+    expect(again.status).toBe(200);
+    const memberships = await prisma.membership.findMany({ where: { user: { email: 'nuria@codigo.test' } } });
+    expect(memberships).toHaveLength(1);
+    expect(memberships[0].role).toBe('empleado');
+    expect(memberships[0].areaId).toBeNull();
+    expect(memberships[0].jobTitleId).toBeNull();
+
+    const badPass = await json('POST', '/api/acceso-codigo', undefined, {
+      code, name: 'Nuria Código', email: 'nuria@codigo.test', password: 'otra-clave-1',
+    });
+    expect(badPass.status).toBe(401);
+
+    const employee = await json('GET', '/api/empresa/codigo-acceso', joined.body.token);
+    expect(employee.status).toBe(403);
+
+    const adminInvite = await json('POST', '/api/invitaciones', token, { email: 'admin@codigo.test', role: 'administrador' });
+    expect(adminInvite.status).toBe(200);
+    const adminAccept = await json('POST', `/api/invitaciones/${adminInvite.body.code}/aceptar`, undefined, { name: 'Admin Código', password: 'clave-segura' });
+    expect(adminAccept.status).toBe(200);
+    const adminSee = await json('GET', '/api/empresa/codigo-acceso', adminAccept.body.token);
+    expect(adminSee.status).toBe(200);
+
+    const off = await json('PATCH', '/api/empresa/codigo-acceso', token, { enabled: false });
+    expect(off.body.enabled).toBe(false);
+    const closed = await json('POST', '/api/acceso-codigo', undefined, {
+      code, name: 'Otro', email: 'otro@codigo.test', password: 'clave-segura',
+    });
+    expect(closed.status).toBe(404);
+    expect(String(closed.body.error)).toContain('desactivado');
+
+    const kept = await json('POST', '/api/empresa/codigo-acceso/regenerar', token);
+    expect(kept.body.enabled).toBe(false);
+    expect(kept.body.code).not.toBe(code);
+    await json('PATCH', '/api/empresa/codigo-acceso', token, { enabled: true });
+
+    const foreign = await json('POST', '/api/acceso-codigo', undefined, {
+      code: kept.body.code, name: 'Ana', email: 'ana@empresa-a.test', password: 'clave-segura',
+    });
+    expect(foreign.status).toBe(409);
+
+    const company = await prisma.company.findFirst({ where: { name: 'Codigo SA' }, include: { subscription: true } });
+    await prisma.plan.update({ where: { id: company!.subscription!.planId }, data: { maxWorkers: 3 } });
+    const overflow = await json('POST', '/api/acceso-codigo', undefined, {
+      code: kept.body.code, name: 'Extra Código', email: 'extra.codigo@codigo.test', password: 'clave-segura',
+    });
+    expect(overflow.status).toBe(409);
+    expect(String(overflow.body.error)).toContain('plan');
+
+    await prisma.plan.update({ where: { id: company!.subscription!.planId }, data: { maxWorkers: 1 } });
+    await prisma.company.create({
+      data: {
+        name: 'Demo Código',
+        slug: 'demo-codigo',
+        apiKey: 'hx_demo_codigo_test',
+        isDemo: true,
+        joinCode: 'HIVEXTEST',
+        joinCodeEnabled: true,
+      },
+    });
+    const demoJoin = await json('POST', '/api/acceso-codigo', undefined, {
+      code: 'hivextest', name: 'Visitante Demo', email: 'visita@demo-codigo.test', password: 'clave-segura',
+    });
+    expect(demoJoin.status).toBe(200);
+    await prisma.plan.update({ where: { id: company!.subscription!.planId }, data: { maxWorkers: 8 } });
+
+    resetJoinRate();
+    let limited = 0;
+    for (let i = 0; i < 22; i += 1) {
+      const hit = await app.inject({
+        method: 'POST',
+        url: '/api/acceso-codigo',
+        payload: { code: 'NOEXISTE', name: 'Alguien', email: `x${i}@rate.test`, password: 'clave-segura' },
+        headers: { 'x-forwarded-for': '203.0.113.9' },
+      });
+      if (hit.statusCode === 429) limited += 1;
+    }
+    expect(limited).toBeGreaterThan(0);
+    resetJoinRate();
   });
 });

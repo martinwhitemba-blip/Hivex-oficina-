@@ -15,7 +15,11 @@ body.auth-mode { overflow: auto; touch-action: auto; user-select: text; }
 .btn.primary { background: linear-gradient(180deg, #F7CD2E, #E0A800); color: #0B0B0C; border-color: #F5C518; }
 .btn.ghost { background: transparent; color: #F2F2F3; }
 .btn.danger { color: #fecaca; border-color: #7f1d1d; }
-.auth-links { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; font-size: 12px; }
+a.btn { display: inline-block; text-decoration: none; text-align: center; }
+a.btn.block { display: block; width: 100%; margin-top: 14px; box-sizing: border-box; }
+.join-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.join-actions .btn { width: auto; }
+.auth-links { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; font-size: 12px; flex-wrap: wrap; }
 .auth-links a, .inline-link { color: #F5C518; }
 .demo-box { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: rgba(245,197,24,.08); border: 1px dashed rgba(245,197,24,.4); font-size: 12px; color: #F7DC6F; }
 

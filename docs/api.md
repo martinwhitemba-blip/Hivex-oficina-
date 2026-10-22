@@ -11,6 +11,8 @@ Todas las rutas de datos empiezan por `/api` y exigen sesión, salvo el alta, el
 - `GET /api/auth/yo` devuelve la sesión.
 - `POST /api/invitaciones` crea un código de 14 días. No envía correo. La respuesta incluye `enlace` (`#/unirse?code=`). Si el `jobTitleId` o el `areaId` ya no existen, responde 404 en español.
 - `POST /api/invitaciones/:code/aceptar` `{ name, password }`.
+- `POST /api/acceso-codigo` `{ code, name, email, password }` es público. Si el código está activo, crea un empleado sin área ni puesto, o entra si ese correo ya es de esa empresa. No envía correo. Un correo de otra empresa responde 409. Código inexistente o apagado: 404. Demasiados intentos desde la misma IP: 429.
+- `GET /api/empresa/codigo-acceso`, `PATCH /api/empresa/codigo-acceso` `{ enabled }` y `POST /api/empresa/codigo-acceso/regenerar` los usan el propietario y el administrador. La respuesta trae `code`, `enabled` y `enlace` (`#/codigo?c=`).
 
 Si el plan no admite más personas, la respuesta es **409** con un texto en español que indica el tope y remite a Plan y uso.
 

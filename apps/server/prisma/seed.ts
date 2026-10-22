@@ -113,6 +113,13 @@ async function main() {
   await ensurePlans();
   const existing = await prisma.company.findUnique({ where: { slug: DEMO_SLUG } });
   if (existing) {
+    if (!existing.joinCode) {
+      await prisma.company.update({
+        where: { id: existing.id },
+        data: { joinCode: 'HIVEX2026', joinCodeEnabled: true },
+      });
+      console.log('Código de acceso de la demo: HIVEX2026.');
+    }
     console.log('La empresa de demostración ya existe. No se toca: invitaciones, personas y mensajes siguen ahí.');
     return;
   }
@@ -125,6 +132,8 @@ async function main() {
       officeName: 'Oficina principal',
       apiKey: 'hx_demo_clave_publica',
       isDemo: true,
+      joinCode: 'HIVEX2026',
+      joinCodeEnabled: true,
     },
   });
   await attachPlan(company.id, 'empresa', 'activa');

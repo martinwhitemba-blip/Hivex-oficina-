@@ -43,6 +43,8 @@ export async function companyUsage(companyId: string) {
 }
 
 export async function assertCanAddWorker(companyId: string) {
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { isDemo: true } });
+  if (company?.isDemo) return;
   const usage = await companyUsage(companyId);
   if (usage.workers >= usage.maxWorkers) {
     throw new HttpError(409, `Tu plan ${usage.plan.name} permite hasta ${usage.maxWorkers} personas y ya estás en el límite. Entra en Plan y uso para verlo. El cobro en línea todavía no está conectado.`);
