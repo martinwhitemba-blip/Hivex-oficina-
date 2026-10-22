@@ -11,7 +11,8 @@
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Sora:wght@500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Sora:wght@500;600&display=swap" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Sora:wght@500;600&display=swap" /></noscript>
     <title>HIVEX · Oficina virtual</title>
     <link id="favicon" rel="icon" type="image/png" href="data:," />
   </head>
@@ -19,6 +20,10 @@
     <div id="auth" hidden></div>
     <div id="app" hidden></div>
     <div id="pages" class="hidden"></div>
+    <div id="boot-error" hidden role="alert">
+      <p id="boot-error-text">No se pudo abrir HIVEX.</p>
+      <button type="button" id="boot-reload">Recargar</button>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -24,7 +24,7 @@ import { prisma } from './prisma';
 import { awardBadge, parseLook, photoUrl, savePhoto, upsertReport } from './services';
 import { assertCanAddArea, assertCanAddWorker, attachPlan, audit } from './billing';
 import { assignFreeZone } from './zones';
-import { directDirectory, directThread, sendDirect } from './direct';
+import { directDirectory, directThread, directUnreadTotal, sendDirect } from './direct';
 import { broadcastPanel, pushDirect } from './socket';
 import { registerOwnerRoutes } from './ownerRoutes';
 import { assertJoinRate, clientIp } from './rateLimit';
@@ -1014,13 +1014,16 @@ export function registerRoutes(app: FastifyInstance) {
         look: { ...parseLook(p.lookJson), photoUrl: photoUrl(p.photoPath) },
       })),
       alertCount: filteredAlerts.length,
+      directUnread: await directUnreadTotal(actor.company.id, actor.membership.id),
       media: mediaInfo(),
     };
   });
 
   app.get('/api/directos', async (req) => {
     const actor = await auth(req);
-    return { personas: await directDirectory(actor.company.id, actor.membership.id) };
+    const personas = await directDirectory(actor.company.id, actor.membership.id);
+    const noLeidos = personas.reduce((sum, person) => sum + person.unread, 0);
+    return { personas, noLeidos };
   });
 
   app.get('/api/directos/:id', async (req) => {

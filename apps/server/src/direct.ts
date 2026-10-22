@@ -42,18 +42,28 @@ export function directDto(message: {
   };
 }
 
+/** Cuenta no leídos con findMany: groupBy y `readAt: null` no es fiable en todos los motores. */
+export async function unreadBySender(companyId: string, selfId: string) {
+  const rows = await prisma.directMessage.findMany({
+    where: { companyId, recipientId: selfId, readAt: null },
+    select: { senderId: true },
+  });
+  const unread = new Map<string, number>();
+  for (const row of rows) unread.set(row.senderId, (unread.get(row.senderId) || 0) + 1);
+  return unread;
+}
+
+export async function directUnreadTotal(companyId: string, selfId: string) {
+  return prisma.directMessage.count({ where: { companyId, recipientId: selfId, readAt: null } });
+}
+
 export async function directDirectory(companyId: string, selfId: string) {
   const people = await prisma.membership.findMany({
     where: { ...companyScope(companyId), active: true, id: { not: selfId } },
     include: { jobTitle: true },
     orderBy: { name: 'asc' },
   });
-  const unreadRows = await prisma.directMessage.groupBy({
-    by: ['senderId'],
-    where: { ...companyScope(companyId), recipientId: selfId, readAt: null },
-    _count: { _all: true },
-  });
-  const unread = new Map(unreadRows.map((row) => [row.senderId, row._count._all]));
+  const unread = await unreadBySender(companyId, selfId);
   const history = await prisma.directMessage.findMany({
     where: { ...companyScope(companyId), OR: [{ senderId: selfId }, { recipientId: selfId }] },
     orderBy: { createdAt: 'desc' },

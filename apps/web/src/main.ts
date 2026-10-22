@@ -9,9 +9,10 @@ import { LiveKitMediaProvider } from './media/livekitMedia';
 import { P2PMediaProvider } from './media/p2pMedia';
 import type { ProximityMediaProvider } from './media/proximityMedia';
 import { SocketIoTransport } from './net/socketTransport';
-import { api, clearToken, getToken } from './platform/api';
+import { ApiError, api, clearToken, getToken } from './platform/api';
 import { applyMarca, type Marca } from './platform/brand';
-import { renderAuth, renderPasswordGate, renderView, type Session } from './platform/pages';
+import { paintSessionNotice, renderAuth, renderPasswordGate, renderView, type Session } from './platform/pages';
+import { isPublicJoin, viewForSession } from './routing';
 import { UI } from './ui/ui';
 import markUrl from './assets/hivex-mark.png';
 import wordmarkUrl from './assets/hivex-wordmark.png';
@@ -40,12 +41,40 @@ interface Hud {
   deskId: string | null;
   directory: { id: string; name: string; role: string; photoUrl?: string | null; deskId?: string | null; look?: Session['membership']['look'] }[];
   alertCount: number;
+  directUnread?: number;
   media: { mode: 'livekit' | 'p2p'; notice: string };
 }
 
 const authEl = document.getElementById('auth')!;
 const appEl = document.getElementById('app')!;
 const pagesEl = document.getElementById('pages')!;
+const bootErrorEl = document.getElementById('boot-error')!;
+const bootErrorText = document.getElementById('boot-error-text')!;
+
+function showBootError(message: string) {
+  bootErrorText.textContent = message || 'No se pudo abrir HIVEX.';
+  bootErrorEl.hidden = false;
+}
+
+document.getElementById('boot-reload')?.addEventListener('click', () => location.reload());
+window.addEventListener('error', (event) => {
+  showBootError(event.message || 'Error inesperado');
+});
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason;
+  showBootError(reason instanceof Error ? reason.message : 'Error inesperado');
+});
+
+function withTimeout<T>(work: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(`Tiempo de espera agotado (${label})`)), ms);
+    work.then((value) => { window.clearTimeout(timer); resolve(value); }, (error) => { window.clearTimeout(timer); reject(error); });
+  });
+}
+
+function nextFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
 
 let session: Session | null = null;
 let socket: Socket | null = null;
@@ -56,10 +85,11 @@ let booting = false;
 let applyingLock = false;
 
 function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve) => {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(img);
+    const timer = window.setTimeout(() => reject(new Error('logo')), 2000);
+    img.onload = () => { window.clearTimeout(timer); resolve(img); };
+    img.onerror = () => { window.clearTimeout(timer); resolve(img); };
     img.src = src;
   });
 }
@@ -69,15 +99,52 @@ function asLook(look: Session['membership']['look']): AvatarLook {
   return { skin: look.skin, hair: look.hair, hairStyle, shirt: look.shirt, pants: look.pants, glasses: look.glasses, usePhoto: look.usePhoto === true, photoUrl: look.photoUrl };
 }
 
-function showAuth() {
+function revealAuth() {
   document.body.classList.add('auth-mode');
   authEl.hidden = false;
   appEl.hidden = true;
   pagesEl.classList.add('hidden');
+  pagesEl.hidden = true;
+}
+
+function revealApp() {
+  document.body.classList.remove('auth-mode');
+  authEl.hidden = true;
+  appEl.hidden = false;
+}
+
+function showAuth() {
+  revealAuth();
   const hash = location.hash;
   const keep = ['#/registro', '#/unirse', '#/entrar', '#/codigo', '#/oficina', '#/activar'];
   if (!keep.some((prefix) => hash.startsWith(prefix))) location.hash = '#/entrar';
+  if (isPublicJoin(location.hash)) {
+    openPublicJoin();
+    return;
+  }
   renderAuth(authEl, () => { void enter(); });
+}
+
+function openPublicJoin() {
+  revealAuth();
+  renderAuth(authEl, () => { void enter(); });
+  if (session) {
+    paintSessionNotice(authEl, session.membership.name, () => logout({ keepHash: true }), () => { location.hash = '#/oficina'; });
+    return;
+  }
+  if (!getToken()) return;
+  void withTimeout(api<Session>('/api/auth/yo'), 12000, 'sesión').then((next) => {
+    session = next;
+    if (!isPublicJoin(location.hash)) return;
+    paintSessionNotice(authEl, next.membership.name, () => logout({ keepHash: true }), () => { location.hash = '#/oficina'; });
+  }).catch((error) => {
+    if (error instanceof ApiError && error.status === 401) {
+      clearToken();
+      session = null;
+      return;
+    }
+    showBootError(error instanceof Error ? error.message : 'No se pudo comprobar la sesión');
+  });
 }
 
 function teardownOffice() {
@@ -96,25 +163,40 @@ async function enter() {
   if (booting) return;
   booting = true;
   try {
-    session = await api<Session>('/api/auth/yo');
+    if (isPublicJoin(location.hash)) {
+      openPublicJoin();
+      return;
+    }
+    session = await withTimeout(api<Session>('/api/auth/yo'), 12000, 'sesión');
     if (session.debeCambiarContrasena) {
       showPasswordGate();
       return;
     }
-    const hud = await api<Hud>('/api/oficina/hud');
-    const marca = await api<Marca>('/api/marca');
-    applyMarca(marca);
+    // La sesión ya se conoce: la interfaz sale antes de marca, fuentes o 3D.
+    revealApp();
+    await nextFrame();
+    const [hud, marca] = await withTimeout(Promise.all([
+      api<Hud>('/api/oficina/hud'),
+      api<Marca>('/api/marca'),
+    ]), 12000, 'oficina');
+    try { applyMarca(marca); } catch (error) { console.error(error); }
     await startOffice(session, hud, marca);
-    route();
   } catch (error) {
-    clearToken();
-    session = null;
-    showAuth();
-    const err = authEl.querySelector('.err') as HTMLElement | null;
-    if (err) {
-      err.hidden = false;
-      err.textContent = error instanceof Error ? error.message : 'No se pudo entrar';
+    const message = error instanceof Error ? error.message : 'No se pudo entrar';
+    if (error instanceof ApiError && error.status === 401) {
+      clearToken();
+      session = null;
+      showAuth();
+      const err = authEl.querySelector('.err') as HTMLElement | null;
+      if (err) {
+        err.hidden = false;
+        err.textContent = message;
+      }
+      return;
     }
+    showBootError(message);
+    if (session) revealApp();
+    else showAuth();
   } finally {
     booting = false;
   }
@@ -122,9 +204,8 @@ async function enter() {
 
 async function startOffice(current: Session, hud: Hud, marca: Marca | null) {
   teardownOffice();
-  document.body.classList.remove('auth-mode');
-  authEl.hidden = true;
-  const emblem = await loadImage(marca?.logoUrl || markUrl);
+  revealApp();
+  const emblem = await loadImage(marca?.logoUrl || markUrl).catch(() => null);
   const canvas = document.createElement('canvas');
   canvas.id = 'game';
   document.body.append(canvas);
@@ -138,7 +219,7 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null) {
   game = new Game(canvas, map, {
     transport: new SocketIoTransport(socket),
     media,
-    emblem,
+    emblem: emblem ?? undefined,
     player: {
       id: current.membership.id,
       name: current.membership.name,
@@ -177,8 +258,21 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null) {
     return [{ id: person.id, name: person.name, role: person.role, deskId: person.deskId, look: asLook(person.look) }];
   }));
   game.start();
-  if (marca?.logoUrl && emblem.naturalWidth) game.setPlazaLogo(emblem);
+  ui.setDirectUnread(hud.directUnread ?? 0);
   ui.applyMarca({ nombre: marca?.nombre || current.membership.company.name, oficina: marca?.oficina || hud.officeName, logoUrl: marca?.logoUrl || null });
+  socket.on('dm:message', (message: { recipientId?: string }) => {
+    if (message.recipientId !== current.membership.id) return;
+    if (location.hash.startsWith('#/chat')) return;
+    ui?.bumpDirectUnread(1);
+  });
+  route();
+  await nextFrame();
+  try {
+    await withTimeout(game.mount3d(), 4000, 'webgl');
+  } catch (error) {
+    console.error(error);
+  }
+  if (marca?.logoUrl && emblem?.naturalWidth) game.setPlazaLogo(emblem);
   pingTimer = window.setInterval(() => socket?.emit('presence:ping'), 20000);
   socket.emit('presence:ping');
   (window as unknown as { __game?: Game }).__game = game;
@@ -208,24 +302,24 @@ window.addEventListener('hivex-marca', (event) => {
   });
 });
 
-function logout() {
+function logout(opts?: { keepHash?: boolean }) {
   clearToken();
   teardownOffice();
   session = null;
-  location.hash = '#/entrar';
-  showAuth();
+  if (!opts?.keepHash) location.hash = '#/entrar';
+  if (isPublicJoin(location.hash)) openPublicJoin();
+  else showAuth();
 }
 
 function currentView() {
-  const raw = location.hash.replace(/^#\//, '').split('?')[0];
-  if (raw === 'oficina') return 'oficina';
-  if (!raw || raw === 'entrar' || raw === 'registro' || raw === 'unirse' || raw === 'codigo') {
-    return session?.membership.role === 'empleado' ? 'oficina' : 'dueno';
-  }
-  return raw;
+  return viewForSession(location.hash, session?.membership.role);
 }
 
 function route() {
+  if (isPublicJoin(location.hash)) {
+    openPublicJoin();
+    return;
+  }
   if (!getToken()) {
     showAuth();
     return;
@@ -251,10 +345,20 @@ function route() {
   void renderView(pagesEl, view, session, socket);
 }
 
+window.addEventListener('hivex-unread', (event) => {
+  const count = Number((event as CustomEvent<number>).detail);
+  if (Number.isFinite(count)) ui?.setDirectUnread(count);
+});
+
 window.addEventListener('hashchange', () => {
+  if (isPublicJoin(location.hash)) {
+    openPublicJoin();
+    return;
+  }
   if (!getToken()) showAuth();
   else route();
 });
 
-if (getToken()) void enter();
+if (isPublicJoin(location.hash)) openPublicJoin();
+else if (getToken()) void enter();
 else showAuth();

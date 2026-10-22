@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import { PROXIMITY_RADIUS, TILE } from '../config';
+import { probeWebGL } from './webglProbe';
 import { STATUSES } from '../data/statuses';
 import type { Camera } from './camera';
 import type { Avatar } from './entities';
@@ -74,8 +75,10 @@ export class Stage3D {
 
   private constructor() {}
 
-  static mount(gameCanvas: HTMLCanvasElement, world: World): Stage3D {
+  static async mount(gameCanvas: HTMLCanvasElement, world: World): Promise<Stage3D> {
     const stage = new Stage3D();
+    const ready = await probeWebGL(2000);
+    if (!ready) return stage;
     try {
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
       const gl = renderer.getContext();
@@ -121,6 +124,10 @@ export class Stage3D {
       return stage;
     } catch (error) {
       console.error(error);
+      stage.ok = false;
+      stage.renderer?.dispose();
+      stage.renderer?.domElement.remove();
+      stage.renderer = null;
       return stage;
     }
   }

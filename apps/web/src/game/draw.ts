@@ -51,6 +51,7 @@ export function rng(seed: number) {
 }
 
 export function shade(hex: string, amt: number) {
+  if (!hex || hex[0] !== '#') return hex || '#888888';
   const n = parseInt(hex.slice(1), 16);
   let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
   r = Math.max(0, Math.min(255, Math.round(r + amt * 255)));

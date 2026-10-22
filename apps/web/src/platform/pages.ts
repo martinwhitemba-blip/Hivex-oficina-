@@ -60,6 +60,21 @@ export function renderPasswordGate(root: HTMLElement, onDone: () => void) {
   };
 }
 
+export function paintSessionNotice(root: HTMLElement, name: string, onLogout: () => void, onOffice: () => void) {
+  const card = root.querySelector('.auth-card');
+  if (!card || root.querySelector('#session-notice')) return;
+  const box = document.createElement('div');
+  box.className = 'session-notice';
+  box.innerHTML = `<p id="session-notice">Has iniciado sesión como ${esc(name)}.</p>
+    <div class="join-actions">
+      <button class="btn" id="logout-continue" type="button">Cerrar sesión y continuar</button>
+      <button class="btn" id="go-office" type="button">Ir a mi oficina</button>
+    </div>`;
+  card.prepend(box);
+  box.querySelector('#logout-continue')?.addEventListener('click', onLogout);
+  box.querySelector('#go-office')?.addEventListener('click', onOffice);
+}
+
 export function renderAuth(root: HTMLElement, onDone: () => void) {
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const mode = location.hash.startsWith('#/registro') ? 'registro' : location.hash.startsWith('#/unirse') ? 'unirse' : location.hash.startsWith('#/codigo') ? 'codigo' : location.hash.startsWith('#/activar') ? 'activar' : 'entrar';
@@ -947,9 +962,10 @@ async function renderChat(root: HTMLElement, session: Session, socket: Socket | 
     log.scrollTop = log.scrollHeight;
   };
   const paintPeers = () => {
-    const total = personas.reduce((sum, person) => sum + person.unread, 0);
+    const total = personas.reduce((sum, person) => sum + (Number(person.unread) || 0), 0);
     badge.hidden = total === 0;
-    badge.textContent = String(total);
+    badge.textContent = total ? String(total) : '';
+    window.dispatchEvent(new CustomEvent('hivex-unread', { detail: total }));
     peerBox.innerHTML = personas.map((person) => `<button class="peer-row ${person.id === selected && mode === 'directos' ? 'on' : ''}" data-peer="${esc(person.id)}" type="button">
       <span><b>${esc(person.name)}</b><span class="muted">${esc(person.puesto || 'Compañero')}${person.ultimo ? ' · ' + esc(person.ultimo.body) : ''}</span></span>
       ${person.unread ? `<span class="count-badge">${person.unread}</span>` : ''}

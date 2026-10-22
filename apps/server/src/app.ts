@@ -45,12 +45,15 @@ export async function buildApp() {
   registerRoutes(app);
 
   if (env.serveStatic && fs.existsSync(env.webDist)) {
-    await app.register(fastifyStatic, { root: env.webDist, prefix: '/', decorateReply: false });
+    await app.register(fastifyStatic, { root: env.webDist, prefix: '/', decorateReply: false, wildcard: false });
     app.setNotFoundHandler((req, reply) => {
-      if (req.url.startsWith('/api') || req.url.startsWith('/socket.io') || req.url.startsWith('/uploads')) {
+      const pathName = req.url.split('?')[0];
+      if (pathName.startsWith('/api') || pathName.startsWith('/socket.io') || pathName.startsWith('/uploads')) {
         return reply.code(404).send({ error: 'No encontrado' });
       }
-      return reply.type('text/html').send(fs.readFileSync(path.join(env.webDist, 'index.html')));
+      // Una ruta de la aplicación (#/unirse, /codigo, …) no es un archivo.
+      // Responder 200 con el index evita el HTML "Not Found" de Fastify.
+      return reply.code(200).type('text/html').send(fs.readFileSync(path.join(env.webDist, 'index.html')));
     });
   }
 

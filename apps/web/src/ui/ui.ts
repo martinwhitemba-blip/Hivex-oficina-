@@ -53,6 +53,7 @@ export class UI {
   private minimap!: Minimap;
   private toastTimer = 0;
   private filter = '';
+  private directUnread = 0;
 
   constructor(private root: HTMLElement, private game: Game, private media: ProximityMediaProvider, private brand: BrandAssets, private hooks: OfficeHooks) {
     this.build();
@@ -320,6 +321,27 @@ export class UI {
     return bg;
   }
   showHelp(v: boolean) { this.helpEl.classList.toggle('show', v); }
+
+  setDirectUnread(count: number) {
+    this.directUnread = Math.max(0, Math.floor(count) || 0);
+    const button = this.root.querySelector<HTMLButtonElement>('[data-view=chat]');
+    if (!button) return;
+    let badge = button.querySelector<HTMLElement>('.badge');
+    if (this.directUnread <= 0) {
+      badge?.remove();
+      return;
+    }
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'badge';
+      button.append(badge);
+    }
+    badge.textContent = String(this.directUnread);
+  }
+
+  bumpDirectUnread(by = 1) {
+    this.setDirectUnread(this.directUnread + by);
+  }
 
   setActive(view: string) {
     this.root.querySelectorAll<HTMLButtonElement>('.rail button[data-view]').forEach((button) => {

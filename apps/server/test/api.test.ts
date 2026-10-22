@@ -141,6 +141,9 @@ describe('API de empresa', () => {
     const inbox = await json('GET', '/api/directos', tokenEva);
     const row = inbox.body.personas.find((person: { id: string; unread: number }) => person.id === anaId);
     expect(row.unread).toBe(1);
+    expect(inbox.body.noLeidos).toBe(1);
+    const hudUnread = await json('GET', '/api/oficina/hud', tokenEva);
+    expect(hudUnread.body.directUnread).toBe(1);
 
     const crossSend = await json('POST', `/api/directos/${eva.id}`, tokenB, { body: 'hola desde fuera' });
     expect(crossSend.status).toBe(404);
@@ -154,6 +157,9 @@ describe('API de empresa', () => {
     expect(thread.body.mensajes.map((message: { body: string }) => message.body)).toEqual(['¿Sigues en Ventas?']);
     const after = await json('GET', '/api/directos', tokenEva);
     expect(after.body.personas.find((person: { id: string; unread: number }) => person.id === anaId).unread).toBe(0);
+    expect(after.body.noLeidos).toBe(0);
+    const hudRead = await json('GET', '/api/oficina/hud', tokenEva);
+    expect(hudRead.body.directUnread).toBe(0);
 
     const self = await json('POST', `/api/directos/${anaId}`, tokenA, { body: 'yo' });
     expect(self.status).toBe(400);
@@ -532,5 +538,31 @@ describe('API de empresa', () => {
     expect(after.body.actual.limite).toBeNull();
     const starter = await prisma.plan.findUnique({ where: { code: 'starter' } });
     expect(starter?.maxWorkers).toBe(8);
+  });
+
+  it('una invitación usada o caducada se explica, también con sesión iniciada', async () => {
+    const owner = await json('POST', '/api/auth/registro', undefined, {
+      name: 'Olga Invitación', email: 'olga@invitacion.test', password: 'clave-segura', companyName: 'Invitaciones SA',
+    });
+    const token = owner.body.token as string;
+    const invite = await json('POST', '/api/invitaciones', token, { email: 'nueva@invitacion.test', role: 'empleado' });
+    expect(invite.status).toBe(200);
+    const code = invite.body.code as string;
+
+    await prisma.invite.update({ where: { code }, data: { expiresAt: new Date(Date.now() - 60_000) } });
+    const expired = await json('GET', `/api/invitaciones/${code}`, token);
+    expect(expired.status).toBe(404);
+    expect(String(expired.body.error)).toMatch(/invitación no es válida o ha caducado/i);
+    const expiredPost = await json('POST', `/api/invitaciones/${code}/aceptar`, token, { name: 'Nueva', password: 'clave-segura' });
+    expect(expiredPost.status).toBe(404);
+    expect(String(expiredPost.body.error)).toMatch(/invitación no es válida o ha caducado/i);
+
+    const fresh = await json('POST', '/api/invitaciones', token, { email: 'usada@invitacion.test', role: 'empleado' });
+    const usedCode = fresh.body.code as string;
+    const accepted = await json('POST', `/api/invitaciones/${usedCode}/aceptar`, undefined, { name: 'Usada', password: 'clave-segura' });
+    expect(accepted.status).toBe(200);
+    const again = await json('GET', `/api/invitaciones/${usedCode}`, token);
+    expect(again.status).toBe(404);
+    expect(String(again.body.error)).toMatch(/invitación no es válida o ha caducado/i);
   });
 });

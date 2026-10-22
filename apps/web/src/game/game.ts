@@ -114,9 +114,13 @@ export class Game {
     // Zoom inicial según tamaño de pantalla (móvil más alejado para ver más oficina).
     this.camera.setZoom(Math.min(window.innerWidth, window.innerHeight) < 560 ? 0.72 : 0.85);
     this.camera.follow(this.player.x, this.player.y - 10, 0, true);
-    this.stage = Stage3D.mount(this.canvas, this.world);
     this.focusKeyboard();
     requestAnimationFrame(this.loop);
+  }
+
+  /** 3D después de pintar la interfaz. Si WebGL no responde, se queda el plano 2D. */
+  async mount3d() {
+    this.stage = await Stage3D.mount(this.canvas, this.world);
   }
 
   /** El lienzo recibe WASD aunque antes hubiera un input del panel. */
