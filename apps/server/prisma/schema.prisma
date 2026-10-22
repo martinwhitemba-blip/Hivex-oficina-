@@ -123,6 +123,7 @@ model Area {
   messages  ChatMessage[]
 
   @@unique([companyId, name])
+  @@index([companyId])
 }
 
 model JobTitle {
@@ -134,6 +135,7 @@ model JobTitle {
   invites   Invite[]
 
   @@unique([companyId, name])
+  @@index([companyId])
 }
 
 model KpiDefinition {
@@ -230,6 +232,8 @@ model Invite {
   company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   area       Area?     @relation(fields: [areaId], references: [id], onDelete: SetNull)
   jobTitle   JobTitle? @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 model OfficeRoom {
@@ -243,6 +247,7 @@ model OfficeRoom {
   area      Area?   @relation(fields: [areaId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, mapRoomId])
+  @@index([companyId])
 }
 
 model DeskAssignment {
@@ -254,6 +259,7 @@ model DeskAssignment {
   membership   Membership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, seatId])
+  @@index([companyId, membershipId])
 }
 
 model ChatMessage {

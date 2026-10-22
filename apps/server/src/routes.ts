@@ -30,6 +30,7 @@ import { registerOwnerRoutes } from './ownerRoutes';
 import { assertJoinRate, clientIp } from './rateLimit';
 import { activationCsv, importPeople, rowsFromRecords } from './peopleImport';
 import { registerBrandRoutes } from './branding';
+import { companyScope, pageArgs } from './tenant';
 
 const emailSchema = z.string().trim().email('El correo no es válido').transform((v) => v.toLowerCase());
 const passwordSchema = z.string().min(8, 'La contraseña debe tener al menos 8 caracteres');
@@ -493,8 +494,13 @@ export function registerRoutes(app: FastifyInstance) {
 
   app.get('/api/empleados', async (req) => {
     const actor = await auth(req);
-    const people = await loadPeople(actor.company.id);
-    return people.map((person) => memberDto(actor, person));
+    const people = (await loadPeople(actor.company.id)).map((person) => memberDto(actor, person));
+    const page = pageArgs(req.query as { take?: string; cursor?: string }, people.length || 1);
+    if (!page.paged) return people;
+    const found = page.cursor ? people.findIndex((person) => person.id === page.cursor) : 0;
+    const start = found < 0 ? 0 : found;
+    const items = people.slice(start, start + page.take);
+    return { items, next: people[start + page.take]?.id ?? null };
   });
 
   app.get('/api/empleados/plantilla.csv', async (req, reply) => {
@@ -1036,15 +1042,21 @@ export function registerRoutes(app: FastifyInstance) {
 
   app.get('/api/chat', async (req) => {
     const actor = await auth(req);
-    const areaId = (req.query as { areaId?: string }).areaId || '';
+    const query = req.query as { areaId?: string; take?: string; cursor?: string };
+    const areaId = query.areaId || '';
     assertChatArea(actor, areaId);
+    const page = pageArgs(query, 80);
     const messages = await prisma.chatMessage.findMany({
-      where: { companyId: actor.company.id, areaId: areaId || null },
+      where: { ...companyScope(actor.company.id), areaId: areaId || null },
       include: { author: true },
-      orderBy: { createdAt: 'desc' },
-      take: 80,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: page.take + 1,
+      ...(page.cursor ? { cursor: { id: page.cursor }, skip: 1 } : {}),
     });
-    return messages.reverse().map(chatDto);
+    const hasMore = messages.length > page.take;
+    const slice = (hasMore ? messages.slice(0, page.take) : messages).reverse().map(chatDto);
+    if (!page.paged) return slice;
+    return { items: slice, next: hasMore ? messages[page.take - 1]?.id ?? null : null };
   });
 
   app.post('/api/chat', async (req) => {
@@ -1167,14 +1179,14 @@ function ref(actor: Actor) {
 }
 
 async function ownArea(actor: Actor, id: string) {
-  const area = await prisma.area.findFirst({ where: { id, companyId: actor.company.id } });
+  const area = await prisma.area.findFirst({ where: { id, ...companyScope(actor.company.id) } });
   if (!area) throw new HttpError(404, 'Área no encontrada');
   return area;
 }
 
 async function loadPeople(companyId: string) {
   return prisma.membership.findMany({
-    where: { companyId, active: true },
+    where: { ...companyScope(companyId), active: true },
     include: { area: true, jobTitle: true, user: true, desks: true },
     orderBy: { name: 'asc' },
   });
@@ -1182,7 +1194,7 @@ async function loadPeople(companyId: string) {
 
 async function loadPerson(companyId: string, id: string) {
   const person = await prisma.membership.findFirst({
-    where: { id, companyId, active: true },
+    where: { id, ...companyScope(companyId), active: true },
     include: { area: { include: { kpis: { orderBy: { sort: 'asc' } } } }, jobTitle: true, user: true, desks: true },
   });
   if (!person) throw new HttpError(404, 'Empleado no encontrado');

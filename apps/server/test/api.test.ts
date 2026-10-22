@@ -476,4 +476,24 @@ describe('API de empresa', () => {
     const leaked = await json('GET', '/api/marca', tokenB);
     expect(leaked.body.logoUrl).toBeNull();
   });
+
+  it('pagina el equipo y no deja escribir en otra empresa', async () => {
+    const owner = await json('POST', '/api/auth/entrar', undefined, { email: 'ana@empresa-a.test', password: 'clave-segura' });
+    const other = await json('POST', '/api/auth/entrar', undefined, { email: 'beto@empresa-b.test', password: 'clave-segura' });
+    const full = await json('GET', '/api/empleados', owner.body.token);
+    expect(Array.isArray(full.body)).toBe(true);
+    expect(full.body.length).toBeGreaterThan(1);
+    const page = await json('GET', '/api/empleados?take=1', owner.body.token);
+    expect(page.body.items).toHaveLength(1);
+    expect(page.body.next).toBeTruthy();
+    const next = await json('GET', `/api/empleados?take=1&cursor=${page.body.next}`, owner.body.token);
+    expect(next.body.items).toHaveLength(1);
+    expect(next.body.items[0].id).not.toBe(page.body.items[0].id);
+    const hack = await json('PATCH', `/api/empleados/${full.body[0].id}`, other.body.token, { name: 'Robado' });
+    expect(hack.status).toBe(404);
+    const chat = await json('GET', '/api/chat?take=5', owner.body.token);
+    expect(Array.isArray(chat.body.items)).toBe(true);
+    const legacy = await json('GET', '/api/chat', owner.body.token);
+    expect(Array.isArray(legacy.body)).toBe(true);
+  });
 });

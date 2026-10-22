@@ -11,6 +11,18 @@ import { HttpError } from './http';
 import { registerRoutes } from './routes';
 import { attachSocket } from './socket';
 
+async function attachRedis(io: Server) {
+  const url = process.env.REDIS_URL;
+  if (!url) return;
+  const { createClient } = await import('redis');
+  const { createAdapter } = await import('@socket.io/redis-adapter');
+  const pub = createClient({ url });
+  const sub = pub.duplicate();
+  await pub.connect();
+  await sub.connect();
+  io.adapter(createAdapter(pub, sub));
+}
+
 export async function buildApp() {
   const app = Fastify({ logger: env.nodeEnv !== 'test', bodyLimit: 8 * 1024 * 1024 });
   const origins = () => allowedOrigins();
@@ -59,6 +71,7 @@ export async function buildApp() {
       },
     },
   });
+  await attachRedis(io);
   attachSocket(io);
   installAccessGate(app.server);
   return { app, io };

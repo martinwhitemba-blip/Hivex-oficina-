@@ -961,7 +961,8 @@ async function renderChat(root: HTMLElement, session: Session, socket: Socket | 
     if (mode === 'canales') {
       title.textContent = channel.selectedOptions[0]?.textContent || 'General';
       try {
-        paintChannel(await api(`/api/chat?areaId=${encodeURIComponent(channel.value)}`));
+        const channelPage = await api<{ id?: string; author: string; body: string; createdAt: string }[] | { items: { id?: string; author: string; body: string; createdAt: string }[] }>(`/api/chat?areaId=${encodeURIComponent(channel.value)}&take=80`);
+        paintChannel(Array.isArray(channelPage) ? channelPage : channelPage.items);
       } catch (error) { noteError(out, error); }
       return;
     }

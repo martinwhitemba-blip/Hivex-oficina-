@@ -67,6 +67,48 @@ interface PresenceState {
 }
 
 const lastStates = new Map<string, Map<string, PresenceState>>();
+const lastBroadcast = new Map<string, number>();
+const pendingPresence = new Map<string, { timer: ReturnType<typeof setTimeout>; state: PresenceState }>();
+const INTEREST_UNDER = 40;
+const INTEREST_RADIUS = 720;
+
+function roomCrowd(io: Server, room: string) {
+  return io.sockets.adapter.rooms.get(room)?.size ?? 1;
+}
+
+function closeEnough(viewer: Socket, other: { areaId?: string | null; x: number; y: number }) {
+  if (viewer.data.areaId && other.areaId && viewer.data.areaId === other.areaId) return true;
+  const dx = Number(viewer.data.x || 0) - other.x;
+  const dy = Number(viewer.data.y || 0) - other.y;
+  return Math.hypot(dx, dy) < INTEREST_RADIUS;
+}
+
+function emitPresence(io: Server, socket: Socket, room: string, companyId: string, state: PresenceState, immediate: boolean) {
+  const now = Date.now();
+  const previous = lastBroadcast.get(socket.id) || 0;
+  if (!immediate && now - previous < 80) {
+    const queued = pendingPresence.get(socket.id);
+    if (queued) queued.state = state;
+    else {
+      const timer = setTimeout(() => {
+        const item = pendingPresence.get(socket.id);
+        pendingPresence.delete(socket.id);
+        if (item) emitPresence(io, socket, room, companyId, item.state, true);
+      }, 80);
+      pendingPresence.set(socket.id, { timer, state });
+    }
+    return;
+  }
+  lastBroadcast.set(socket.id, now);
+  if (roomCrowd(io, room) <= INTEREST_UNDER) {
+    socket.to(room).emit('office:state', state);
+    return;
+  }
+  for (const peer of io.sockets.sockets.values()) {
+    if (peer.data.companyId !== companyId || peer.id === socket.id) continue;
+    if (closeEnough(peer, { areaId: socket.data.areaId ?? null, x: state.x, y: state.y })) peer.emit('office:state', state);
+  }
+}
 
 export function attachSocket(io: Server) {
   ioRef = io;
@@ -105,14 +147,17 @@ export function attachSocket(io: Server) {
       const state = sanitize(incoming, socket);
       const bucket = lastStates.get(companyId) ?? new Map<string, PresenceState>();
       lastStates.set(companyId, bucket);
+      const crowded = roomCrowd(io, room) > INTEREST_UNDER;
       for (const previous of bucket.values()) {
-        if (previous.id !== membershipId) socket.emit('office:state', previous);
+        if (previous.id === membershipId) continue;
+        if (crowded && Math.hypot(previous.x - state.x, previous.y - state.y) >= INTEREST_RADIUS) continue;
+        socket.emit('office:state', previous);
       }
       bucket.set(membershipId, state);
       socket.data.liveStatus = state.status;
       socket.data.x = state.x;
       socket.data.y = state.y;
-      socket.to(room).emit('office:state', state);
+      emitPresence(io, socket, room, companyId, state, true);
       void broadcastPanel(companyId);
     });
 
@@ -124,7 +169,7 @@ export function attachSocket(io: Server) {
       socket.data.liveStatus = state.status;
       socket.data.x = state.x;
       socket.data.y = state.y;
-      socket.to(room).emit('office:state', state);
+      emitPresence(io, socket, room, companyId, state, false);
     });
 
     socket.on('panel:sync', () => { void broadcastPanel(companyId); });
@@ -192,6 +237,10 @@ export function attachSocket(io: Server) {
     });
 
     socket.on('disconnect', () => {
+      const pending = pendingPresence.get(socket.id);
+      if (pending) clearTimeout(pending.timer);
+      pendingPresence.delete(socket.id);
+      lastBroadcast.delete(socket.id);
       lastStates.get(companyId)?.delete(membershipId);
       socket.to(room).emit('office:leave', membershipId);
       void broadcastPanel(companyId);

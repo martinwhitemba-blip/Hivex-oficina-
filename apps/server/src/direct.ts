@@ -1,6 +1,7 @@
 import { HttpError } from './http';
 import { prisma } from './prisma';
 import { photoUrl } from './services';
+import { companyScope } from './tenant';
 
 export interface DirectDto {
   id: string;
@@ -15,7 +16,7 @@ export interface DirectDto {
 export async function assertCoworker(companyId: string, selfId: string, otherId: string) {
   if (!otherId || otherId === selfId) throw new HttpError(400, 'Elige a un compañero de tu empresa');
   const person = await prisma.membership.findFirst({
-    where: { id: otherId, companyId, active: true },
+    where: { id: otherId, ...companyScope(companyId), active: true },
     include: { jobTitle: true },
   });
   if (!person) throw new HttpError(404, 'Esa persona no está en tu empresa');
@@ -43,29 +44,27 @@ export function directDto(message: {
 
 export async function directDirectory(companyId: string, selfId: string) {
   const people = await prisma.membership.findMany({
-    where: { companyId, active: true, id: { not: selfId } },
+    where: { ...companyScope(companyId), active: true, id: { not: selfId } },
     include: { jobTitle: true },
     orderBy: { name: 'asc' },
   });
   const unreadRows = await prisma.directMessage.groupBy({
     by: ['senderId'],
-    where: { companyId, recipientId: selfId, readAt: null },
+    where: { ...companyScope(companyId), recipientId: selfId, readAt: null },
     _count: { _all: true },
   });
   const unread = new Map(unreadRows.map((row) => [row.senderId, row._count._all]));
-  const latest = await Promise.all(people.map(async (person) => {
-    const last = await prisma.directMessage.findFirst({
-      where: {
-        companyId,
-        OR: [
-          { senderId: selfId, recipientId: person.id },
-          { senderId: person.id, recipientId: selfId },
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { person, last };
-  }));
+  const history = await prisma.directMessage.findMany({
+    where: { ...companyScope(companyId), OR: [{ senderId: selfId }, { recipientId: selfId }] },
+    orderBy: { createdAt: 'desc' },
+    take: 2000,
+  });
+  const lastByPerson = new Map<string, (typeof history)[number]>();
+  for (const message of history) {
+    const other = message.senderId === selfId ? message.recipientId : message.senderId;
+    if (!lastByPerson.has(other)) lastByPerson.set(other, message);
+  }
+  const latest = people.map((person) => ({ person, last: lastByPerson.get(person.id) || null }));
   return latest
     .map(({ person, last }) => ({
       id: person.id,
