@@ -111,9 +111,11 @@ async function avatar(companyId: string, membershipId: string, name: string, col
 
 async function main() {
   await ensurePlans();
-  const emails = PEOPLE.map((person) => person.email);
-  await prisma.company.deleteMany({ where: { slug: DEMO_SLUG } });
-  await prisma.user.deleteMany({ where: { email: { in: emails } } });
+  const existing = await prisma.company.findUnique({ where: { slug: DEMO_SLUG } });
+  if (existing) {
+    console.log('La empresa de demostración ya existe. No se toca: invitaciones, personas y mensajes siguen ahí.');
+    return;
+  }
 
   const passwordHash = await hashPassword(DEMO_PASSWORD);
   const company = await prisma.company.create({

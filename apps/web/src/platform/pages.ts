@@ -32,7 +32,7 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
     <img class="logo" src="${logoUrl}" alt="HIVEX">
     <h1>${mode === 'registro' ? 'Crea tu empresa' : mode === 'unirse' ? 'Únete al equipo' : 'Entra en tu oficina'}</h1>
     <p class="lead">HIVEX es el sistema operativo de capital humano: cada empresa configura sus áreas y ves, en el momento, qué está haciendo cada persona.</p>
-    <div class="err" hidden></div>
+    <div class="err" hidden role="alert"></div>
     ${mode !== 'unirse' ? '<label>Correo</label><input name="email" type="email" required autocomplete="username">' : '<label>Código de invitación</label><input name="code" required value="' + esc(params.get('code') || '') + '">'}
     ${mode !== 'entrar' ? '<label>Tu nombre</label><input name="name" required>' : ''}
     ${mode === 'registro' ? '<label>Nombre de la empresa</label><input name="companyName" required>' : ''}
@@ -42,7 +42,7 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
       <a href="#/entrar">Ya tengo cuenta</a>
       <a href="#/registro">Crear empresa</a>
     </div>
-    <div class="demo-box">Prueba la demo: <b>martin@hivex.demo</b> / <b>hivex-demo</b>. También puedes entrar como Hugo, Martín, Luis, Naomi o Maite con el mismo dominio de correo de la demo y la misma contraseña.</div>
+    <div class="demo-box">Prueba la demo: <b>martin@hivex.demo</b> / <b>hivex-demo</b>. También puedes entrar como Hugo, Martín, Luis, Naomi o Maite con el mismo dominio de correo de la demo y la misma contraseña.${mode === 'entrar' ? '<br>Si te invitaron, entra con el correo de la invitación y la contraseña que elegiste al unirte.' : ''}</div>
   </form>`;
   const form = root.querySelector('form')!;
   const err = root.querySelector('.err') as HTMLElement;
@@ -54,13 +54,20 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
       const path = mode === 'registro' ? '/api/auth/registro' : mode === 'unirse' ? `/api/invitaciones/${data.code}/aceptar` : '/api/auth/entrar';
       const result = await api<{ token: string }>(path, { method: 'POST', body: JSON.stringify(data) });
       localStorage.setItem('hivex_token', result.token);
-      location.hash = '#/dueno';
+      location.hash = mode === 'unirse' ? '#/oficina' : '#/dueno';
       onDone();
     } catch (error) {
       err.hidden = false;
-      err.textContent = error instanceof Error ? error.message : 'Error';
+      const message = error instanceof Error ? error.message : '';
+      err.textContent = message || (mode === 'unirse' ? 'La invitación no es válida o ha caducado' : 'No se pudo completar la acción');
     }
   };
+  if (mode === 'unirse' && params.get('code')) {
+    void api<{ email: string; empresa: string }>(`/api/invitaciones/${encodeURIComponent(params.get('code') || '')}`).catch((error) => {
+      err.hidden = false;
+      err.textContent = error instanceof Error && error.message ? error.message : 'La invitación no es válida o ha caducado';
+    });
+  }
 }
 
 export async function renderView(root: HTMLElement, view: string, session: Session, socket: Socket | null) {

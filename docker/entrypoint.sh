@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 cd /app/apps/server
-# Idempotente: ajusta el provider, alinea el esquema y, si se pide, rehace solo la empresa demo.
+# Idempotente: ajusta el provider, alinea el esquema y, si se pide, crea la demo solo si falta.
 node scripts/prisma-provider.mjs
 npx prisma generate
 npx prisma db push --accept-data-loss

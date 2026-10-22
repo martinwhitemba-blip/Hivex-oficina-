@@ -35,7 +35,7 @@ Para parar, cierra la terminal. Los datos quedan en un archivo SQLite dentro de 
 docker compose up --build
 ```
 
-Abre http://localhost:8787 . El mismo servidor entrega la web y la API. La primera vez crea la empresa de demostración (`SEED_ON_BOOT=1`).
+Abre http://localhost:8787 . El mismo servidor entrega la web y la API. Con `SEED_ON_BOOT=1` crea la empresa de demostración solo si aún no existe. Los arranques siguientes la dejan como está.
 
 ## En Render (plan gratuito, URL de pruebas)
 
@@ -45,7 +45,7 @@ Abre http://localhost:8787 . El mismo servidor entrega la web y la API. La prime
 4. Salud del servicio: `/api/salud` responde `{"ok":true}` sin sesión, para que el chequeo de Render no falle.
 5. Dentro de la app, entra con `martin@hivex.demo` / `hivex-demo`.
 
-El arranque aplica el esquema con `prisma db push` (también la tabla de mensajes directos; el SQL está en `apps/server/prisma/migrations/`) y vuelve a cargar la empresa de demostración. Se puede ejecutar otra vez: no duplica esa empresa y no borra las demás.
+El arranque aplica el esquema con `prisma db push` (también la tabla de mensajes directos; el SQL está en `apps/server/prisma/migrations/`). `SEED_ON_BOOT=1` crea la empresa de demostración la primera vez. Si esa empresa ya está —aunque sea la que estás usando de verdad—, un redespliegue o un despertar del plan gratuito no la borra: se quedan las invitaciones, las personas que aceptaron, las áreas, los chats y los mensajes directos.
 
 Límites del plan gratuito, para que no pillen por sorpresa:
 
@@ -87,7 +87,7 @@ No rellenes un dominio personalizado en el blueprint. Cuando lo quieras, se aña
 | `ACCESS_USER`, `ACCESS_PASSWORD` | Opcionales. Si las dos tienen valor, cierran la web, la API y el WebSocket. Vacías, el sitio es público. No van en el blueprint |
 | `PORT` | Puerto. El hosting suele inyectarlo |
 | `SERVE_STATIC` | `1` para que el API también sirva la web compilada |
-| `SEED_ON_BOOT` | `1` vuelve a cargar la empresa demo en cada arranque, sin duplicarla ni borrar las demás |
+| `SEED_ON_BOOT` | `1` crea la empresa demo solo si no existe. No borra datos en los arranques siguientes |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | Opcional. Si faltan, el audio es directo entre navegadores |
 
 El servidor también acepta `RENDER_EXTERNAL_URL` y `RAILWAY_PUBLIC_DOMAIN` como orígenes, para no tener que adivinar el nombre.
