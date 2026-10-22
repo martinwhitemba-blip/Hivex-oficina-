@@ -25,6 +25,7 @@ export interface GameEvents {
   lock: { locked: boolean };
   follow: { id: string | null; name?: string };
   toast: { text: string };
+  dm: { id: string; name: string };
 }
 type Listener<K extends keyof GameEvents> = (e: GameEvents[K]) => void;
 
@@ -45,7 +46,7 @@ export class Game {
   readonly camera: Camera;
   readonly player: Avatar;
   readonly npcs: Npc[] = [];
-  readonly remotes = new Map<string, { avatar: Avatar; target: AvatarState }>();
+  readonly remotes = new Map<string, { avatar: Avatar; target: AvatarState; fromX: number; fromY: number; toX: number; toY: number; t0: number; dur: number }>();
   readonly mapRenderer: MapRenderer;
   private ctx: Ctx;
   private input = new Input();
@@ -221,8 +222,12 @@ export class Game {
     const r = this.canvas.getBoundingClientRect();
     const p = this.camera.screenToWorld(clientX - r.left, clientY - r.top);
     // ¿toque sobre un avatar? → ir hasta él
-    const hit = this.allAvatars().find((a) => a !== this.player && Math.abs(a.x - p.x) < 14 && p.y < a.y + 6 && p.y > a.y - 36);
-    if (hit) { this.walkTo(hit.id); return; }
+    const hit = this.allAvatars().find((a) => a !== this.player && Math.abs(a.x - p.x) < 18 && p.y < a.y + 8 && p.y > a.y - 52);
+    if (hit) {
+      if (this.remotes.has(hit.id)) this.emit('dm', { id: hit.id, name: hit.name });
+      else this.emit('toast', { text: 'Ese personaje de demostración no recibe mensajes' });
+      return;
+    }
     this.stopFollow();
     this.moveTo(p.x, p.y);
   }
@@ -279,6 +284,7 @@ export class Game {
   }
 
   private faceOf(look: AvatarLook) {
+    if (!look.usePhoto) return undefined;
     const url = look.photoUrl;
     if (!url) return undefined;
     let image = this.faces.get(url);
@@ -304,15 +310,27 @@ export class Game {
     this.updatePlayer(dt);
     for (const n of this.npcs) n.update(dt, now);
     for (const r of this.remotes.values()) {
-      const a = r.avatar, s = r.target;
-      a.x += (s.x - a.x) * Math.min(1, dt * 10);
-      a.y += (s.y - a.y) * Math.min(1, dt * 10);
-      a.dir = s.dir; a.moving = s.moving; a.status = s.status; a.mode = s.mode; a.sitting = !!s.sitting;
-      a.name = s.name; a.role = s.role; a.look = s.look;
+      const a = r.avatar;
+      const s = r.target;
+      const u = r.dur <= 0 ? 1 : Math.min(1, (now - r.t0) / r.dur);
+      const ease = u * u * (3 - 2 * u);
+      a.x = r.fromX + (r.toX - r.fromX) * ease;
+      a.y = r.fromY + (r.toY - r.fromY) * ease;
+      a.dir = s.dir;
+      a.moving = s.moving || u < 0.98;
+      a.status = s.status;
+      a.mode = s.mode;
+      a.sitting = !!s.sitting;
+      a.name = s.name;
+      a.role = s.role;
+      a.look = s.look;
+      a.glide(dt, a.moving);
     }
-    // cámara
     const target = this.followId ? this.allAvatars().find((a) => a.id === this.followId) ?? this.player : this.player;
-    this.camera.follow(target.x, target.y - 10, dt);
+    const ahead = target.moving ? 26 : 0;
+    const lookX = target.dir === 'left' ? -ahead : target.dir === 'right' ? ahead : 0;
+    const lookY = target.dir === 'up' ? -ahead : target.dir === 'down' ? ahead * 0.4 : 0;
+    this.camera.follow(target.x + lookX, target.y - 12 + lookY, dt);
     this.updateProximity();
     this.updateRoom();
     // red: ~10 Hz
@@ -328,16 +346,22 @@ export class Game {
       p.path = [];
       p.sitting = false;
       this.stopFollow();
+      p.glide(dt, true);
       const len = Math.hypot(ax.x, ax.y);
-      const mag = Math.min(1, len); // joystick analógico
-      const vx = (ax.x / len) * p.speed * mag * dt, vy = (ax.y / len) * p.speed * mag * dt;
+      const mag = Math.min(1, len);
+      const pace = Math.max(0.2, p.pace);
+      const vx = (ax.x / len) * p.speed * mag * pace * dt;
+      const vy = (ax.y / len) * p.speed * mag * pace * dt;
       p.faceTowards(ax.x, ax.y);
-      // deslizamiento por ejes separados
       if (this.world.canStand(p.x + vx, p.y, rad)) p.x += vx;
       if (this.world.canStand(p.x, p.y + vy, rad)) p.y += vy;
       p.moving = true;
-    } else {
+    } else if (p.path.length) {
+      p.glide(dt, true);
       p.followPath(dt);
+    } else {
+      p.glide(dt, false);
+      p.moving = false;
     }
   }
 
@@ -370,9 +394,21 @@ export class Game {
   }
 
   private onRemoteState(s: AvatarState) {
+    const now = performance.now();
     const r = this.remotes.get(s.id);
-    if (r) r.target = s;
-    else this.remotes.set(s.id, { avatar: Object.assign(new Avatar(s.id, s.name, s.role, s.look, s.x, s.y), { status: s.status, sitting: !!s.sitting }), target: s });
+    if (r) {
+      const gap = Math.hypot(s.x - r.avatar.x, s.y - r.avatar.y);
+      r.fromX = r.avatar.x;
+      r.fromY = r.avatar.y;
+      r.toX = s.x;
+      r.toY = s.y;
+      r.t0 = now;
+      r.dur = gap > 240 ? 0 : 150;
+      r.target = s;
+    } else {
+      const avatar = Object.assign(new Avatar(s.id, s.name, s.role, s.look, s.x, s.y), { status: s.status, sitting: !!s.sitting });
+      this.remotes.set(s.id, { avatar, target: s, fromX: s.x, fromY: s.y, toX: s.x, toY: s.y, t0: now, dur: 0 });
+    }
   }
 
   // ───────────── render ─────────────
@@ -418,10 +454,10 @@ export class Game {
     }
     for (const a of avatars) {
       drawNameTag(ctx, a.x, a.y + (a.mode === 'car' ? 12 : 0), a === this.player ? `${a.name.split(' ')[0]} (tú)` : a.name.split(' ')[0], a.status, a === this.player);
-      if (a.status === 'en_llamada' && a !== this.player) drawStatusIcon(ctx, a.x + 11, a.y - 34, '📞');
+      if (a.status === 'en_llamada' && a !== this.player) drawStatusIcon(ctx, a.x + 14, a.y - 52, '📞');
       if (a.bubble) {
         if (now > a.bubble.until) a.bubble = null;
-        else drawBubble(ctx, a.x, a.y - (a.mode === 'car' ? 34 : 38), a.bubble.text, Math.min(1, (a.bubble.until - now) / 300));
+        else drawBubble(ctx, a.x, a.y - (a.mode === 'car' ? 34 : 56), a.bubble.text, Math.min(1, (a.bubble.until - now) / 300));
       }
     }
   }

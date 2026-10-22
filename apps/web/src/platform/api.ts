@@ -13,7 +13,7 @@ export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const headers = new Headers(opts.headers);
   if (opts.body && !(opts.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   const token = getToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (token) headers.set('X-HIVEX-Token', token);
   const response = await fetch(path, { ...opts, headers });
   if (response.status === 401 && !path.includes('/api/auth/')) {
     clearToken();

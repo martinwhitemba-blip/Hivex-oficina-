@@ -20,10 +20,6 @@ services:
         value: "1"
       - key: SEED_ON_BOOT
         value: "1"
-      - key: ACCESS_USER
-        value: hivex
-      - key: ACCESS_PASSWORD
-        generateValue: true
 databases:
   - name: hivex-db
     plan: free

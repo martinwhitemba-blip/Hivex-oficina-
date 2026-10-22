@@ -113,4 +113,48 @@ describe('API de empresa', () => {
     const panelDueno = await json('GET', '/api/dueno', employee.body.token);
     expect(panelDueno.status).toBe(403);
   });
+
+  it('guarda mensajes directos dentro de la empresa y rechaza un puesto inexistente', async () => {
+    const owner = await json('POST', '/api/auth/entrar', undefined, { email: 'ana@empresa-a.test', password: 'clave-segura' });
+    const evaLogin = await json('POST', '/api/auth/entrar', undefined, { email: 'eva@empresa-a.test', password: 'clave-segura' });
+    const beto = await json('POST', '/api/auth/entrar', undefined, { email: 'beto@empresa-b.test', password: 'clave-segura' });
+    const tokenA = owner.body.token as string;
+    const tokenEva = evaLogin.body.token as string;
+    const tokenB = beto.body.token as string;
+    const yo = await json('GET', '/api/auth/yo', tokenA);
+    const anaId = yo.body.membership.id as string;
+    const people = await json('GET', '/api/empleados', tokenA);
+    const eva = people.body.find((person: { name: string; id: string }) => person.name === 'Eva Soto');
+
+    const missing = await json('POST', '/api/invitaciones', tokenA, {
+      email: 'nadie@empresa-a.test', role: 'empleado', jobTitleId: 'puesto-inexistente',
+    });
+    expect(missing.status).toBe(404);
+    expect(String(missing.body.error)).toMatch(/Puesto/);
+
+    const sent = await json('POST', `/api/directos/${eva.id}`, tokenA, { body: '¿Sigues en Ventas?' });
+    expect(sent.status).toBe(200);
+    expect(sent.body.body).toBe('¿Sigues en Ventas?');
+    expect(sent.body.recipientId).toBe(eva.id);
+
+    const inbox = await json('GET', '/api/directos', tokenEva);
+    const row = inbox.body.personas.find((person: { id: string; unread: number }) => person.id === anaId);
+    expect(row.unread).toBe(1);
+
+    const crossSend = await json('POST', `/api/directos/${eva.id}`, tokenB, { body: 'hola desde fuera' });
+    expect(crossSend.status).toBe(404);
+    const crossRead = await json('GET', `/api/directos/${eva.id}`, tokenB);
+    expect(crossRead.status).toBe(404);
+    const outsiders = await json('GET', '/api/directos', tokenB);
+    expect(outsiders.body.personas.some((person: { id: string }) => person.id === eva.id)).toBe(false);
+
+    const thread = await json('GET', `/api/directos/${anaId}`, tokenEva);
+    expect(thread.status).toBe(200);
+    expect(thread.body.mensajes.map((message: { body: string }) => message.body)).toEqual(['¿Sigues en Ventas?']);
+    const after = await json('GET', '/api/directos', tokenEva);
+    expect(after.body.personas.find((person: { id: string; unread: number }) => person.id === anaId).unread).toBe(0);
+
+    const self = await json('POST', `/api/directos/${anaId}`, tokenA, { body: 'yo' });
+    expect(self.status).toBe(400);
+  });
 });

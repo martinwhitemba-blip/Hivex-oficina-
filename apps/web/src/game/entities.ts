@@ -25,6 +25,8 @@ export class Avatar {
   carAngle = -Math.PI / 2;
   bubble: { text: string; until: number } | null = null;
   isNew = false;
+  /** 0 parado, 1 a velocidad plena. Sube y baja con suavidad. */
+  pace = 0;
 
   constructor(id: string, name: string, role: Role, look: AvatarLook, x: number, y: number) {
     this.id = id; this.name = name; this.role = role; this.look = look; this.x = x; this.y = y;
@@ -52,10 +54,18 @@ export class Avatar {
     return true;
   }
 
+  /** Acelera al andar y frena al soltar, en vez de pegar un tirón. */
+  glide(dt: number, going: boolean) {
+    const target = going ? 1 : 0;
+    const k = 1 - Math.exp(-dt * (going ? 8 : 11));
+    this.pace += (target - this.pace) * k;
+    if (!going && this.pace < 0.04) this.pace = 0;
+  }
+
   /** Avanza por la ruta. Devuelve true si llegó al final en este frame. */
   followPath(dt: number): boolean {
     if (!this.path.length) { this.moving = false; return false; }
-    let budget = this.speed * dt * (this.mode === 'car' ? 1 : 0.85);
+    let budget = this.speed * Math.max(0.22, this.pace) * dt * (this.mode === 'car' ? 1 : 0.92);
     while (budget > 0 && this.path.length) {
       const p = this.path[0];
       const dx = p.x - this.x, dy = p.y - this.y;

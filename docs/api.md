@@ -1,6 +1,6 @@
 # API de HIVEX (beta)
 
-Todas las rutas de datos empiezan por `/api` y exigen `Authorization: Bearer <token>`, salvo el alta, el acceso, aceptar una invitación y el webhook de métricas. Cada fila de negocio lleva `companyId`. Un token de una empresa no lee ni escribe datos de otra.
+Todas las rutas de datos empiezan por `/api` y exigen sesión, salvo el alta, el acceso, aceptar una invitación y el webhook de métricas. La aplicación manda el JWT en la cabecera `X-HIVEX-Token`. `Authorization: Bearer <token>` sigue valiendo cuando el sitio no tiene puerta de acceso. Si activas `ACCESS_USER` y `ACCESS_PASSWORD`, `Authorization` queda para esa contraseña HTTP Basic y la sesión va solo en `X-HIVEX-Token`. Cada fila de negocio lleva `companyId`. Un token de una empresa no lee ni escribe datos de otra.
 
 `GET /api/salud` → `{ "ok": true, "servicio": "hivex-beta" }`.
 
@@ -9,7 +9,7 @@ Todas las rutas de datos empiezan por `/api` y exigen `Authorization: Bearer <to
 - `POST /api/auth/registro` `{ email, password, name, companyName }` crea la empresa, el propietario y un plan Starter en prueba de 14 días.
 - `POST /api/auth/entrar` `{ email, password }`.
 - `GET /api/auth/yo` devuelve la sesión.
-- `POST /api/invitaciones` crea un código de 14 días. La respuesta incluye `enlace` (`#/unirse?code=`).
+- `POST /api/invitaciones` crea un código de 14 días. No envía correo. La respuesta incluye `enlace` (`#/unirse?code=`). Si el `jobTitleId` o el `areaId` ya no existen, responde 404 en español.
 - `POST /api/invitaciones/:code/aceptar` `{ name, password }`.
 
 Si el plan no admite más personas, la respuesta es **409** con un texto en español que indica el tope y remite a Plan y uso.
@@ -68,6 +68,13 @@ Socket.IO con `auth.token` igual al JWT.
 - `office:join` / `office:state` / `office:leave` presencia del avatar
 - `office:lock` puerta del despacho
 - `chat:send` `{ body, areaId }` (`areaId` vacío = general)
+- `dm:send` `{ to, body }` mensaje directo. `to` es el id de una persona de la misma empresa. El servidor lo guarda y emite `dm:message` solo a quien escribe y a quien recibe, y solo si su socket es de esa `companyId`.
 - `webrtc:signal` retransmite la señal de audio directo
+
+## Mensajes directos
+
+- `GET /api/directos` lista a los compañeros de tu empresa, con el no leído y el último texto.
+- `GET /api/directos/:id` hilo con esa persona y marca como leídos los que te llegaron. 404 si no es de tu empresa.
+- `POST /api/directos/:id` `{ body }` envía y persiste el mensaje.
 - `presence:ping` suma tiempo conectado (como máximo 60 s por aviso)
 - `panel:sync` pide un `panel:state`

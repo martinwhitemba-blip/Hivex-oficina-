@@ -54,6 +54,22 @@ describe('puerta de acceso', () => {
     });
     expect(open.headers['www-authenticate']).toBeUndefined();
     expect(open.json().error).not.toBe('Acceso restringido');
+
+    const bearerOnly = await app.inject({
+      method: 'GET',
+      url: '/api/auth/yo',
+      headers: { authorization: 'Bearer no-es-la-puerta' },
+    });
+    expect(bearerOnly.statusCode).toBe(401);
+    expect(String(bearerOnly.headers['www-authenticate'])).toContain('HIVEX beta');
+
+    const together = await app.inject({
+      method: 'GET',
+      url: '/api/auth/yo',
+      headers: { authorization: basic(USER, PASSWORD), 'x-hivex-token': 'sesion-de-la-app' },
+    });
+    expect(together.headers['www-authenticate']).toBeUndefined();
+    expect(together.json().error).not.toBe('Acceso restringido');
   });
 
   it('pide la contraseña también al abrir el WebSocket', async () => {

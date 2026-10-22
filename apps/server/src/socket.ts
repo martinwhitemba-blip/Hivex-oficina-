@@ -4,6 +4,7 @@ import { isoDate, roleLabel } from './domain';
 import { env } from './env';
 import { ownerSnapshot, type LivePresence } from './ownerSnapshot';
 import { prisma } from './prisma';
+import { sendDirect, type DirectDto } from './direct';
 import { photoUrl, parseLook } from './services';
 
 let ioRef: Server | null = null;
@@ -20,6 +21,16 @@ export function collectOnline(companyId: string): Map<string, LivePresence> {
     });
   }
   return map;
+}
+
+export function pushDirect(companyId: string, message: DirectDto) {
+  if (!ioRef) return;
+  for (const peer of ioRef.sockets.sockets.values()) {
+    if (peer.data.companyId !== companyId) continue;
+    const id = String(peer.data.membershipId);
+    if (id !== message.senderId && id !== message.recipientId) continue;
+    peer.emit('dm:message', message);
+  }
 }
 
 export async function broadcastPanel(companyId: string) {
@@ -144,6 +155,15 @@ export function attachSocket(io: Server) {
         if (peer.data.companyId !== companyId) continue;
         if (areaId && peer.data.appRole !== 'propietario' && peer.data.areaId !== areaId) continue;
         peer.emit('chat:message', dto);
+      }
+    });
+
+    socket.on('dm:send', async (payload: { to?: string; body?: string }) => {
+      try {
+        const message = await sendDirect(companyId, membershipId, String(payload?.to || ''), String(payload?.body || ''));
+        pushDirect(companyId, message);
+      } catch (error) {
+        socket.emit('dm:error', { error: error instanceof Error ? error.message : 'No se pudo enviar el mensaje' });
       }
     });
 

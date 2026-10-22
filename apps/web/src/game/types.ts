@@ -83,5 +83,7 @@ export interface AvatarLook {
   shirt: string;
   pants: string;
   glasses?: boolean;
+  /** Si es true y hay foto, la cara del personaje es esa foto. Por defecto, personaje de juego. */
+  usePhoto?: boolean;
   photoUrl?: string | null;
 }

@@ -21,6 +21,7 @@ export interface OfficeHooks {
   onLogout: () => void;
   onStatus?: (status: StatusId) => void;
   onToggleDemo?: (on: boolean) => void;
+  onMessage?: (id: string) => void;
 }
 import { ICONS } from './icons';
 import { Minimap } from './minimap';
@@ -298,6 +299,18 @@ export class UI {
   }
 
   // ───────────────────────────── Render dinámico ─────────────────────────────
+  private canMessage(id: string) {
+    return this.game.remotes.has(id) || this.hooks.directory.some((person) => person.id === id);
+  }
+
+  private openMessage(id: string) {
+    if (!this.canMessage(id)) {
+      this.toast('Ese personaje de demostración no recibe mensajes');
+      return;
+    }
+    this.hooks.onMessage?.(id);
+  }
+
   toast(text: string) {
     this.toastEl.textContent = text;
     this.toastEl.classList.add('show');
@@ -346,6 +359,7 @@ export class UI {
           <div class="nm">${a.name}${a.isNew ? '<span class="new">Nuevo</span>' : ''}</div>
           <div class="meta"><span class="role ${roleClass(a.role)}">${a.role}</span><span>${STATUSES[a.status].emoji} ${STATUSES[a.status].label}</span></div>
         </div>
+        <button class="go" data-msg="${a.id}">Mensaje</button>
         <button class="go" data-go="${a.id}">Ir</button>
       </div>`;
     const section = (title: string, items: string[]) => items.length ? `<div class="section-title">${title} <span class="count">(${items.length})</span></div>${items.join('')}` : '';
@@ -361,8 +375,9 @@ export class UI {
       <div class="room-row">${g.world.isPrivateLocked() ? ICONS.lock : ICONS.unlock}<span class="rn">Despacho privado</span><button class="switch ${g.world.isPrivateLocked() ? '' : 'on'}" data-act="lock" title="Abrir / cerrar"></button></div>`;
     html += `<div class="room-row"><span class="rn">Compañeros de demostración</span><button class="switch ${g.demoOn ? 'on' : ''}" data-act="demo" title="Mostrar u ocultar NPC"></button></div>`;
     html += section('Desconectados', offline.map((o) => `
-      <div class="member offline"><div class="pic">${o.photoUrl ? `<img src="${o.photoUrl}" alt="">` : `<div class="ph">${o.name.split(' ').map((w) => w[0]).join('')}</div>`}<span class="dot" style="background:#555"></span></div>
-      <div class="body"><div class="nm">${o.name}</div><div class="meta"><span class="role ${roleClass(o.role)}">${o.role}</span><span>Desconectado</span></div></div></div>`));
+      <div class="member offline" data-id="${o.id}"><div class="pic">${o.photoUrl ? `<img src="${o.photoUrl}" alt="">` : `<div class="ph">${o.name.split(' ').map((w) => w[0]).join('')}</div>`}<span class="dot" style="background:#555"></span></div>
+      <div class="body"><div class="nm">${o.name}</div><div class="meta"><span class="role ${roleClass(o.role)}">${o.role}</span><span>Desconectado</span></div></div>
+      <button class="go" data-msg="${o.id}">Mensaje</button></div>`));
 
     // Evita re-render si no cambió (mantiene hover/scroll)
     if (this.listEl.dataset.html === html) return;
@@ -371,6 +386,13 @@ export class UI {
     this.listEl.innerHTML = html;
     this.listEl.scrollTop = scroll;
     this.listEl.querySelectorAll<HTMLElement>('.member[data-id]').forEach((el) => el.onclick = (e) => {
+      const msg = (e.target as HTMLElement).closest<HTMLElement>('[data-msg]');
+      const pic = (e.target as HTMLElement).closest('.pic');
+      if (msg || pic) {
+        this.openMessage(el.dataset.id!);
+        if (window.innerWidth < 900) this.toggleSidebar(false);
+        return;
+      }
       const go = (e.target as HTMLElement).closest<HTMLElement>('[data-go]');
       if (go) g.walkTo(go.dataset.go!); else g.focusMember(el.dataset.id!);
       if (window.innerWidth < 900) this.toggleSidebar(false);

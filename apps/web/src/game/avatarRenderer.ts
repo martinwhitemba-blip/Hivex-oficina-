@@ -14,67 +14,104 @@ export interface AvatarDrawOpts {
   face?: CanvasImageSource;
 }
 
-/** Dibuja el avatar con los pies en (x, y). Ocupa ~22x32 px de mundo. */
+/** Dibuja el avatar con los pies en (x, y). Cabeza grande, cuerpo corto, estilo plataforma. */
 export function drawAvatar(ctx: Ctx, x: number, y: number, o: AvatarDrawOpts) {
   const { look, dir } = o;
   ctx.save();
   if (o.dim) ctx.globalAlpha = 0.6;
-  const step = o.moving ? Math.sin(o.t * 14) : 0;
-  const bob = o.moving ? Math.abs(Math.sin(o.t * 14)) * 1.5 : 0;
-  shadow(ctx, x, y, 9, 3.5, 0.25);
+  const cycle = o.t * 8.5;
+  const step = o.moving && !o.sitting ? Math.sin(cycle) : 0;
+  const bob = o.moving && !o.sitting ? Math.abs(Math.sin(cycle)) * 2.4 : 0;
+  const squash = o.moving && !o.sitting ? 1 + Math.sin(cycle * 2) * 0.07 : 1;
+  shadow(ctx, x, y + 1, 12, 4.2, 0.28);
+  if (o.moving && !o.sitting) {
+    const puff = (Math.sin(cycle) + 1) / 2;
+    ctx.save();
+    ctx.globalAlpha *= 0.35 * (1 - puff);
+    ellipse(ctx, x - 7 - puff * 3, y - 1, 3.2, 1.6, '#C4B08A');
+    ellipse(ctx, x + 6 + (1 - puff) * 3, y - 1, 2.6, 1.3, '#C4B08A');
+    ctx.restore();
+  }
   const by = y - bob;
+  ctx.translate(x, by);
+  ctx.scale(2 - squash, squash);
+  ctx.translate(-x, -by);
 
-  // Piernas
   if (!o.sitting) {
     ctx.fillStyle = look.pants;
-    ctx.fillRect(x - 5, by - 9 + step * 1.5, 4, 8 - step * 1.5);
-    ctx.fillRect(x + 1, by - 9 - step * 1.5, 4, 8 + step * 1.5);
-    ctx.fillStyle = '#1B1B1B';
-    ctx.fillRect(x - 5.5, by - 2 + Math.max(0, step) * 0, 5, 2);
-    ctx.fillRect(x + 0.5, by - 2, 5, 2);
+    fillRR(ctx, x - 6.5, by - 15 + step * 1.6, 5.2, 10 - step, 2, look.pants);
+    fillRR(ctx, x + 1.3, by - 15 - step * 1.6, 5.2, 10 + step, 2, look.pants);
+    fillRR(ctx, x - 7.2, by - 6 + Math.max(0, step) * 0.4, 6.4, 4.2, 1.6, '#1A1A1A');
+    fillRR(ctx, x + 0.8, by - 6, 6.4, 4.2, 1.6, '#1A1A1A');
+    ctx.fillStyle = '#F5C518';
+    ctx.fillRect(x - 6.2, by - 3.2, 2.2, 1.2);
+    ctx.fillRect(x + 4.2, by - 3.2, 2.2, 1.2);
   } else {
-    ctx.fillStyle = look.pants;
-    ctx.fillRect(x - 6, by - 8, 12, 4);
+    fillRR(ctx, x - 8, by - 10, 16, 5, 2, look.pants);
   }
-  const top = by - (o.sitting ? 4 : 9);
-  // Cuerpo
-  fillRR(ctx, x - 7, top - 11, 14, 12, 4, look.shirt, shade(look.shirt, -0.2), 1);
-  // brazos
-  ctx.fillStyle = shade(look.shirt, -0.1);
-  const armSwing = o.moving ? step * 2 : 0;
-  if (dir !== 'left') ctx.fillRect(x + 6, top - 9 + armSwing, 3, 8);
-  if (dir !== 'right') ctx.fillRect(x - 9, top - 9 - armSwing, 3, 8);
-  ctx.fillStyle = look.skin;
-  if (dir !== 'left') ctx.fillRect(x + 6, top - 2 + armSwing, 3, 2);
-  if (dir !== 'right') ctx.fillRect(x - 9, top - 2 - armSwing, 3, 2);
-  if (o.face) {
-    const hy = top - 23;
+
+  const top = by - (o.sitting ? 6 : 15);
+  fillRR(ctx, x - 9, top - 14, 18, 15, 6, look.shirt, shade(look.shirt, -0.22), 1);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fillRect(x - 6, top - 12, 5, 2);
+  const arm = o.moving ? step * 2.4 : 0;
+  const sleeve = shade(look.shirt, -0.12);
+  if (dir !== 'left') {
+    fillRR(ctx, x + 7, top - 12 + arm, 4.2, 10, 2, sleeve);
+    circle(ctx, x + 9, top - 2 + arm, 2.3, look.skin);
+  }
+  if (dir !== 'right') {
+    fillRR(ctx, x - 11.2, top - 12 - arm, 4.2, 10, 2, sleeve);
+    circle(ctx, x - 9, top - 2 - arm, 2.3, look.skin);
+  }
+
+  const headY = top - 16;
+  const showPhoto = Boolean(o.face && look.usePhoto);
+  circle(ctx, x, headY, 12.5, look.skin, shade(look.skin, -0.2), 1);
+  if (!showPhoto) drawHair(ctx, x, headY - 8, look, dir);
+  if (showPhoto && o.face) {
     ctx.save();
     ctx.beginPath();
-    ctx.arc(x, hy + 8, 9, 0, Math.PI * 2);
+    ctx.arc(x, headY, 10.5, 0, Math.PI * 2);
     ctx.clip();
-    ctx.drawImage(o.face, x - 9, hy - 1, 18, 18);
+    ctx.drawImage(o.face, x - 11, headY - 12, 22, 22);
     ctx.restore();
-    ctx.restore();
-    return;
-  }
-  // Cabeza
-  const hy = top - 23;
-  fillRR(ctx, x - 8, hy, 16, 14, 5, look.skin, shade(look.skin, -0.15), 1);
-  drawHair(ctx, x, hy, look, dir);
-  // Cara
-  if (dir !== 'up') {
-    ctx.fillStyle = '#1E1E1E';
-    const ex = dir === 'left' ? -3 : dir === 'right' ? 3 : 0;
-    if (dir === 'down') { ctx.fillRect(x - 4, hy + 7, 2, 2.5); ctx.fillRect(x + 2, hy + 7, 2, 2.5); }
-    else ctx.fillRect(x + ex - 1, hy + 7, 2, 2.5);
-    ctx.fillStyle = 'rgba(230,110,110,0.35)';
-    if (dir === 'down') { ctx.fillRect(x - 6, hy + 10, 2, 1.5); ctx.fillRect(x + 4, hy + 10, 2, 1.5); }
+    ctx.beginPath();
+    ctx.arc(x, headY, 10.5, 0, Math.PI * 2);
+    ctx.strokeStyle = '#F5C518';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+  } else if (dir !== 'up') {
+    const blink = o.moving ? false : (Math.floor(o.t * 0.7) % 9 === 0 && (o.t % 1) < 0.12);
+    const ex = dir === 'left' ? -3.2 : dir === 'right' ? 3.2 : 0;
+    ctx.fillStyle = '#1A1A1A';
+    if (blink) {
+      ctx.fillRect(x + ex - (dir === 'down' ? 4 : 1.5), headY + 0.5, dir === 'down' ? 8 : 3, 1);
+    } else if (dir === 'down') {
+      circle(ctx, x - 3.6, headY + 0.4, 1.7, '#1A1A1A');
+      circle(ctx, x + 3.6, headY + 0.4, 1.7, '#1A1A1A');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(x - 4.1, headY - 0.3, 1, 1);
+      ctx.fillRect(x + 3.1, headY - 0.3, 1, 1);
+    } else {
+      circle(ctx, x + ex, headY + 0.4, 1.7, '#1A1A1A');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(x + ex - 0.5, headY - 0.3, 1, 1);
+    }
+    ctx.fillStyle = 'rgba(255,120,120,0.45)';
+    if (dir === 'down') { circle(ctx, x - 7, headY + 3.2, 1.5, 'rgba(255,120,120,0.4)'); circle(ctx, x + 7, headY + 3.2, 1.5, 'rgba(255,120,120,0.4)'); }
+    ctx.strokeStyle = shade(look.skin, -0.35);
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.arc(x + ex * 0.3, headY + 4.2, dir === 'down' ? 2.4 : 1.6, 0.15, Math.PI - 0.15);
+    ctx.stroke();
     if (look.glasses) {
-      ctx.strokeStyle = '#111';
-      ctx.lineWidth = 1;
-      if (dir === 'down') { ctx.strokeRect(x - 5.5, hy + 6, 4.5, 3.5); ctx.strokeRect(x + 1, hy + 6, 4.5, 3.5); }
-      else ctx.strokeRect(x + ex - 2.5, hy + 6, 4.5, 3.5);
+      ctx.strokeStyle = '#1A1A1A';
+      ctx.lineWidth = 1.1;
+      if (dir === 'down') {
+        ctx.strokeRect(x - 6.2, headY - 1.4, 5, 3.6);
+        ctx.strokeRect(x + 1.2, headY - 1.4, 5, 3.6);
+      }       else ctx.strokeRect(x + ex - 2.6, headY - 1.4, 5, 3.6);
     }
   }
   ctx.restore();
@@ -171,7 +208,7 @@ export function drawBubble(ctx: Ctx, x: number, y: number, content: string, alph
 
 /** Mini retrato (cabeza) para la lista lateral → dataURL. */
 export function portraitDataUrl(look: AvatarLook, size = 28): string {
-  if (look.photoUrl) return look.photoUrl;
+  if (look.usePhoto && look.photoUrl) return look.photoUrl;
   const c = document.createElement('canvas');
   const s = 2;
   c.width = c.height = size * s;

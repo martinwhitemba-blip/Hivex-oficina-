@@ -25,7 +25,8 @@ import { prisma } from './prisma';
 import { awardBadge, parseLook, photoUrl, savePhoto, upsertReport } from './services';
 import { assertCanAddArea, assertCanAddWorker, attachPlan, audit } from './billing';
 import { assignFreeZone } from './zones';
-import { broadcastPanel } from './socket';
+import { directDirectory, directThread, sendDirect } from './direct';
+import { broadcastPanel, pushDirect } from './socket';
 import { registerOwnerRoutes } from './ownerRoutes';
 
 const emailSchema = z.string().trim().email('El correo no es válido').transform((v) => v.toLowerCase());
@@ -156,7 +157,11 @@ export function registerRoutes(app: FastifyInstance) {
     }
     if (body.areaId) {
       const area = await prisma.area.findFirst({ where: { id: body.areaId, companyId: actor.company.id } });
-      if (!area) throw new HttpError(404, 'Área no encontrada');
+      if (!area) throw new HttpError(404, 'Área no encontrada. Recarga la página: esa área ya no existe.');
+    }
+    if (body.jobTitleId) {
+      const title = await prisma.jobTitle.findFirst({ where: { id: body.jobTitleId, companyId: actor.company.id } });
+      if (!title) throw new HttpError(404, 'Puesto no encontrado. Recarga la página: ese puesto ya no existe.');
     }
     const code = randomCode(8);
     const invite = await prisma.invite.create({
@@ -415,6 +420,15 @@ export function registerRoutes(app: FastifyInstance) {
       bio: z.string().trim().optional(),
       startDate: z.string().nullable().optional(),
       status: z.enum(['en_linea', 'ausente', 'en_reunion', 'cafe', 'en_llamada']).optional(),
+      usePhoto: z.boolean().optional(),
+      look: z.object({
+        skin: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'El color tiene que ser hexadecimal').optional(),
+        hair: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'El color tiene que ser hexadecimal').optional(),
+        hairStyle: z.number().int().min(0).max(3).optional(),
+        shirt: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'El color tiene que ser hexadecimal').optional(),
+        pants: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'El color tiene que ser hexadecimal').optional(),
+        glasses: z.boolean().optional(),
+      }).optional(),
       role: z.enum(['administrador', 'empleado']).optional(),
       areaId: z.string().nullable().optional(),
       jobTitleId: z.string().nullable().optional(),
@@ -426,6 +440,14 @@ export function registerRoutes(app: FastifyInstance) {
     if (body.schedule !== undefined) data.schedule = body.schedule;
     if (body.bio !== undefined) data.bio = body.bio;
     if (body.status) data.status = body.status;
+    if (body.usePhoto !== undefined || body.look) {
+      const current = parseLook(person.lookJson);
+      data.lookJson = JSON.stringify({
+        ...current,
+        ...(body.look || {}),
+        usePhoto: body.usePhoto !== undefined ? body.usePhoto : current.usePhoto,
+      });
+    }
     if (!self || actor.membership.role === 'propietario') {
       if (body.startDate !== undefined) {
         if (body.startDate && !parseIsoDate(body.startDate)) throw new HttpError(400, 'La fecha de inicio debe ser AAAA-MM-DD');
@@ -451,7 +473,13 @@ export function registerRoutes(app: FastifyInstance) {
         data.jobTitleId = body.jobTitleId;
       }
     } else if (actor.membership.role === 'administrador' && !self) {
-      if (body.jobTitleId !== undefined) data.jobTitleId = body.jobTitleId;
+      if (body.jobTitleId !== undefined) {
+        if (body.jobTitleId) {
+          const title = await prisma.jobTitle.findFirst({ where: { id: body.jobTitleId, companyId: actor.company.id } });
+          if (!title) throw new HttpError(404, 'Puesto no encontrado. Recarga la página: ese puesto ya no existe.');
+        }
+        data.jobTitleId = body.jobTitleId;
+      }
     }
     await prisma.membership.update({ where: { id }, data });
     await broadcastPanel(actor.company.id);
@@ -853,6 +881,28 @@ export function registerRoutes(app: FastifyInstance) {
       alertCount: filteredAlerts.length,
       media: mediaInfo(),
     };
+  });
+
+  app.get('/api/directos', async (req) => {
+    const actor = await auth(req);
+    return { personas: await directDirectory(actor.company.id, actor.membership.id) };
+  });
+
+  app.get('/api/directos/:id', async (req) => {
+    const actor = await auth(req);
+    const id = (req.params as { id: string }).id;
+    return directThread(actor.company.id, actor.membership.id, id);
+  });
+
+  app.post('/api/directos/:id', async (req) => {
+    const actor = await auth(req);
+    const id = (req.params as { id: string }).id;
+    const body = parseBody(z.object({
+      body: z.string().trim().min(1, 'Escribe un mensaje').max(1000),
+    }), req.body);
+    const message = await sendDirect(actor.company.id, actor.membership.id, id, body.body);
+    pushDirect(actor.company.id, message);
+    return message;
   });
 
   app.get('/api/chat', async (req) => {

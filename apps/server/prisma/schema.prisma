@@ -36,8 +36,9 @@ model Company {
   rooms       OfficeRoom[]
   desks       DeskAssignment[]
   tasks       Task[]
-  messages    ChatMessage[]
-  reports     DailyReport[]
+  messages       ChatMessage[]
+  directMessages DirectMessage[]
+  reports        DailyReport[]
 }
 
 model Membership {
@@ -69,8 +70,10 @@ model Membership {
   presence      PresenceDay[]
   tasks         Task[]         @relation("assignee")
   badges        Badge[]
-  messages      ChatMessage[]
-  desks         DeskAssignment[]
+  messages        ChatMessage[]
+  sentDirects     DirectMessage[] @relation("DmSender")
+  receivedDirects DirectMessage[] @relation("DmRecipient")
+  desks           DeskAssignment[]
 
   @@unique([userId, companyId])
   @@index([companyId])
@@ -237,6 +240,22 @@ model ChatMessage {
   author       Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
 
   @@index([companyId, createdAt])
+}
+
+model DirectMessage {
+  id          String     @id @default(cuid())
+  companyId   String
+  senderId    String
+  recipientId String
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime   @default(now())
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sender      Membership @relation("DmSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   Membership @relation("DmRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, senderId, recipientId])
+  @@index([recipientId, readAt])
 }
 
 model Plan {

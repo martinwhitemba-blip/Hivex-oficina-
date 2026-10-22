@@ -12,7 +12,7 @@ export function photoUrl(photoPath: string | null | undefined) {
 }
 
 export function parseLook(json: string) {
-  const fallback = { skin: '#EFC3A0', hair: '#3B2A20', hairStyle: 0 as 0 | 1 | 2 | 3, shirt: '#E0A800', pants: '#1F2937', glasses: false };
+  const fallback = { skin: '#EFC3A0', hair: '#3B2A20', hairStyle: 0 as 0 | 1 | 2 | 3, shirt: '#E0A800', pants: '#1F2937', glasses: false, usePhoto: false };
   try {
     const value = JSON.parse(json) as Record<string, unknown>;
     const style = Number(value.hairStyle);
@@ -23,6 +23,7 @@ export function parseLook(json: string) {
       shirt: typeof value.shirt === 'string' ? value.shirt : fallback.shirt,
       pants: typeof value.pants === 'string' ? value.pants : fallback.pants,
       glasses: Boolean(value.glasses),
+      usePhoto: value.usePhoto === true,
     };
   } catch {
     return fallback;

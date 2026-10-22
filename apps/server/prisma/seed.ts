@@ -177,7 +177,11 @@ async function main() {
         phone: '600 000 000',
         currentTaskTitle: person.task || '',
         currentTaskSince: person.task ? new Date(Date.now() - (person.taskMinutes || 20) * 60 * 1000) : null,
-        lookJson: JSON.stringify({ skin: person.skin, hair: person.hair, hairStyle: person.hairStyle, shirt: person.shirt, pants: '#1F2937', glasses: Boolean(person.glasses) }),
+        lookJson: JSON.stringify({
+          skin: person.skin, hair: person.hair, hairStyle: person.hairStyle, shirt: person.shirt, pants: '#1F2937',
+          glasses: Boolean(person.glasses),
+          usePhoto: ['martin@hivex.demo', 'hugo@hivex.demo', 'martin.soto@hivex.demo', 'luis@hivex.demo', 'naomi@hivex.demo', 'maite@hivex.demo'].includes(person.email),
+        }),
       },
     });
     const photoPath = await avatar(company.id, membership.id, person.name, person.area ? AREAS.find((area) => area.name === person.area)!.color : '#F5C518');

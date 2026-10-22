@@ -65,7 +65,7 @@ function loadImage(src: string) {
 
 function asLook(look: Session['membership']['look']): AvatarLook {
   const hairStyle = (look.hairStyle === 1 || look.hairStyle === 2 || look.hairStyle === 3 ? look.hairStyle : 0) as 0 | 1 | 2 | 3;
-  return { skin: look.skin, hair: look.hair, hairStyle, shirt: look.shirt, pants: look.pants, glasses: look.glasses, photoUrl: look.photoUrl };
+  return { skin: look.skin, hair: look.hair, hairStyle, shirt: look.shirt, pants: look.pants, glasses: look.glasses, usePhoto: look.usePhoto === true, photoUrl: look.photoUrl };
 }
 
 function showAuth() {
@@ -153,7 +153,9 @@ async function startOffice(current: Session, hud: Hud) {
     onLogout: logout,
     onStatus: (status: StatusId) => { game?.setPlayerStatus(status); },
     onToggleDemo: (on) => game?.setDemoMode(on),
+    onMessage: (id) => { location.hash = `#/chat?con=${encodeURIComponent(id)}`; },
   });
+  game.on('dm', ({ id }) => { location.hash = `#/chat?con=${encodeURIComponent(id)}`; });
   game.on('lock', ({ locked }) => {
     if (applyingLock) return;
     socket?.emit('office:lock', { locked });

@@ -10,7 +10,7 @@ export interface Session {
     area: { id: string; name: string; color: string } | null;
     jobTitle: { id: string; name: string } | null;
     company: { id: string; name: string; officeName: string; isDemo: boolean };
-    look: { skin: string; hair: string; hairStyle: number; shirt: string; pants: string; glasses?: boolean; photoUrl?: string | null };
+    look: { skin: string; hair: string; hairStyle: number; shirt: string; pants: string; glasses?: boolean; usePhoto?: boolean; photoUrl?: string | null };
   };
 }
 
@@ -177,8 +177,10 @@ async function renderOwner(root: HTMLElement, session: Session, socket: Socket |
         event.preventDefault();
         const taskId = event.dataTransfer?.getData('text/plain');
         if (!taskId) return;
-        await api(`/api/dueno/tareas/${taskId}/reasignar`, { method: 'POST', body: JSON.stringify({ assigneeId: card.dataset.drop }) });
-        socket?.emit('panel:sync');
+        try {
+          await api(`/api/dueno/tareas/${taskId}/reasignar`, { method: 'POST', body: JSON.stringify({ assigneeId: card.dataset.drop }) });
+          socket?.emit('panel:sync');
+        } catch (error) { noteError(null, error); }
       };
     });
   };
@@ -196,8 +198,10 @@ async function renderOwner(root: HTMLElement, session: Session, socket: Socket |
   root.querySelector('#new-area')?.addEventListener('click', async () => {
     const name = prompt('Nombre de la nueva área');
     if (!name) return;
-    await api('/api/areas', { method: 'POST', body: JSON.stringify({ name, color: '#F5C518', teamName: name }) });
-    await load();
+    try {
+      await api('/api/areas', { method: 'POST', body: JSON.stringify({ name, color: '#F5C518', teamName: name }) });
+      await load();
+    } catch (error) { noteError(null, error); }
   });
   ['#q', '#area', '#status'].forEach((sel) => root.querySelector(sel)!.addEventListener('input', draw));
   socket?.off('panel:state');
@@ -223,7 +227,9 @@ async function reassign(taskId: string, snap: OwnerSnap) {
   const pick = prompt(`¿A quién se la asigno?\n${options}`);
   const index = Number(pick) - 1;
   if (!snap.people[index]) return;
-  await api(`/api/dueno/tareas/${taskId}/reasignar`, { method: 'POST', body: JSON.stringify({ assigneeId: snap.people[index].id }) });
+  try {
+    await api(`/api/dueno/tareas/${taskId}/reasignar`, { method: 'POST', body: JSON.stringify({ assigneeId: snap.people[index].id }) });
+  } catch (error) { noteError(null, error); }
 }
 
 async function movePerson(id: string, snap: OwnerSnap) {
@@ -231,7 +237,9 @@ async function movePerson(id: string, snap: OwnerSnap) {
   const pick = prompt(`¿A qué área muevo a esta persona?\n${options}`);
   const index = Number(pick) - 1;
   if (!snap.areas[index]) return;
-  await api(`/api/dueno/personas/${id}/area`, { method: 'POST', body: JSON.stringify({ areaId: snap.areas[index].id }) });
+  try {
+    await api(`/api/dueno/personas/${id}/area`, { method: 'POST', body: JSON.stringify({ areaId: snap.areas[index].id }) });
+  } catch (error) { noteError(null, error); }
 }
 
 async function renderBusiness(root: HTMLElement) {
@@ -248,12 +256,12 @@ async function renderBusiness(root: HTMLElement) {
     <h2>El ritmo, día a día</h2>
     ${spark(panel.areas[0]?.kpis[0])}
   `);
-  root.querySelector('#export')?.addEventListener('click', () => void downloadFile('/api/panel/export.csv', 'panel-hivex.csv'));
+  root.querySelector('#export')?.addEventListener('click', () => void downloadFile('/api/panel/export.csv', 'panel-hivex.csv').catch((error) => noteError(null, error)));
 }
 
 async function downloadFile(path: string, filename: string) {
   const token = getToken();
-  const response = await fetch(path, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const response = await fetch(path, { headers: token ? { 'X-HIVEX-Token': token } : {} });
   if (!response.ok) throw new Error('No se pudo descargar el archivo');
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
@@ -277,33 +285,51 @@ function spark(kpi?: PanelKpi) {
 async function renderTeam(root: HTMLElement, session: Session) {
   const people = await api<Person[]>('/api/empleados');
   const can = session.membership.role !== 'empleado';
-  root.innerHTML = shell('equipo', 'Equipo', 'Fotos, puestos y áreas. La foto se usa como cara del avatar.', `
+  root.innerHTML = shell('equipo', 'Equipo', 'Fotos, puestos y áreas. En la oficina el personaje de juego sale por defecto.', `
     ${can ? `<form id="import" class="cardx"><b>Importar CSV o Excel</b><p class="muted">Columnas: nombre, email, puesto, area, telefono, fecha_inicio, horario. <button class="btn" id="plantilla" type="button">Descargar plantilla</button></p><input name="file" type="file" accept=".csv,.xlsx" required><button class="btn primary" type="submit">Importar</button><div id="import-out" class="muted"></div></form>` : ''}
     <div class="grid cards">${people.map((person) => `<a class="cardx person" href="#/equipo/${person.id}">${avatar(person.photoUrl, person.name)}<div><div class="nm">${esc(person.name)}</div><div class="muted">${esc(person.area?.name || 'Sin área')} · ${esc(person.puesto || person.roleLabel)}</div></div></a>`).join('')}</div>
     ${can ? await inviteBox() : ''}
   `);
   root.querySelector('#import')?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const file = (root.querySelector('input[type=file]') as HTMLInputElement).files?.[0];
-    if (!file) return;
-    const body = new FormData();
-    body.append('file', file);
-    const result = await api<{ creados: { email: string; password: string }[]; errores: string[] }>('/api/empleados/importar', { method: 'POST', body });
-    (root.querySelector('#import-out') as HTMLElement).textContent = `Creados: ${result.creados.map((row) => `${row.email} (${row.password})`).join(', ') || 'ninguno'}. ${result.errores.join(' ')}`;
+    const out = root.querySelector('#import-out') as HTMLElement;
+    try {
+      const file = (root.querySelector('input[type=file]') as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const body = new FormData();
+      body.append('file', file);
+      const result = await api<{ creados: { email: string; password: string }[]; errores: string[] }>('/api/empleados/importar', { method: 'POST', body });
+      out.className = 'muted';
+      out.textContent = `Creados: ${result.creados.map((row) => `${row.email} (${row.password})`).join(', ') || 'ninguno'}. ${result.errores.join(' ')}`;
+    } catch (error) { noteError(out, error); }
   });
-  root.querySelector('#plantilla')?.addEventListener('click', () => void downloadFile('/api/empleados/plantilla.csv', 'plantilla-equipo.csv'));
+  root.querySelector('#plantilla')?.addEventListener('click', () => void downloadFile('/api/empleados/plantilla.csv', 'plantilla-equipo.csv').catch((error) => noteError(root.querySelector('#import-out'), error)));
   const invite = root.querySelector('#invite') as HTMLFormElement | null;
   invite?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(invite).entries());
-    const result = await api<{ enlace: string }>('/api/invitaciones', { method: 'POST', body: JSON.stringify({ ...data, areaId: data.areaId || null, jobTitleId: data.jobTitleId || null }) });
-    (root.querySelector('#invite-out') as HTMLElement).textContent = `Comparte este enlace: ${location.origin}${location.pathname}${result.enlace}`;
+    const out = root.querySelector('#invite-out') as HTMLElement;
+    try {
+      const data = Object.fromEntries(new FormData(invite).entries());
+      const result = await api<{ enlace: string }>('/api/invitaciones', { method: 'POST', body: JSON.stringify({ ...data, areaId: data.areaId || null, jobTitleId: data.jobTitleId || null }) });
+      const url = `${location.origin}${location.pathname}${result.enlace}`;
+      out.className = 'muted';
+      out.innerHTML = `<p>No se ha enviado ningún correo. Comparte este enlace:</p>
+        <input id="invite-link" readonly value="${esc(url)}">
+        <button class="btn" id="copy-invite" type="button">Copiar enlace</button>
+        <span id="copy-state"></span>`;
+      out.querySelector('#copy-invite')?.addEventListener('click', async () => {
+        await copyText(url);
+        const state = out.querySelector('#copy-state');
+        if (state) state.textContent = ' Enlace copiado.';
+      });
+    } catch (error) { noteError(out, error); }
   });
 }
 
 async function inviteBox() {
   const [areas, titles] = await Promise.all([api<{ id: string; name: string }[]>('/api/areas'), api<{ id: string; name: string }[]>('/api/puestos')]);
   return `<form id="invite" class="cardx form"><h2>Invitar</h2>
+    <p class="muted">No se envía ningún correo. Al crear la invitación te damos un enlace para copiar y compartir a mano.</p>
     <label>Correo</label><input name="email" type="email" required>
     <label>Rol</label><select name="role"><option value="empleado">Empleado</option><option value="administrador">Administrador / director de área</option></select>
     <label>Área</label><select name="areaId"><option value="">Sin área</option>${areas.map((area) => `<option value="${area.id}">${esc(area.name)}</option>`).join('')}</select>
@@ -318,7 +344,23 @@ async function renderEmployee(root: HTMLElement, id: string, session: Session) {
     <div class="cardx detail-hero">${person.photoUrl ? `<img src="${esc(person.photoUrl)}" alt="">` : avatar(null, person.name)}
       <div><div class="tag">${esc(statusLabel(person.status))}</div><p>Puntuación <b>${person.score ?? '—'}</b> · ${person.points ?? 0} puntos</p>
       <p class="muted">${esc(person.schedule || '')} ${person.phone ? '· ' + esc(person.phone) : ''}</p></div></div>
-    ${mine ? `<form id="photo" class="cardx"><label>Foto de perfil</label><input type="file" accept="image/*" name="file" required><button class="btn" type="submit">Subir y usar en el mapa</button></form>` : ''}
+    ${mine ? `<form id="photo" class="cardx"><label>Foto de perfil</label><input type="file" accept="image/*" name="file" required><button class="btn" type="submit">Subir foto</button><p id="photo-out" class="muted"></p></form>
+      <label class="cardx"><input id="use-photo" type="checkbox" ${person.look?.usePhoto ? 'checked' : ''}> Usar mi foto como avatar</label>
+      <p class="muted">Apagado: en la oficina se ve el personaje de juego, con tus colores. Encendido: la foto ocupa la cara. Hace falta haber subido una foto.</p>
+      <form id="look" class="cardx form"><h2>Personaje</h2>
+        <p class="muted">Colores, pelo y ropa del avatar. Es el que se ve en la oficina salvo que actives la foto.</p>
+        <div class="look-grid">
+          <div><label>Piel</label><input name="skin" type="color" value="${hex(person.look?.skin, '#EFC3A0')}"></div>
+          <div><label>Pelo</label><input name="hair" type="color" value="${hex(person.look?.hair, '#3B2A20')}"></div>
+          <div><label>Peinado</label><select name="hairStyle">
+            ${[['0', 'Corto'], ['1', 'Largo'], ['2', 'Moño'], ['3', 'Rapado']].map(([value, label]) => `<option value="${value}" ${String(person.look?.hairStyle || 0) === value ? 'selected' : ''}>${label}</option>`).join('')}
+          </select></div>
+          <div><label>Camiseta</label><input name="shirt" type="color" value="${hex(person.look?.shirt, '#E0A800')}"></div>
+          <div><label>Pantalón</label><input name="pants" type="color" value="${hex(person.look?.pants, '#1F2937')}"></div>
+          <label><input name="glasses" type="checkbox" ${person.look?.glasses ? 'checked' : ''}> Gafas</label>
+        </div>
+        <button class="btn" type="submit">Guardar personaje</button><p id="look-out" class="muted"></p>
+      </form>` : ''}
     <h2>Historial</h2>
     <div class="table-wrap"><table class="data"><tr><th>Fecha</th><th>Nota</th><th>Métricas</th></tr>
       ${(person.history || []).slice().reverse().map((row) => `<tr><td>${esc(row.date)}${row.isDemo ? ' · demo' : ''}</td><td>${esc(row.note)}</td><td>${Object.entries(row.values).map(([key, value]) => `${esc(key)}: ${num(value)}`).join(', ')}</td></tr>`).join('') || '<tr><td colspan="3">Sin informes visibles</td></tr>'}
@@ -327,12 +369,45 @@ async function renderEmployee(root: HTMLElement, id: string, session: Session) {
   `);
   root.querySelector('#photo')?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const file = (root.querySelector('input[type=file]') as HTMLInputElement).files?.[0];
-    if (!file) return;
-    const body = new FormData();
-    body.append('file', file);
-    await api(`/api/empleados/${id}/foto`, { method: 'POST', body });
-    location.reload();
+    const out = root.querySelector('#photo-out') as HTMLElement;
+    try {
+      const file = (root.querySelector('#photo input[type=file]') as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const body = new FormData();
+      body.append('file', file);
+      await api(`/api/empleados/${id}/foto`, { method: 'POST', body });
+      location.reload();
+    } catch (error) { noteError(out, error); }
+  });
+  root.querySelector('#use-photo')?.addEventListener('change', async (event) => {
+    const input = event.target as HTMLInputElement;
+    try {
+      await api(`/api/empleados/${id}`, { method: 'PATCH', body: JSON.stringify({ usePhoto: input.checked }) });
+      applyLocalLook(session, id, { usePhoto: input.checked });
+    } catch (error) {
+      input.checked = !input.checked;
+      noteError(root.querySelector('#photo-out'), error);
+    }
+  });
+  root.querySelector('#look')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const data = new FormData(form);
+    const look = {
+      skin: String(data.get('skin') || ''),
+      hair: String(data.get('hair') || ''),
+      hairStyle: Number(data.get('hairStyle') || 0),
+      shirt: String(data.get('shirt') || ''),
+      pants: String(data.get('pants') || ''),
+      glasses: Boolean(form.querySelector<HTMLInputElement>('[name=glasses]')?.checked),
+    };
+    try {
+      await api(`/api/empleados/${id}`, { method: 'PATCH', body: JSON.stringify({ look }) });
+      applyLocalLook(session, id, look);
+      const out = root.querySelector('#look-out') as HTMLElement;
+      out.className = 'muted';
+      out.textContent = 'Personaje guardado. Vuelve a la oficina para verlo.';
+    } catch (error) { noteError(root.querySelector('#look-out'), error); }
   });
 }
 
@@ -351,15 +426,19 @@ async function renderAreas(root: HTMLElement, session: Session) {
   `);
   root.querySelector('#area')?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.target as HTMLFormElement).entries());
-    await api('/api/areas', { method: 'POST', body: JSON.stringify(data) });
-    location.reload();
+    try {
+      const data = Object.fromEntries(new FormData(event.target as HTMLFormElement).entries());
+      await api('/api/areas', { method: 'POST', body: JSON.stringify(data) });
+      location.reload();
+    } catch (error) { noteError(null, error); }
   });
   root.querySelector('#puesto')?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.target as HTMLFormElement).entries());
-    await api('/api/puestos', { method: 'POST', body: JSON.stringify(data) });
-    location.reload();
+    try {
+      const data = Object.fromEntries(new FormData(event.target as HTMLFormElement).entries());
+      await api('/api/puestos', { method: 'POST', body: JSON.stringify(data) });
+      location.reload();
+    } catch (error) { noteError(null, error); }
   });
   root.querySelectorAll<HTMLButtonElement>('[data-kpi]').forEach((button) => button.onclick = async () => {
     const raw = prompt('Indicadores separados por punto y coma. Ejemplo: llamadas|Llamadas|40; citas|Citas|5');
@@ -368,8 +447,10 @@ async function renderAreas(root: HTMLElement, session: Session) {
       const [key, label, target] = part.split('|');
       return { key: key.trim(), label: (label || key).trim(), unit: '', targetDaily: target ? Number(target) : null, higherIsBetter: true };
     });
-    await api(`/api/areas/${button.dataset.kpi}/kpis`, { method: 'PUT', body: JSON.stringify({ kpis }) });
-    location.reload();
+    try {
+      await api(`/api/areas/${button.dataset.kpi}/kpis`, { method: 'PUT', body: JSON.stringify({ kpis }) });
+      location.reload();
+    } catch (error) { noteError(null, error); }
   });
 }
 
@@ -389,14 +470,19 @@ async function renderMapEditor(root: HTMLElement, session: Session) {
   `);
   root.querySelectorAll<HTMLFormElement>('.room-form').forEach((form) => form.onsubmit = async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(form).entries());
-    await api(`/api/oficina/salas/${form.dataset.room}`, { method: 'PUT', body: JSON.stringify({ name: data.name, label: data.label, areaId: data.areaId || null }) });
-    form.insertAdjacentHTML('beforeend', '<span class="muted"> Guardado</span>');
+    try {
+      const data = Object.fromEntries(new FormData(form).entries());
+      await api(`/api/oficina/salas/${form.dataset.room}`, { method: 'PUT', body: JSON.stringify({ name: data.name, label: data.label, areaId: data.areaId || null }) });
+      form.insertAdjacentHTML('beforeend', '<span class="muted"> Guardado</span>');
+    } catch (error) { noteError(null, error); }
   });
   root.querySelectorAll<HTMLFormElement>('.desk-form').forEach((form) => form.onsubmit = async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(form).entries());
-    await api(`/api/oficina/puestos/${form.dataset.seat}`, { method: 'PUT', body: JSON.stringify({ membershipId: data.membershipId || null }) });
+    try {
+      const data = Object.fromEntries(new FormData(form).entries());
+      await api(`/api/oficina/puestos/${form.dataset.seat}`, { method: 'PUT', body: JSON.stringify({ membershipId: data.membershipId || null }) });
+      form.insertAdjacentHTML('beforeend', '<span class="muted"> Asignado</span>');
+    } catch (error) { noteError(null, error); }
   });
 }
 
@@ -415,13 +501,17 @@ async function renderTasks(root: HTMLElement, session: Session) {
   `);
   root.querySelector('#task')?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.target as HTMLFormElement).entries());
-    await api('/api/tareas', { method: 'POST', body: JSON.stringify({ ...data, assigneeId: data.assigneeId || null }) });
-    location.reload();
+    try {
+      const data = Object.fromEntries(new FormData(event.target as HTMLFormElement).entries());
+      await api('/api/tareas', { method: 'POST', body: JSON.stringify({ ...data, assigneeId: data.assigneeId || null }) });
+      location.reload();
+    } catch (error) { noteError(null, error); }
   });
   root.querySelectorAll<HTMLButtonElement>('[data-move]').forEach((button) => button.onclick = async () => {
-    await api(`/api/tareas/${button.dataset.move}`, { method: 'PATCH', body: JSON.stringify({ status: button.dataset.status }) });
-    location.reload();
+    try {
+      await api(`/api/tareas/${button.dataset.move}`, { method: 'PATCH', body: JSON.stringify({ status: button.dataset.status }) });
+      location.reload();
+    } catch (error) { noteError(null, error); }
   });
 }
 
@@ -441,44 +531,172 @@ async function renderDay(root: HTMLElement, session: Session) {
       <label>Nota libre</label><textarea name="note">${esc(report.note || '')}</textarea>
       <button class="btn primary" type="submit">Guardar jornada</button></form>
   `);
-  root.querySelector('#in')!.addEventListener('click', async () => { await api('/api/fichaje/entrada', { method: 'POST' }); location.reload(); });
-  root.querySelector('#out')!.addEventListener('click', async () => { await api('/api/fichaje/salida', { method: 'POST' }); location.reload(); });
+  root.querySelector('#in')!.addEventListener('click', async () => {
+    try { await api('/api/fichaje/entrada', { method: 'POST' }); location.reload(); } catch (error) { noteError(null, error); }
+  });
+  root.querySelector('#out')!.addEventListener('click', async () => {
+    try { await api('/api/fichaje/salida', { method: 'POST' }); location.reload(); } catch (error) { noteError(null, error); }
+  });
   root.querySelector('#report')!.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.target as HTMLFormElement).entries());
-    const metrics: Record<string, number> = {};
-    for (const kpi of kpis) if (data[kpi.key] !== '') metrics[kpi.key] = Number(data[kpi.key]);
-    const saved = await api<{ pointsAwarded: number }>('/api/informes/mio', { method: 'PUT', body: JSON.stringify({ date: today, note: data.note || '', metrics }) });
-    alert(saved.pointsAwarded ? `Jornada guardada. +${saved.pointsAwarded} puntos` : 'Jornada actualizada');
+    try {
+      const data = Object.fromEntries(new FormData(event.target as HTMLFormElement).entries());
+      const metrics: Record<string, number> = {};
+      for (const kpi of kpis) if (data[kpi.key] !== '') metrics[kpi.key] = Number(data[kpi.key]);
+      const saved = await api<{ pointsAwarded: number }>('/api/informes/mio', { method: 'PUT', body: JSON.stringify({ date: today, note: data.note || '', metrics }) });
+      alert(saved.pointsAwarded ? `Jornada guardada. +${saved.pointsAwarded} puntos` : 'Jornada actualizada');
+    } catch (error) { noteError(null, error); }
   });
 }
 
 async function renderChat(root: HTMLElement, session: Session, socket: Socket | null) {
-  const areas = await api<{ id: string; name: string }[]>('/api/areas');
+  const initial = new URLSearchParams((location.hash.split('?')[1] || '')).get('con') || '';
+  const [areas, directory] = await Promise.all([
+    api<{ id: string; name: string }[]>('/api/areas'),
+    api<{ personas: DirectPerson[] }>('/api/directos'),
+  ]);
   const channels = [{ id: '', name: 'General' }, ...areas.filter((area) => session.membership.role === 'propietario' || area.id === session.membership.area?.id)];
-  root.innerHTML = shell('chat', 'Chat del equipo', 'General y un canal por área.', `
-    <div class="toolbar"><select id="channel">${channels.map((channel) => `<option value="${channel.id}">${esc(channel.name)}</option>`).join('')}</select></div>
-    <div id="log" class="chat-log cardx"></div>
-    <form id="send" class="toolbar"><input name="body" placeholder="Escribe un mensaje" required><button class="btn primary" type="submit">Enviar</button></form>
+  root.innerHTML = shell('chat', 'Chat del equipo', 'Canales de la empresa y mensajes directos. Un directo solo llega a un compañero de tu empresa.', `
+    <div class="toolbar">
+      <button class="btn" id="tab-canales" type="button">Canales</button>
+      <button class="btn primary" id="tab-directos" type="button">Directos <span id="dm-badge" class="count-badge" hidden></span></button>
+    </div>
+    <div class="chat-layout">
+      <aside class="cardx" id="chat-side">
+        <div id="channel-box"><label>Canal</label><select id="channel">${channels.map((channel) => `<option value="${channel.id}">${esc(channel.name)}</option>`).join('')}</select></div>
+        <div id="peer-box"></div>
+      </aside>
+      <section>
+        <h2 id="chat-title" style="margin-top:0">General</h2>
+        <div id="log" class="chat-log cardx"></div>
+        <form id="send" class="toolbar"><input name="body" placeholder="Escribe un mensaje" required maxlength="1000"><button class="btn primary" type="submit">Enviar</button></form>
+        <p id="chat-out" class="muted"></p>
+      </section>
+    </div>
   `);
   const log = root.querySelector('#log') as HTMLElement;
   const channel = root.querySelector('#channel') as HTMLSelectElement;
-  const paint = (rows: { author: string; body: string; createdAt: string }[]) => {
-    log.innerHTML = rows.map((row) => `<div class="bubble"><b>${esc(row.author)}</b> <span class="muted">${esc(new Date(row.createdAt).toLocaleTimeString('es'))}</span><div>${esc(row.body)}</div></div>`).join('');
+  const channelBox = root.querySelector('#channel-box') as HTMLElement;
+  const peerBox = root.querySelector('#peer-box') as HTMLElement;
+  const title = root.querySelector('#chat-title') as HTMLElement;
+  const badge = root.querySelector('#dm-badge') as HTMLElement;
+  const out = root.querySelector('#chat-out') as HTMLElement;
+  const seen = new Set<string>();
+  let mode: 'canales' | 'directos' = initial ? 'directos' : 'canales';
+  let selected = initial;
+  const personas = directory.personas;
+
+  const paintChannel = (rows: { id?: string; author: string; body: string; createdAt: string }[]) => {
+    log.innerHTML = rows.map((row) => `<div class="bubble"><b>${esc(row.author)}</b> <span class="muted">${esc(new Date(row.createdAt).toLocaleTimeString('es'))}</span><div>${esc(row.body)}</div></div>`).join('') || '<p class="muted">Todavía no hay mensajes en este canal.</p>';
     log.scrollTop = log.scrollHeight;
   };
-  const load = async () => paint(await api(`/api/chat?areaId=${channel.value}`));
-  channel.onchange = () => void load();
+  const paintThread = (rows: DirectLine[]) => {
+    for (const row of rows) seen.add(row.id);
+    log.innerHTML = rows.map((row) => `<div class="bubble ${row.senderId === session.membership.id ? 'mine' : ''}"><b>${esc(row.senderName)}</b> <span class="muted">${esc(new Date(row.createdAt).toLocaleTimeString('es'))}</span><div>${esc(row.body)}</div></div>`).join('') || '<p class="muted">Aún no os habéis escrito. El mensaje se queda guardado.</p>';
+    log.scrollTop = log.scrollHeight;
+  };
+  const paintPeers = () => {
+    const total = personas.reduce((sum, person) => sum + person.unread, 0);
+    badge.hidden = total === 0;
+    badge.textContent = String(total);
+    peerBox.innerHTML = personas.map((person) => `<button class="peer-row ${person.id === selected && mode === 'directos' ? 'on' : ''}" data-peer="${esc(person.id)}" type="button">
+      <span><b>${esc(person.name)}</b><span class="muted">${esc(person.puesto || 'Compañero')}${person.ultimo ? ' · ' + esc(person.ultimo.body) : ''}</span></span>
+      ${person.unread ? `<span class="count-badge">${person.unread}</span>` : ''}
+    </button>`).join('') || '<p class="muted">No hay más personas en la empresa.</p>';
+    peerBox.querySelectorAll<HTMLButtonElement>('[data-peer]').forEach((button) => {
+      button.onclick = () => {
+        selected = button.dataset.peer || '';
+        mode = 'directos';
+        history.replaceState(null, '', `#/chat?con=${encodeURIComponent(selected)}`);
+        void show();
+      };
+    });
+  };
+  const show = async () => {
+    channelBox.hidden = mode !== 'canales';
+    peerBox.hidden = mode !== 'directos';
+    (root.querySelector('#tab-canales') as HTMLButtonElement).className = mode === 'canales' ? 'btn primary' : 'btn';
+    (root.querySelector('#tab-directos') as HTMLButtonElement).className = mode === 'directos' ? 'btn primary' : 'btn';
+    paintPeers();
+    out.className = 'muted';
+    out.textContent = '';
+    if (mode === 'canales') {
+      title.textContent = channel.selectedOptions[0]?.textContent || 'General';
+      try {
+        paintChannel(await api(`/api/chat?areaId=${encodeURIComponent(channel.value)}`));
+      } catch (error) { noteError(out, error); }
+      return;
+    }
+    const person = personas.find((item) => item.id === selected);
+    title.textContent = person ? `Directo con ${person.name}` : 'Directos';
+    if (!selected) {
+      log.innerHTML = '<p class="muted">Elige a un compañero. También puedes pulsar su avatar en la oficina.</p>';
+      return;
+    }
+    try {
+      const thread = await api<{ con: { name: string }; mensajes: DirectLine[] }>(`/api/directos/${encodeURIComponent(selected)}`);
+      title.textContent = `Directo con ${thread.con.name}`;
+      if (person) person.unread = 0;
+      paintPeers();
+      paintThread(thread.mensajes);
+    } catch (error) {
+      log.innerHTML = '';
+      noteError(out, error);
+    }
+  };
+  root.querySelector('#tab-canales')!.addEventListener('click', () => { mode = 'canales'; history.replaceState(null, '', '#/chat'); void show(); });
+  root.querySelector('#tab-directos')!.addEventListener('click', () => { mode = 'directos'; void show(); });
+  channel.onchange = () => void show();
   socket?.off('chat:message');
-  socket?.on('chat:message', () => void load());
+  socket?.off('dm:message');
+  socket?.off('dm:error');
+  socket?.on('chat:message', () => { if (root.isConnected && mode === 'canales') void show(); });
+  socket?.on('dm:message', (message: DirectLine) => {
+    if (!root.isConnected) return;
+    const mine = message.senderId === session.membership.id;
+    const peerId = mine ? message.recipientId : message.senderId;
+    const person = personas.find((item) => item.id === peerId);
+    if (person) {
+      person.ultimo = { body: message.body, createdAt: message.createdAt, mio: mine };
+      if (!mine && !(mode === 'directos' && selected === peerId)) person.unread += 1;
+      if (!mine && mode === 'directos' && selected === peerId) person.unread = 0;
+    }
+    if (mode === 'directos' && selected === peerId && !seen.has(message.id)) {
+      seen.add(message.id);
+      log.insertAdjacentHTML('beforeend', `<div class="bubble ${mine ? 'mine' : ''}"><b>${esc(message.senderName)}</b> <span class="muted">${esc(new Date(message.createdAt).toLocaleTimeString('es'))}</span><div>${esc(message.body)}</div></div>`);
+      log.scrollTop = log.scrollHeight;
+      if (!mine) void api(`/api/directos/${encodeURIComponent(peerId)}`).catch(() => {});
+    }
+    paintPeers();
+  });
+  socket?.on('dm:error', (payload: { error?: string }) => { if (root.isConnected) noteError(out, new Error(payload?.error || 'No se pudo enviar')); });
   root.querySelector('#send')!.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const body = String(new FormData(event.target as HTMLFormElement).get('body') || '');
-    socket?.emit('chat:send', { body, areaId: channel.value || null });
-    (event.target as HTMLFormElement).reset();
-    setTimeout(() => void load(), 200);
+    const form = event.target as HTMLFormElement;
+    const body = String(new FormData(form).get('body') || '');
+    try {
+      if (mode === 'canales') {
+        if (!socket?.connected) throw new Error('El chat en vivo no está conectado. Recarga la página.');
+        socket.emit('chat:send', { body, areaId: channel.value || null });
+        form.reset();
+        setTimeout(() => { if (mode === 'canales') void show(); }, 250);
+        return;
+      }
+      if (!selected) throw new Error('Elige a un compañero de la lista Directos');
+      const sent = await api<DirectLine>(`/api/directos/${encodeURIComponent(selected)}`, { method: 'POST', body: JSON.stringify({ body }) });
+      form.reset();
+      const person = personas.find((item) => item.id === selected);
+      if (person) person.ultimo = { body: sent.body, createdAt: sent.createdAt, mio: true };
+      if (!seen.has(sent.id)) {
+        seen.add(sent.id);
+        if (!log.querySelector('.bubble')) log.innerHTML = '';
+        log.insertAdjacentHTML('beforeend', `<div class="bubble mine"><b>${esc(sent.senderName)}</b> <span class="muted">${esc(new Date(sent.createdAt).toLocaleTimeString('es'))}</span><div>${esc(sent.body)}</div></div>`);
+        log.scrollTop = log.scrollHeight;
+      }
+      paintPeers();
+    } catch (error) { noteError(out, error); }
   });
-  await load();
+  await show();
 }
 
 async function renderBadges(root: HTMLElement) {
@@ -504,8 +722,10 @@ async function renderPlan(root: HTMLElement, session: Session) {
   `);
   root.querySelectorAll<HTMLButtonElement>('[data-plan]').forEach((button) => button.onclick = async () => {
     if (button.dataset.plan === plan.actual.code) return;
-    await api('/api/plan', { method: 'POST', body: JSON.stringify({ code: button.dataset.plan }) });
-    location.reload();
+    try {
+      await api('/api/plan', { method: 'POST', body: JSON.stringify({ code: button.dataset.plan }) });
+      location.reload();
+    } catch (error) { noteError(null, error); }
   });
 }
 
@@ -521,9 +741,43 @@ async function renderLeads(root: HTMLElement, session: Session) {
     </div>
   `);
   root.querySelector('#enable')?.addEventListener('click', async () => {
-    await api('/api/captacion/activar', { method: 'POST' });
-    location.reload();
+    try {
+      await api('/api/captacion/activar', { method: 'POST' });
+      location.reload();
+    } catch (error) { noteError(null, error); }
   });
+}
+
+function hex(value: string | undefined, fallback: string) {
+  return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : fallback;
+}
+
+function applyLocalLook(session: Session, id: string, patch: Partial<Session['membership']['look']>) {
+  if (session.membership.id === id) Object.assign(session.membership.look, patch);
+  const live = (window as unknown as { __game?: { player: { id: string; look: Record<string, unknown> } } }).__game;
+  if (live?.player.id === id) Object.assign(live.player.look, patch);
+}
+
+async function copyText(value: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch {
+    const area = document.createElement('textarea');
+    area.value = value;
+    document.body.append(area);
+    area.select();
+    document.execCommand('copy');
+    area.remove();
+  }
+}
+
+function noteError(node: Element | null, error: unknown) {
+  const message = error instanceof Error ? error.message : 'No se pudo completar la acción';
+  if (!node) { window.alert(message); return; }
+  const host = node as HTMLElement;
+  host.hidden = false;
+  host.className = 'err';
+  host.textContent = message;
 }
 
 function avatar(photo: string | null | undefined, name: string) {
@@ -544,7 +798,9 @@ interface OwnerSnap { people: OwnerPerson[]; areas: { id: string; name: string; 
 interface PanelKpi { label: string; unit: string; total: number; pct: number | null; byDate?: Record<string, number>; ranking?: { name: string; value: number }[] }
 interface Panel { isDemo: boolean; alerts: { level: string; text: string }[]; areas: { name: string; color: string; kpis: PanelKpi[] }[]; employees: { name: string; score: number }[] }
 interface Person { id: string; name: string; photoUrl: string | null; puesto: string | null; roleLabel: string; area: { name: string } | null }
-interface EmployeeDetail extends Person { status: string; score?: number; points?: number; schedule?: string; phone?: string; activeHours?: number; history?: { date: string; note: string; isDemo: boolean; values: Record<string, number> }[]; badges?: { label: string }[] }
+interface EmployeeDetail extends Person { status: string; score?: number; points?: number; schedule?: string; phone?: string; activeHours?: number; look?: { usePhoto?: boolean; skin?: string; hair?: string; hairStyle?: number; shirt?: string; pants?: string; glasses?: boolean }; history?: { date: string; note: string; isDemo: boolean; values: Record<string, number> }[]; badges?: { label: string }[] }
+interface DirectPerson { id: string; name: string; puesto: string; unread: number; ultimo: { body: string; createdAt: string; mio: boolean } | null }
+interface DirectLine { id: string; body: string; createdAt: string; senderId: string; recipientId: string; senderName: string }
 interface AreaFull { id: string; name: string; color: string; teamName: string; members: number; rooms: { name: string }[]; kpis: { key: string; label: string; unit?: string; targetDaily: number | null }[] }
 interface OfficeLayout { canEdit: boolean; rooms: { mapRoomId: string; name: string; label: string; areaId: string | null }[]; desks: { seatId: string; membershipId: string | null }[]; areas: { id: string; name: string }[]; people: { id: string; name: string }[] }
 interface TaskItem { id: string; title: string; status: string; area: string | null; assignee: string | null }

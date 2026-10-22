@@ -54,8 +54,9 @@ export interface Actor {
 }
 
 export async function actorFromRequest(req: FastifyRequest): Promise<Actor> {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const custom = req.headers['x-hivex-token'];
+  const bearer = req.headers.authorization || '';
+  const token = (typeof custom === 'string' && custom) || (bearer.startsWith('Bearer ') ? bearer.slice(7) : '');
   if (!token) throw new HttpError(401, 'Inicia sesión para continuar');
   let sub = '';
   try {

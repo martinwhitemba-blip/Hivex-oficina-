@@ -78,7 +78,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .role.SDR { background: #5EEAD4; } .role.Closer { background: #86EFAC; } .role.Director { background: #C4B5FD; }
 .role.Propietario { background: var(--gold); } .role.Customer { background: #93C5FD; }
 .member .go { opacity: 0; font-size: 10.5px; font-weight: 700; color: var(--gold); border: 1px solid var(--line); background: transparent; border-radius: 6px; padding: 2px 6px; }
-.member:hover .go { opacity: 1; }
+.member:hover .go, .member .go:focus { opacity: 1; }
+@media (pointer: coarse) { .member .go { opacity: 1; } }
 .room-row { display: flex; align-items: center; gap: 8px; padding: 6px 14px; font-size: 12px; }
 .room-row .rn { flex: 1; }
 .switch { position: relative; width: 34px; height: 19px; border-radius: 10px; background: #3A3A40; border: 0; padding: 0; transition: background .15s; }

@@ -7,14 +7,15 @@ Oro sobre negro. Toda la interfaz está en español.
 ## Qué incluye
 
 - Alta de empresa, sesión y roles: propietario, director de área y empleado. Puestos configurables (SDR, Closer, director comercial, y los que quieras).
-- Invitación por enlace o código. Permisos: el empleado ve lo suyo, el director su área, el propietario toda la empresa.
+- Invitación por enlace. No se envía correo: la pantalla da el enlace y un botón para copiarlo. Permisos: el empleado ve lo suyo, el director su área, el propietario toda la empresa.
 - Áreas, equipos, colores e indicadores libres. Cada área nueva ocupa una zona del plano.
 - Editor sencillo: nombre de sala, área de la sala y quién se sienta en cada puesto.
-- Fichas con foto (se usa como cara del avatar), contacto, horario y fecha de alta. Importación CSV o Excel.
+- Fichas con personaje de juego (colores, pelo, ropa) y foto opcional. La foto solo sustituye la cara si la persona activa «Usar mi foto como avatar». Importación CSV o Excel.
 - Informe de jornada, fichaje, tareas (pendiente / en curso / hecho) y puntos.
 - Panel de mi negocio: rankings, ritmo diario, objetivo contra real, alertas en español y exportación CSV.
 - Panel del dueño: personas en vivo (área, tarea, estado y tiempo), mapa de áreas, reasignar, mover y auditoría. Diseño en `docs/panel-del-dueno.md`.
-- Oficina multijugador por WebSocket. Audio de proximidad directo entre navegadores, o LiveKit si configuras las claves. Los compañeros de demostración del prototipo se pueden volver a encender desde el interruptor de la lista.
+- Oficina multijugador por WebSocket, con paso más suave. Pulsa el avatar de un compañero para abrirle un mensaje directo. Audio de proximidad directo entre navegadores, o LiveKit si configuras las claves. Los compañeros de demostración del prototipo se pueden volver a encender desde el interruptor de la lista.
+- Chat con canales y la lista Directos (no leídos). Los mensajes directos se guardan y no salen de la empresa.
 - Planes Starter, Pro y Empresa con topes de personas y áreas. Pantalla Plan y uso. Sin cobro todavía.
 - Módulo de captación marcado como **Próximamente** (modelos y área Llamadas listos, sin telefonía).
 
@@ -43,7 +44,7 @@ Comandos: `npm test`, `npm run typecheck`, `npm run build`.
 
 ## Dónde se publica
 
-Esta beta no tiene dominio propio ni una URL pública ya desplegada. El hosting de pruebas te dará una dirección del estilo `https://NOMBRE.onrender.com` o `https://NOMBRE.up.railway.app`. Los pasos, para quien no desarrolla, están en `docs/despliegue.md`. El dominio de marca se puede enganchar después, en el panel de ese hosting.
+Esta beta no tiene dominio propio. El blueprint de Render publica https://hivex.onrender.com y la página es pública (solo el login de la aplicación). Los pasos, para quien no desarrolla, están en `docs/despliegue.md`, incluido cómo volver a poner una contraseña de sitio. El dominio de marca se puede enganchar después, en el panel de ese hosting.
 
 Archivos listos para un clic: `Dockerfile`, `docker-compose.yml`, `render.yaml`, `railway.json`.
 

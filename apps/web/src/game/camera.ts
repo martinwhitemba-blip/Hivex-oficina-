@@ -12,7 +12,7 @@ export class Camera {
   get top() { return this.y - this.viewH / 2 / this.zoom; }
 
   follow(tx: number, ty: number, dt: number, snap = false) {
-    const k = snap ? 1 : 1 - Math.exp(-dt * 7);
+    const k = snap ? 1 : 1 - Math.exp(-dt * 4.2);
     this.x += (tx - this.x) * k;
     this.y += (ty - this.y) * k;
     this.clamp();

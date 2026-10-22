@@ -59,13 +59,21 @@ table.data th, table.data td { text-align: left; padding: 8px 6px; border-bottom
 .err { background: #3f1212; color: #fecaca; padding: 8px 10px; border-radius: 8px; margin-bottom: 8px; }
 .usage { height: 10px; background: #232327; border-radius: 99px; overflow: hidden; }
 .usage span { display: block; height: 100%; background: #F5C518; }
-.chat-log { display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow: auto; }
+.chat-layout { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 12px; align-items: start; }
+.chat-log { display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow: auto; min-height: 220px; }
 .bubble { background: #1B1B1E; border-radius: 12px; padding: 8px 10px; }
+.bubble.mine { background: #2a2308; border: 1px solid rgba(245,197,24,.35); margin-left: 18%; }
+.peer-row { width: 100%; display: flex; justify-content: space-between; gap: 8px; align-items: center; text-align: left; color: inherit; background: #101012; border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 8px; margin-bottom: 6px; cursor: pointer; }
+.peer-row.on { border-color: #F5C518; }
+.peer-row b { display: block; }
+.count-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: #F5C518; color: #0B0B0C; font-size: 11px; font-weight: 800; display: inline-grid; place-items: center; }
+.look-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.look-grid input[type=color] { height: 40px; padding: 4px; }
 .detail-hero { display: flex; gap: 14px; align-items: center; }
 .detail-hero img { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; }
 svg.chart { width: 100%; height: 160px; background: #101012; border-radius: 12px; }
 @media (max-width: 860px) {
-  .split, .kanban { grid-template-columns: 1fr; }
+  .split, .kanban, .chat-layout { grid-template-columns: 1fr; }
   .ph h1 { font-size: 22px; }
   .floor { height: 620px; }
   .barline { grid-template-columns: 1fr; }

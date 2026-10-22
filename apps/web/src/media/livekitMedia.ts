@@ -11,7 +11,7 @@ export class LiveKitMediaProvider implements ProximityMediaProvider {
 
   async connect(selfId: string) {
     const { Room } = await import('livekit-client');
-    const creds = await fetch(this.tokenUrl, { method: 'POST', headers: { authorization: `Bearer ${localStorage.getItem('hivex_token') || ''}` } }).then((res) => res.json());
+    const creds = await fetch(this.tokenUrl, { method: 'POST', headers: { 'X-HIVEX-Token': localStorage.getItem('hivex_token') || '' } }).then((res) => res.json());
     const room = new Room();
     await room.connect(creds.url, creds.token);
     await room.localParticipant.setMicrophoneEnabled(true);
