@@ -213,11 +213,15 @@ async function renderOwner(root: HTMLElement, session: Session, socket: Socket |
   let showFloor = true;
   let snap: OwnerSnap | null = null;
   const draw = () => {
-    if (!snap) return;
-    const q = (root.querySelector('#q') as HTMLInputElement).value.toLowerCase();
-    const area = (root.querySelector('#area') as HTMLSelectElement).value;
-    const status = (root.querySelector('#status') as HTMLSelectElement).value;
-    const areaSel = root.querySelector('#area') as HTMLSelectElement;
+    if (!snap || !root.isConnected) return;
+    const qEl = root.querySelector('#q') as HTMLInputElement | null;
+    const areaEl = root.querySelector('#area') as HTMLSelectElement | null;
+    const statusEl = root.querySelector('#status') as HTMLSelectElement | null;
+    if (!qEl || !areaEl || !statusEl) return;
+    const q = qEl.value.toLowerCase();
+    const area = areaEl.value;
+    const status = statusEl.value;
+    const areaSel = areaEl;
     if (areaSel.options.length === 1) {
       for (const item of snap.areas) areaSel.insertAdjacentHTML('beforeend', `<option value="${item.id}">${esc(item.name)}</option>`);
     }
@@ -289,7 +293,9 @@ async function renderOwner(root: HTMLElement, session: Session, socket: Socket |
     snap = await api<OwnerSnap>('/api/dueno');
     draw();
     const audit = await api<{ action: string; summary: string; createdAt: string }[]>('/api/dueno/auditoria');
-    (root.querySelector('#audit') as HTMLElement).innerHTML = audit.slice(0, 8).map((row) => `<div><b>${esc(row.summary)}</b><div class="muted">${esc(new Date(row.createdAt).toLocaleString('es'))}</div></div>`).join('') || 'Todavía no hay movimientos.';
+    const auditHost = root.querySelector('#audit');
+    if (!auditHost || !root.isConnected) return;
+    auditHost.innerHTML = audit.slice(0, 8).map((row) => `<div><b>${esc(row.summary)}</b><div class="muted">${esc(new Date(row.createdAt).toLocaleString('es'))}</div></div>`).join('') || 'Todavía no hay movimientos.';
   };
   root.querySelector('#mode')!.addEventListener('click', () => {
     showFloor = !showFloor;
@@ -306,7 +312,14 @@ async function renderOwner(root: HTMLElement, session: Session, socket: Socket |
   });
   ['#q', '#area', '#status'].forEach((sel) => root.querySelector(sel)!.addEventListener('input', draw));
   socket?.off('panel:state');
-  socket?.on('panel:state', (state: OwnerSnap) => { snap = state; draw(); });
+  socket?.on('panel:state', (state: OwnerSnap) => {
+    if (!root.isConnected || !root.querySelector('#q')) {
+      socket?.off('panel:state');
+      return;
+    }
+    snap = state;
+    draw();
+  });
   socket?.emit('panel:sync');
   await load();
 }
