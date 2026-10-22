@@ -235,7 +235,7 @@ export class Stage3D {
           rig.bob.rotation.z = walking ? swing * 0.04 : 0;
         }
       }
-      const dim = avatar.status === 'ausente';
+      const dim = avatar.status === 'ausente' || Boolean(avatar.ghost);
       if (dim !== rig.dim) {
         rig.dim = dim;
         rig.anchor.traverse((obj) => {
@@ -428,13 +428,14 @@ export class Stage3D {
   private placeName(avatar: Avatar, selfId: string, viewW: number, viewH: number) {
     const first = avatar.name.split(' ')[0] || avatar.name;
     const text = avatar.id === selfId ? `${first} (tú)` : first;
-    const key = `${text}|${avatar.status}|${avatar.id === selfId ? 1 : 0}`;
+    const tone = avatar.ghost ? '#6B7280' : (STATUSES[avatar.status]?.color || '#22C55E');
+    const key = `${text}|${tone}|${avatar.id === selfId ? 1 : 0}`;
     let tag = this.names.get(avatar.id);
     if (!tag || tag.key !== key) {
       tag?.sprite.removeFromParent();
       (tag?.sprite.material as THREE.SpriteMaterial | undefined)?.map?.dispose();
       (tag?.sprite.material as THREE.Material | undefined)?.dispose();
-      const made = makeLabel(text, STATUSES[avatar.status]?.color || '#22C55E', avatar.id === selfId);
+      const made = makeLabel(text, tone, avatar.id === selfId);
       const material = new THREE.SpriteMaterial({ map: made.texture, transparent: true, depthTest: false });
       material.userData.keep = true;
       const sprite = new THREE.Sprite(material);

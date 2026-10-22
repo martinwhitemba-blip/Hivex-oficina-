@@ -11,7 +11,6 @@ import {
   isoDate,
   parseCsv,
   parseIsoDate,
-  pickField,
   randomCode,
   roleLabel,
   scoreOf,
@@ -29,6 +28,7 @@ import { directDirectory, directThread, sendDirect } from './direct';
 import { broadcastPanel, pushDirect } from './socket';
 import { registerOwnerRoutes } from './ownerRoutes';
 import { assertJoinRate, clientIp } from './rateLimit';
+import { activationCsv, importPeople, rowsFromRecords } from './peopleImport';
 
 const emailSchema = z.string().trim().email('El correo no es válido').transform((v) => v.toLowerCase());
 const passwordSchema = z.string().min(8, 'La contraseña debe tener al menos 8 caracteres');
@@ -42,6 +42,15 @@ function visiblePeople<T extends { id: string; role: string; areaId: string | nu
     { id: actor.membership.id, role: actor.membership.role, areaId: actor.membership.areaId },
     person,
   ));
+}
+
+function textField(fields: unknown, name: string) {
+  if (!fields || typeof fields !== 'object') return '';
+  const raw = (fields as Record<string, unknown>)[name];
+  const field = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof field === 'string') return field.trim();
+  if (field && typeof field === 'object' && 'value' in field) return String((field as { value: unknown }).value ?? '').trim();
+  return '';
 }
 
 export function registerRoutes(app: FastifyInstance) {
@@ -87,7 +96,47 @@ export function registerRoutes(app: FastifyInstance) {
     if (!user || !(await verifyPassword(body.password, user.passwordHash))) {
       throw new HttpError(401, 'Correo o contraseña incorrectos');
     }
-    return { token: signToken(user.id) };
+    return { token: signToken(user.id), debeCambiarContrasena: user.mustChangePassword };
+  });
+
+  app.post('/api/auth/cambiar-clave', async (req) => {
+    const actor = await auth(req);
+    const body = parseBody(z.object({
+      actual: z.string().min(1, 'Escribe la contraseña actual'),
+      nueva: passwordSchema,
+    }), req.body);
+    const user = await prisma.user.findUnique({ where: { id: actor.userId } });
+    if (!user || !(await verifyPassword(body.actual, user.passwordHash))) {
+      throw new HttpError(401, 'La contraseña actual no coincide');
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await hashPassword(body.nueva), mustChangePassword: false },
+    });
+    return { ok: true };
+  });
+
+  app.get('/api/activar/:code', async (req) => {
+    const code = (req.params as { code: string }).code;
+    const row = await prisma.activation.findUnique({ where: { code }, include: { company: true, user: true } });
+    if (!row || row.usedAt || row.expiresAt < new Date()) throw new HttpError(404, 'El enlace de activación no es válido o ha caducado');
+    const membership = await prisma.membership.findFirst({ where: { id: row.membershipId, companyId: row.companyId } });
+    return { email: row.user.email, nombre: membership?.name ?? '', empresa: row.company.name };
+  });
+
+  app.post('/api/activar', async (req) => {
+    const body = parseBody(z.object({
+      code: z.string().trim().min(1, 'Falta el código'),
+      password: passwordSchema,
+    }), req.body);
+    const row = await prisma.activation.findUnique({ where: { code: body.code } });
+    if (!row || row.usedAt || row.expiresAt < new Date()) throw new HttpError(404, 'El enlace de activación no es válido o ha caducado');
+    await prisma.user.update({
+      where: { id: row.userId },
+      data: { passwordHash: await hashPassword(body.password), mustChangePassword: false },
+    });
+    await prisma.activation.update({ where: { id: row.id }, data: { usedAt: new Date() } });
+    return { token: signToken(row.userId) };
   });
 
   app.post('/api/acceso-codigo', async (req) => {
@@ -448,7 +497,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   app.get('/api/empleados/plantilla.csv', async (req, reply) => {
     await auth(req);
-    const csv = 'nombre,email,puesto,area,telefono,fecha_inicio,horario\nAna Pérez,ana@ejemplo.com,SDR,Ventas,600000000,2026-01-15,L–V 09:00–18:00\n';
+    const csv = 'nombre,email,rol,puesto,area,telefono,fecha_inicio,horario\nAna Pérez,ana@ejemplo.com,empleado,SDR,Ventas,600000000,2026-01-15,L–V 09:00–18:00\n';
     return reply.header('content-type', 'text/csv; charset=utf-8').send(`\uFEFF${csv}`);
   });
 
@@ -596,72 +645,51 @@ export function registerRoutes(app: FastifyInstance) {
     return { photoUrl: url };
   });
 
+  app.post('/api/empleados', async (req) => {
+    const actor = await auth(req);
+    const body = parseBody(z.object({
+      nombre: z.string().trim().min(2, 'Escribe el nombre'),
+      email: emailSchema,
+      rol: z.enum(['empleado', 'administrador']).default('empleado'),
+      area: z.string().trim().default(''),
+      puesto: z.string().trim().default(''),
+      telefono: z.string().trim().default(''),
+      fecha_inicio: z.string().trim().default(''),
+      horario: z.string().trim().default(''),
+      modo: z.enum(['enlace', 'temporal']).default('enlace'),
+      crearFaltantes: z.boolean().default(false),
+    }), req.body);
+    const result = await importPeople(actor, [{
+      fila: 1,
+      nombre: body.nombre,
+      email: body.email,
+      rol: body.rol || 'empleado',
+      area: body.area || '',
+      puesto: body.puesto || '',
+      telefono: body.telefono || '',
+      fecha: body.fecha_inicio || '',
+      horario: body.horario || '',
+    }], { modo: body.modo === 'temporal' ? 'temporal' : 'enlace', crearFaltantes: Boolean(body.crearFaltantes) });
+    if (!result.creados.length) throw new HttpError(400, result.errores[0]?.mensaje || 'No se pudo crear la persona');
+    await broadcastPanel(actor.company.id);
+    return { ...result, csv: activationCsv(result.creados) };
+  });
+
   app.post('/api/empleados/importar', async (req) => {
     const actor = await auth(req);
-    if (actor.membership.role === 'empleado') throw new HttpError(403, 'No puedes importar empleados');
     const file = await req.file();
     if (!file) throw new HttpError(400, 'Adjunta un CSV o Excel');
+    const modoRaw = textField(file.fields, 'modo');
+    const crearRaw = textField(file.fields, 'crearFaltantes');
+    const modo = modoRaw === 'temporal' ? 'temporal' : 'enlace';
+    const crearFaltantes = crearRaw === 'si' || crearRaw === 'true' || crearRaw === '1';
     const bytes = await file.toBuffer();
-    const rows = file.filename.toLowerCase().endsWith('.csv') || file.mimetype.includes('csv')
+    const records = file.filename.toLowerCase().endsWith('.csv') || file.mimetype.includes('csv')
       ? parseCsv(bytes.toString('utf8'))
       : await rowsFromExcel(bytes);
-    const created: { email: string; password: string; nombre: string }[] = [];
-    const errors: string[] = [];
-    for (const row of rows) {
-      const nombre = pickField(row, ['nombre', 'name']);
-      const email = pickField(row, ['email', 'correo']).toLowerCase();
-      const puesto = pickField(row, ['puesto', 'cargo']);
-      const areaName = pickField(row, ['area', 'área']);
-      const telefono = pickField(row, ['telefono', 'teléfono', 'phone']);
-      const fecha = pickField(row, ['fecha_inicio', 'inicio']);
-      const horario = pickField(row, ['horario', 'schedule']);
-      if (!nombre || !email) { errors.push('Falta nombre o email en una fila'); continue; }
-      try {
-        await assertCanAddWorker(actor.company.id);
-        let areaId: string | null = null;
-        if (areaName) {
-          let area = await prisma.area.findFirst({ where: { companyId: actor.company.id, name: areaName } });
-          if (!area && actor.membership.role === 'propietario') {
-            area = await prisma.area.create({ data: { companyId: actor.company.id, name: areaName, teamName: areaName } });
-          }
-          if (!area) throw new Error(`El área «${areaName}» no existe`);
-          if (actor.membership.role === 'administrador' && area.id !== actor.membership.areaId) {
-            throw new Error('Solo puedes importar personas de tu área');
-          }
-          areaId = area.id;
-        } else if (actor.membership.role === 'administrador') areaId = actor.membership.areaId;
-        let jobTitleId: string | null = null;
-        if (puesto) {
-          let title = await prisma.jobTitle.findFirst({ where: { companyId: actor.company.id, name: puesto } });
-          if (!title && actor.membership.role === 'propietario') {
-            title = await prisma.jobTitle.create({ data: { companyId: actor.company.id, name: puesto } });
-          }
-          jobTitleId = title?.id ?? null;
-        }
-        const password = pickField(row, ['contrasena', 'contraseña', 'password']) || `Hivex-${randomCode(6)}`;
-        const existing = await prisma.user.findUnique({ where: { email }, include: { memberships: true } });
-        if (existing?.memberships.length) throw new Error(`${email} ya está en una empresa`);
-        const user = existing ?? await prisma.user.create({ data: { email, passwordHash: await hashPassword(password) } });
-        if (existing) await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(password) } });
-        await prisma.membership.create({
-          data: {
-            userId: user.id,
-            companyId: actor.company.id,
-            role: 'empleado',
-            name: nombre,
-            areaId,
-            jobTitleId,
-            phone: telefono,
-            startDate: fecha || null,
-            schedule: horario || 'L–V 09:00–18:00',
-          },
-        });
-        created.push({ email, password, nombre });
-      } catch (error) {
-        errors.push(`${email || nombre}: ${error instanceof Error ? error.message : 'error'}`);
-      }
-    }
-    return { creados: created, errores: errors };
+    const result = await importPeople(actor, rowsFromRecords(records), { modo, crearFaltantes });
+    if (result.creados.length) await broadcastPanel(actor.company.id);
+    return result;
   });
 
   app.put('/api/informes/mio', async (req) => {
@@ -973,7 +1001,9 @@ export function registerRoutes(app: FastifyInstance) {
         name: p.name,
         role: p.jobTitle?.name || roleLabel(p.role),
         photoUrl: photoUrl(p.photoPath),
-        status: p.status,
+        status: p.status === 'desconectado' ? 'desconectado' : p.status,
+        deskId: p.desks[0]?.seatId ?? null,
+        look: { ...parseLook(p.lookJson), photoUrl: photoUrl(p.photoPath) },
       })),
       alertCount: filteredAlerts.length,
       media: mediaInfo(),
@@ -1209,6 +1239,7 @@ function publicSession(actor: Actor) {
         isDemo: actor.company.isDemo,
       },
     },
+    debeCambiarContrasena: actor.mustChangePassword,
   };
 }
 

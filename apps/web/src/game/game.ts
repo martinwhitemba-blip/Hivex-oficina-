@@ -48,6 +48,8 @@ export class Game {
   readonly player: Avatar;
   readonly npcs: Npc[] = [];
   readonly remotes = new Map<string, { avatar: Avatar; target: AvatarState; fromX: number; fromY: number; toX: number; toY: number; t0: number; dur: number }>();
+  private readonly colleagues = new Map<string, Avatar>();
+  private roster: { id: string; name: string; role: string; deskId?: string | null; look: AvatarLook }[] = [];
   readonly mapRenderer: MapRenderer;
   private ctx: Ctx;
   private input = new Input();
@@ -91,7 +93,7 @@ export class Game {
     // Red + media (hoy: local / simulado)
     void opts.transport.connect(this.player.toState());
     opts.transport.onRemoteState((s) => this.onRemoteState(s));
-    opts.transport.onRemoteLeave((id) => this.remotes.delete(id));
+    opts.transport.onRemoteLeave((id) => { this.remotes.delete(id); this.syncColleagues(); });
     void opts.media.connect(this.player.id);
   }
 
@@ -129,7 +131,41 @@ export class Game {
     return { mode: this.stage?.ok ? '3d' as const : '2d' as const, characterPx: this.stage?.characterPx ?? 0, zoom: this.camera.zoom };
   }
 
-  allAvatars(): Avatar[] { return [this.player, ...this.npcs.map((n) => n.avatar), ...[...this.remotes.values()].map((r) => r.avatar)]; }
+  allAvatars(): Avatar[] {
+    return [this.player, ...this.npcs.map((n) => n.avatar), ...[...this.remotes.values()].map((r) => r.avatar), ...this.colleagues.values()];
+  }
+
+  /** Personas de la empresa que aún no han entrado: sentadas en su puesto, atenuadas. */
+  setColleagues(list: { id: string; name: string; role: string; deskId?: string | null; look: AvatarLook }[]) {
+    this.roster = list;
+    this.syncColleagues();
+  }
+
+  private syncColleagues() {
+    const keep = new Set<string>();
+    for (const person of this.roster) {
+      if (!person.id || person.id === this.player.id || this.remotes.has(person.id)) continue;
+      const seat = person.deskId ? this.world.seats.get(person.deskId) : undefined;
+      if (!seat) continue;
+      keep.add(person.id);
+      let avatar = this.colleagues.get(person.id);
+      if (!avatar) {
+        avatar = new Avatar(person.id, person.name, person.role, person.look, seat.x, seat.y);
+        avatar.ghost = true;
+        avatar.sitAt(seat);
+        this.colleagues.set(person.id, avatar);
+      } else {
+        avatar.name = person.name;
+        avatar.role = person.role;
+        avatar.look = person.look;
+        avatar.ghost = true;
+        if (!avatar.sitting) avatar.sitAt(seat);
+      }
+    }
+    for (const id of this.colleagues.keys()) {
+      if (!keep.has(id)) this.colleagues.delete(id);
+    }
+  }
 
   setPlayerStatus(s: StatusId) { this.player.status = s; }
 
@@ -397,7 +433,7 @@ export class Game {
     const enclosed = myRoom && myRoom.walls && (myRoom.kind === 'meeting' || myRoom.kind === 'private');
     const peers: PeerAudio[] = [];
     for (const a of this.allAvatars()) {
-      if (a === me || a.status === 'ausente') continue;
+      if (a === me || a.status === 'ausente' || a.ghost) continue;
       const d = dist(a, me);
       const room = this.world.roomAt(a.x, a.y);
       if (enclosed) {
@@ -420,6 +456,7 @@ export class Game {
   }
 
   private onRemoteState(s: AvatarState) {
+    this.colleagues.delete(s.id);
     const now = performance.now();
     const r = this.remotes.get(s.id);
     if (r) {
@@ -502,7 +539,7 @@ export class Game {
     const stageOn = Boolean(this.stage?.ok);
     for (const a of avatars) {
       if (a.mode === 'car') drawCar(ctx, a.x, a.y, a.carAngle, this.t, a === this.player && now < this.honkUntil);
-      else if (!stageOn) drawAvatar(ctx, a.x, a.y, { look: a.look, dir: a.dir, moving: a.moving, sitting: a.sitting, t: this.t + a.x * 0.01, dim: a.status === 'ausente', face: this.faceOf(a.look) });
+      else if (!stageOn) drawAvatar(ctx, a.x, a.y, { look: a.look, dir: a.dir, moving: a.moving, sitting: a.sitting, t: this.t + a.x * 0.01, dim: a.status === 'ausente' || a.ghost, face: this.faceOf(a.look) });
     }
     const labels = avatars.map((a) => {
       const name = a === this.player ? `${a.name.split(' ')[0]} (tú)` : a.name.split(' ')[0];
@@ -518,7 +555,7 @@ export class Game {
         y = hit.y + 16;
       }
       placed.push({ x: label.x, y, w: label.w });
-      drawNameTag(ctx, label.x, y, label.name, label.a.status, label.a === this.player);
+      drawNameTag(ctx, label.x, y, label.name, label.a.status, label.a === this.player, label.a.ghost ? '#6B7280' : undefined);
       const a = label.a;
       if (a.status === 'en_llamada' && a !== this.player) drawStatusIcon(ctx, a.x + 14, a.y - 52, '📞');
       if (a.bubble) {

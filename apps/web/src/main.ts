@@ -10,7 +10,7 @@ import { P2PMediaProvider } from './media/p2pMedia';
 import type { ProximityMediaProvider } from './media/proximityMedia';
 import { SocketIoTransport } from './net/socketTransport';
 import { api, clearToken, getToken } from './platform/api';
-import { renderAuth, renderView, type Session } from './platform/pages';
+import { renderAuth, renderPasswordGate, renderView, type Session } from './platform/pages';
 import { UI } from './ui/ui';
 import markUrl from './assets/hivex-mark.png';
 import wordmarkUrl from './assets/hivex-wordmark.png';
@@ -37,7 +37,7 @@ interface Hud {
   rankings: { ventas: { title: string; subtitle: string; rows: { name: string; value: number; fmt: string }[] }; citas: { title: string; subtitle: string; rows: { name: string; value: number; fmt: string }[] } };
   rooms: { mapRoomId: string; name: string; label: string }[];
   deskId: string | null;
-  directory: { id: string; name: string; role: string; photoUrl?: string | null }[];
+  directory: { id: string; name: string; role: string; photoUrl?: string | null; deskId?: string | null; look?: Session['membership']['look'] }[];
   alertCount: number;
   media: { mode: 'livekit' | 'p2p'; notice: string };
 }
@@ -74,7 +74,7 @@ function showAuth() {
   appEl.hidden = true;
   pagesEl.classList.add('hidden');
   const hash = location.hash;
-  const keep = ['#/registro', '#/unirse', '#/entrar', '#/codigo', '#/oficina'];
+  const keep = ['#/registro', '#/unirse', '#/entrar', '#/codigo', '#/oficina', '#/activar'];
   if (!keep.some((prefix) => hash.startsWith(prefix))) location.hash = '#/entrar';
   renderAuth(authEl, () => { void enter(); });
 }
@@ -96,6 +96,10 @@ async function enter() {
   booting = true;
   try {
     session = await api<Session>('/api/auth/yo');
+    if (session.debeCambiarContrasena) {
+      showPasswordGate();
+      return;
+    }
     const hud = await api<Hud>('/api/oficina/hud');
     await startOffice(session, hud);
     route();
@@ -165,10 +169,24 @@ async function startOffice(current: Session, hud: Hud) {
     game.setPrivateLocked(Boolean(payload?.locked), false);
     applyingLock = false;
   });
+  game.setColleagues(hud.directory.flatMap((person) => {
+    if (!person.look || !person.deskId) return [];
+    return [{ id: person.id, name: person.name, role: person.role, deskId: person.deskId, look: asLook(person.look) }];
+  }));
   game.start();
   pingTimer = window.setInterval(() => socket?.emit('presence:ping'), 20000);
   socket.emit('presence:ping');
   (window as unknown as { __game?: Game }).__game = game;
+}
+
+function showPasswordGate() {
+  teardownOffice();
+  document.body.classList.add('auth-mode');
+  authEl.hidden = false;
+  appEl.hidden = true;
+  pagesEl.classList.add('hidden');
+  pagesEl.hidden = true;
+  renderPasswordGate(authEl, () => { void enter(); });
 }
 
 function logout() {

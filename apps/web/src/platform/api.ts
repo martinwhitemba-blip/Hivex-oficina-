@@ -15,7 +15,7 @@ export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const token = getToken();
   if (token) headers.set('X-HIVEX-Token', token);
   const response = await fetch(path, { ...opts, headers });
-  const keepsSession = path.includes('/api/auth/') || path.includes('/api/invitaciones/') || path.includes('/api/acceso-codigo');
+  const keepsSession = path.includes('/api/auth/') || path.includes('/api/invitaciones/') || path.includes('/api/acceso-codigo') || path.includes('/api/activar');
   if (response.status === 401 && !keepsSession) {
     clearToken();
     location.hash = '#/entrar';

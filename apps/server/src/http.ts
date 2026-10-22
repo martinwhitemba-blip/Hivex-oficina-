@@ -40,6 +40,7 @@ export interface Actor {
     jobTitleId: string | null;
     active: boolean;
   };
+  mustChangePassword: boolean;
   company: {
     id: string;
     name: string;
@@ -77,9 +78,16 @@ export async function actorFromRequest(req: FastifyRequest): Promise<Actor> {
   });
   const membership = user?.memberships[0];
   if (!user || !membership) throw new HttpError(401, 'No encontramos tu usuario en ninguna empresa');
+  if (user.mustChangePassword) {
+    const path = req.url.split('?')[0];
+    if (path !== '/api/auth/yo' && path !== '/api/auth/cambiar-clave') {
+      throw new HttpError(403, 'Cambia la contraseña temporal antes de continuar.');
+    }
+  }
   return {
     userId: user.id,
     email: user.email,
+    mustChangePassword: user.mustChangePassword,
     membership: membership,
     company: membership.company,
     area: membership.area,

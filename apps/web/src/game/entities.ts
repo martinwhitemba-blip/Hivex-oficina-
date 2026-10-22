@@ -25,6 +25,8 @@ export class Avatar {
   carAngle = -Math.PI / 2;
   bubble: { text: string; until: number } | null = null;
   isNew = false;
+  /** Sentado y atenuado: está en la empresa, pero no ha entrado. */
+  ghost = false;
   /** 0 parado, 1 a velocidad plena. Sube y baja con suavidad. */
   pace = 0;
 

@@ -262,4 +262,162 @@ describe('API de empresa', () => {
     expect(limited).toBeGreaterThan(0);
     resetJoinRate();
   });
+
+  it('crea cuentas una a una o por archivo, con enlace o clave temporal', async () => {
+    const owner = await json('POST', '/api/auth/registro', undefined, {
+      name: 'Olga Dueña', email: 'olga@import.test', password: 'clave-segura', companyName: 'Import SA',
+    });
+    expect(owner.status).toBe(200);
+    const token = owner.body.token as string;
+    const area = await json('POST', '/api/areas', token, { name: 'Ventas', color: '#F5C518' });
+    expect(area.status).toBe(200);
+
+    const missing = await json('POST', '/api/empleados', token, {
+      nombre: 'Sin Zona', email: 'sinzona@import.test', rol: 'empleado', area: 'Inventada', modo: 'enlace', crearFaltantes: false,
+    });
+    expect(missing.status).toBe(400);
+    expect(String(missing.body.error)).toContain('no existe');
+
+    const one = await json('POST', '/api/empleados', token, {
+      nombre: 'Nora López', email: 'nora@import.test', rol: 'empleado', area: 'Ventas', puesto: 'SDR',
+      telefono: '600111222', fecha_inicio: '2026-02-01', horario: 'L–V 09:00–18:00', modo: 'enlace', crearFaltantes: true,
+    });
+    expect(one.status).toBe(200);
+    expect(one.body.creados).toHaveLength(1);
+    expect(one.body.creados[0].enlace).toContain('#/activar?code=');
+    expect(one.body.creados[0].contrasena).toBe('');
+    expect(one.body.creados[0].deskId).toBe('atlas-0');
+    expect(one.body.csv).toContain('nora@import.test');
+
+    const duplicate = await json('POST', '/api/empleados', token, {
+      nombre: 'Nora Otra', email: 'nora@import.test', rol: 'empleado', area: 'Ventas', modo: 'enlace',
+    });
+    expect(duplicate.status).toBe(400);
+    expect(String(duplicate.body.error)).toContain('ya está en tu empresa');
+
+    const other = await json('POST', '/api/auth/registro', undefined, {
+      name: 'Paco Dueño', email: 'paco@import.test', password: 'clave-segura', companyName: 'Import B',
+    });
+    const stolen = await json('POST', '/api/empleados', other.body.token, {
+      nombre: 'Nora Ajena', email: 'nora@import.test', rol: 'empleado', modo: 'enlace',
+    });
+    expect(stolen.status).toBe(400);
+    expect(String(stolen.body.error)).toContain('otra empresa');
+    const hidden = await json('GET', '/api/empleados', other.body.token);
+    expect(hidden.body.some((person: { name: string }) => person.name === 'Nora López')).toBe(false);
+
+    const code = String(one.body.creados[0].enlace).split('code=')[1];
+    const preview = await json('GET', `/api/activar/${code}`);
+    expect(preview.status).toBe(200);
+    expect(preview.body.email).toBe('nora@import.test');
+    expect(preview.body.empresa).toBe('Import SA');
+    const activated = await json('POST', '/api/activar', undefined, { code, password: 'clave-nueva' });
+    expect(activated.status).toBe(200);
+    const again = await json('POST', '/api/activar', undefined, { code, password: 'clave-nueva' });
+    expect(again.status).toBe(404);
+    const nora = await json('GET', '/api/auth/yo', activated.body.token);
+    expect(nora.body.membership.name).toBe('Nora López');
+    expect(nora.body.debeCambiarContrasena).toBe(false);
+    const peek = await json('GET', `/api/empleados/${nora.body.membership.id}`, other.body.token);
+    expect(peek.status).toBe(404);
+    const denied = await json('POST', '/api/empleados', activated.body.token, {
+      nombre: 'Intrusa', email: 'intrusa@import.test', rol: 'empleado', modo: 'enlace',
+    });
+    expect(denied.status).toBe(403);
+
+    const csv = [
+      'nombre,email,rol,puesto,area',
+      'Mal,no-es-correo,empleado,SDR,Ventas',
+      'Nora López,nora@import.test,empleado,SDR,Ventas',
+      'Iria Costa,iria@import.test,empleado,SDR,Inventada',
+      'Hugo Admin,hugo.admin@import.test,administrador,Director,Ventas',
+    ].join('\n');
+    const imported = await app.inject({
+      method: 'POST',
+      url: '/api/empleados/importar',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'multipart/form-data; boundary=----hx' },
+      payload: [
+        '------hx',
+        'Content-Disposition: form-data; name="modo"',
+        '',
+        'temporal',
+        '------hx',
+        'Content-Disposition: form-data; name="crearFaltantes"',
+        '',
+        'si',
+        '------hx',
+        'Content-Disposition: form-data; name="file"; filename="equipo.csv"',
+        'Content-Type: text/csv',
+        '',
+        csv,
+        '------hx--',
+        '',
+      ].join('\r\n'),
+    });
+    const importedBody = imported.json() as { creados: { email: string; contrasena: string; enlace: string; deskId: string | null }[]; errores: { email: string; mensaje: string }[] };
+    expect(imported.statusCode).toBe(200);
+    const emails = importedBody.creados.map((row) => row.email).sort();
+    expect(emails).toEqual(['hugo.admin@import.test', 'iria@import.test']);
+    expect(importedBody.creados.every((row) => row.contrasena.startsWith('Hivex-') && row.enlace === '')).toBe(true);
+    expect(importedBody.errores.some((issue) => issue.email === 'no-es-correo')).toBe(true);
+    expect(importedBody.errores.some((issue) => issue.mensaje.includes('repetido') || issue.email === 'nora@import.test')).toBe(true);
+    const iria = importedBody.creados.find((row) => row.email === 'iria@import.test');
+    expect(iria?.deskId).toBeTruthy();
+
+    const hugo = importedBody.creados.find((row) => row.email === 'hugo.admin@import.test')!;
+    const tempLogin = await json('POST', '/api/auth/entrar', undefined, { email: 'hugo.admin@import.test', password: hugo.contrasena });
+    expect(tempLogin.status).toBe(200);
+    expect(tempLogin.body.debeCambiarContrasena).toBe(true);
+    const blocked = await json('GET', '/api/oficina/hud', tempLogin.body.token);
+    expect(blocked.status).toBe(403);
+    expect(String(blocked.body.error)).toContain('temporal');
+    const changed = await json('POST', '/api/auth/cambiar-clave', tempLogin.body.token, { actual: hugo.contrasena, nueva: 'clave-nueva' });
+    expect(changed.status).toBe(200);
+    const open = await json('GET', '/api/oficina/hud', tempLogin.body.token);
+    expect(open.status).toBe(200);
+    const directory = open.body.directory as { name: string; deskId: string | null; status: string }[];
+    expect(directory.some((person) => person.name === 'Iria Costa' && person.deskId && person.status === 'desconectado')).toBe(true);
+
+    const plan = await prisma.plan.findUnique({ where: { code: 'starter' } });
+    await prisma.plan.update({ where: { id: plan!.id }, data: { maxWorkers: 200 } });
+    try {
+      const lines = ['nombre,email,rol,area'];
+      for (let i = 0; i < 41; i += 1) lines.push(`Lote ${i},lote${i}@import.test,empleado,Ventas`);
+      const bulk = await app.inject({
+        method: 'POST',
+        url: '/api/empleados/importar',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'multipart/form-data; boundary=----hx' },
+        payload: [
+          '------hx',
+          'Content-Disposition: form-data; name="modo"',
+          '',
+          'enlace',
+          '------hx',
+          'Content-Disposition: form-data; name="file"; filename="lote.csv"',
+          'Content-Type: text/csv',
+          '',
+          lines.join('\n'),
+          '------hx--',
+          '',
+        ].join('\r\n'),
+      });
+      const bulkBody = bulk.json() as { creados: unknown[]; errores: unknown[] };
+      expect(bulk.statusCode).toBe(200);
+      expect(bulkBody.creados).toHaveLength(41);
+      expect(bulkBody.errores).toHaveLength(0);
+    } finally {
+      await prisma.plan.update({ where: { id: plan!.id }, data: { maxWorkers: 8 } });
+    }
+
+    await prisma.plan.update({ where: { id: plan!.id }, data: { maxWorkers: 1 } });
+    try {
+      const capped = await json('POST', '/api/empleados', token, {
+        nombre: 'Extra Límite', email: 'extra.limite@import.test', rol: 'empleado', modo: 'enlace',
+      });
+      expect(capped.status).toBe(400);
+      expect(String(capped.body.error)).toContain('plan');
+    } finally {
+      await prisma.plan.update({ where: { id: plan!.id }, data: { maxWorkers: 8 } });
+    }
+  }, 60000);
 });

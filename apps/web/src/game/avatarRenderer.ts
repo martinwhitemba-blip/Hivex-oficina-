@@ -177,13 +177,13 @@ export function drawCar(ctx: Ctx, x: number, y: number, angle: number, t: number
 }
 
 /** Etiqueta de nombre bajo el avatar con punto de estado. */
-export function drawNameTag(ctx: Ctx, x: number, y: number, name: string, status: StatusId, isSelf: boolean) {
+export function drawNameTag(ctx: Ctx, x: number, y: number, name: string, status: StatusId, isSelf: boolean, dotColor?: string) {
   ctx.font = `600 9px ${FONT}`;
   const tw = ctx.measureText(name).width;
   const w = tw + 20, h = 14;
   const px = x - w / 2, py = y + 4;
   fillRR(ctx, px, py, w, h, 7, isSelf ? 'rgba(12,12,14,0.92)' : 'rgba(20,20,22,0.78)', isSelf ? BRAND.gold : undefined, 1.2);
-  circle(ctx, px + 7.5, py + h / 2, 3, STATUSES[status].color, '#0B0B0C', 1);
+  circle(ctx, px + 7.5, py + h / 2, 3, dotColor || STATUSES[status]?.color || '#6B7280', '#0B0B0C', 1);
   ctx.fillStyle = isSelf ? BRAND.goldSoft : '#FFFFFF';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';

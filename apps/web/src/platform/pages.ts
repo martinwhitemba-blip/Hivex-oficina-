@@ -12,6 +12,7 @@ export interface Session {
     company: { id: string; name: string; officeName: string; isDemo: boolean };
     look: { skin: string; hair: string; hairStyle: number; shirt: string; pants: string; glasses?: boolean; usePhoto?: boolean; photoUrl?: string | null };
   };
+  debeCambiarContrasena?: boolean;
 }
 
 const NAV = [
@@ -25,11 +26,46 @@ export function shell(view: string, title: string, subtitle: string, body: strin
   return `<div class="page"><nav class="pn">${nav}</nav><header class="ph"><div><h1>${title}</h1><p>${subtitle}</p></div></header>${body}</div>`;
 }
 
+export function renderPasswordGate(root: HTMLElement, onDone: () => void) {
+  root.innerHTML = `<div class="auth-shell">
+    <section class="auth-hero">
+      <p class="eyebrow">HIVEX · Oficina virtual</p>
+      <h1>Tu equipo, <span>en la oficina</span>.</h1>
+      <p class="pitch">La contraseña temporal solo vale para este primer acceso.</p>
+    </section>
+    <form class="auth-card">
+      <img class="logo" src="${logoUrl}" alt="HIVEX">
+      <h1>Cambia la contraseña temporal</h1>
+      <p class="lead">Elige una contraseña tuya, de al menos 8 caracteres. Hasta entonces la oficina permanece cerrada.</p>
+      <div class="err" hidden role="alert"></div>
+      <label>Contraseña temporal</label><input name="actual" type="password" required autocomplete="current-password">
+      <label>Nueva contraseña</label><input name="nueva" type="password" required minlength="8" autocomplete="new-password">
+      <button class="btn primary" type="submit">Guardar y entrar</button>
+    </form>
+  </div>`;
+  const form = root.querySelector('form')!;
+  const err = root.querySelector('.err') as HTMLElement;
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    err.hidden = true;
+    const data = Object.fromEntries(new FormData(form).entries());
+    try {
+      await api('/api/auth/cambiar-clave', { method: 'POST', body: JSON.stringify(data) });
+      onDone();
+    } catch (error) {
+      err.hidden = false;
+      err.textContent = error instanceof Error ? error.message : 'No se pudo cambiar la contraseña';
+    }
+  };
+}
+
 export function renderAuth(root: HTMLElement, onDone: () => void) {
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
-  const mode = location.hash.startsWith('#/registro') ? 'registro' : location.hash.startsWith('#/unirse') ? 'unirse' : location.hash.startsWith('#/codigo') ? 'codigo' : 'entrar';
-  const title = mode === 'registro' ? 'Crea tu empresa' : mode === 'unirse' ? 'Únete al equipo' : mode === 'codigo' ? 'Entrar con código' : 'Entra en tu oficina';
-  const lead = mode === 'codigo'
+  const mode = location.hash.startsWith('#/registro') ? 'registro' : location.hash.startsWith('#/unirse') ? 'unirse' : location.hash.startsWith('#/codigo') ? 'codigo' : location.hash.startsWith('#/activar') ? 'activar' : 'entrar';
+  const title = mode === 'registro' ? 'Crea tu empresa' : mode === 'unirse' ? 'Únete al equipo' : mode === 'codigo' ? 'Entrar con código' : mode === 'activar' ? 'Activa tu cuenta' : 'Entra en tu oficina';
+  const lead = mode === 'activar'
+    ? 'Elige la contraseña con la que entrarás. No enviamos correo: el enlace te lo pasa tu empresa.'
+    : mode === 'codigo'
     ? 'Escribe el código de la empresa, tu nombre y una contraseña. Entrarás en la oficina como empleado.'
     : mode === 'unirse'
       ? 'La invitación no envía correo. Elige tu nombre y la contraseña con la que entrarás después.'
@@ -51,13 +87,15 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
     <h1>${title}</h1>
     <p class="lead">${lead}</p>
     <div class="err" hidden role="alert"></div>
+    ${mode === 'activar' ? '<p id="activar-who" class="muted"></p>' : ''}
     ${mode === 'codigo' ? '<label>Código</label><input name="code" required value="' + esc(params.get('c') || '') + '" autocomplete="off">' : ''}
     ${mode === 'unirse' ? '<label>Código de invitación</label><input name="code" required value="' + esc(params.get('code') || '') + '">' : ''}
     ${mode === 'entrar' || mode === 'registro' || mode === 'codigo' ? '<label>Correo</label><input name="email" type="email" required autocomplete="username">' : ''}
-    ${mode !== 'entrar' ? '<label>Tu nombre</label><input name="name" required>' : ''}
+    ${mode !== 'entrar' && mode !== 'activar' ? '<label>Tu nombre</label><input name="name" required>' : ''}
     ${mode === 'registro' ? '<label>Nombre de la empresa</label><input name="companyName" required>' : ''}
-    <label>Contraseña</label><input name="password" type="password" required minlength="${mode === 'entrar' ? '1' : '8'}" autocomplete="${mode === 'entrar' ? 'current-password' : 'new-password'}">
-    <button class="btn primary" type="submit">${mode === 'entrar' ? 'Entrar' : mode === 'codigo' ? 'Entrar en la oficina' : 'Continuar'}</button>
+    <label>${mode === 'activar' ? 'Nueva contraseña' : 'Contraseña'}</label><input name="password" type="password" required minlength="${mode === 'entrar' ? '1' : '8'}" autocomplete="${mode === 'entrar' ? 'current-password' : 'new-password'}">
+    ${mode === 'activar' ? '<label>Repite la contraseña</label><input name="password2" type="password" required minlength="8" autocomplete="new-password">' : ''}
+    <button class="btn primary" type="submit">${mode === 'entrar' ? 'Entrar' : mode === 'codigo' ? 'Entrar en la oficina' : mode === 'activar' ? 'Activar cuenta' : 'Continuar'}</button>
     <div class="auth-links">
       <a href="#/entrar">Ya tengo cuenta</a>
       <a href="#/codigo">Entrar con código</a>
@@ -72,6 +110,14 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
     err.hidden = true;
     const data = Object.fromEntries(new FormData(form).entries());
     try {
+      if (mode === 'activar') {
+        if (String(data.password) !== String(data.password2)) throw new Error('Las contraseñas no coinciden');
+        const result = await api<{ token: string }>('/api/activar', { method: 'POST', body: JSON.stringify({ code: params.get('code') || '', password: data.password }) });
+        localStorage.setItem('hivex_token', result.token);
+        location.hash = '#/oficina';
+        onDone();
+        return;
+      }
       const path = mode === 'registro' ? '/api/auth/registro' : mode === 'unirse' ? `/api/invitaciones/${data.code}/aceptar` : mode === 'codigo' ? '/api/acceso-codigo' : '/api/auth/entrar';
       const result = await api<{ token: string }>(path, { method: 'POST', body: JSON.stringify(data) });
       localStorage.setItem('hivex_token', result.token);
@@ -84,6 +130,21 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
       err.textContent = message || (mode === 'unirse' ? 'La invitación no es válida o ha caducado' : 'No se pudo completar la acción');
     }
   };
+  if (mode === 'activar') {
+    const code = params.get('code') || '';
+    if (!code) {
+      err.hidden = false;
+      err.textContent = 'El enlace de activación no es válido o ha caducado';
+    } else {
+      void api<{ email: string; nombre: string; empresa: string }>(`/api/activar/${encodeURIComponent(code)}`).then((info) => {
+        const who = root.querySelector('#activar-who');
+        if (who) who.textContent = `${info.nombre || info.email} · ${info.empresa} · ${info.email}`;
+      }).catch((error) => {
+        err.hidden = false;
+        err.textContent = error instanceof Error && error.message ? error.message : 'El enlace de activación no es válido o ha caducado';
+      });
+    }
+  }
   if (mode === 'unirse' && params.get('code')) {
     void api<{ email: string; empresa: string }>(`/api/invitaciones/${encodeURIComponent(params.get('code') || '')}`).catch((error) => {
       err.hidden = false;
@@ -311,26 +372,122 @@ function spark(kpi?: PanelKpi) {
   return `<svg class="chart" viewBox="0 0 320 160"><polyline fill="none" stroke="#F5C518" stroke-width="3" points="${points}"/></svg><p class="muted">${esc(kpi.label)}</p>`;
 }
 
+interface CreatedAccount {
+  fila: number;
+  nombre: string;
+  email: string;
+  rol: string;
+  enlace: string;
+  contrasena: string;
+  area: string;
+  puesto: string;
+  deskId: string | null;
+}
+interface ImportResult { creados: CreatedAccount[]; errores: { fila: number; email: string; mensaje: string }[]; csv: string }
+
+function accessUrl(enlace: string) {
+  if (!enlace) return '';
+  if (enlace.startsWith('http')) return enlace;
+  return `${location.origin}${location.pathname}${enlace}`;
+}
+
+function paintImportResult(out: HTMLElement, result: ImportResult) {
+  const rows = result.creados.map((person) => {
+    const link = accessUrl(person.enlace);
+    const access = link
+      ? `<a href="${esc(link)}">${esc(link)}</a>`
+      : esc(person.contrasena || '—');
+    return `<tr><td>${esc(person.nombre)}</td><td>${esc(person.email)}</td><td>${esc(person.rol)}</td><td>${esc(person.area || '—')}</td><td>${access}</td></tr>`;
+  }).join('');
+  const errors = result.errores.map((issue) => `<li>Fila ${issue.fila}${issue.email ? ` (${esc(issue.email)})` : ''}: ${esc(issue.mensaje)}</li>`).join('');
+  out.className = 'import-result';
+  out.innerHTML = `<p><b>${result.creados.length}</b> ${result.creados.length === 1 ? 'cuenta creada' : 'cuentas creadas'}. ${result.errores.length ? `<b>${result.errores.length}</b> con error.` : 'Sin errores.'} No se ha enviado ningún correo.</p>
+    ${rows ? `<div class="table-wrap"><table class="data"><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Área</th><th>Acceso</th></tr>${rows}</table></div>` : ''}
+    ${errors ? `<ul class="err-list">${errors}</ul>` : ''}
+    ${result.creados.length ? '<button class="btn" id="download-access" type="button">Descargar CSV de accesos</button>' : ''}`;
+  out.querySelector('#download-access')?.addEventListener('click', () => {
+    const csv = result.csv.split('#/activar?').join(`${location.origin}${location.pathname}#/activar?`);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'accesos-hivex.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+function peopleCards(people: Person[]) {
+  return people.map((person) => `<a class="cardx person" href="#/equipo/${person.id}">${avatar(person.photoUrl, person.name)}<div><div class="nm">${esc(person.name)}</div><div class="muted">${esc(person.area?.name || 'Sin área')} · ${esc(person.puesto || person.roleLabel)}</div></div></a>`).join('');
+}
+
 async function renderTeam(root: HTMLElement, session: Session) {
   const people = await api<Person[]>('/api/empleados');
   const can = session.membership.role !== 'empleado';
-  root.innerHTML = shell('equipo', 'Equipo', 'Fotos, puestos y áreas. En la oficina el personaje de juego sale por defecto.', `
-    ${can ? `<form id="import" class="cardx"><b>Importar CSV o Excel</b><p class="muted">Columnas: nombre, email, puesto, area, telefono, fecha_inicio, horario. <button class="btn" id="plantilla" type="button">Descargar plantilla</button></p><input name="file" type="file" accept=".csv,.xlsx" required><button class="btn primary" type="submit">Importar</button><div id="import-out" class="muted"></div></form>` : ''}
+  const owner = session.membership.role === 'propietario';
+  root.innerHTML = shell('equipo', 'Equipo', 'Cada persona tiene su cuenta. En la oficina se sienta en su puesto aunque todavía no haya entrado.', `
+    ${can ? `<form id="add-person" class="cardx form"><h2>Agregar persona</h2>
+      <p class="muted">Una cuenta real, de una en una. No enviamos correo: o copias el enlace de activación, o generas una contraseña temporal que hay que cambiar al entrar.</p>
+      <label>Nombre</label><input name="nombre" required minlength="2">
+      <label>Correo</label><input name="email" type="email" required>
+      <label>Rol</label><select name="rol"><option value="empleado">Empleado</option>${owner ? '<option value="administrador">Administrador</option>' : ''}</select>
+      <label>Área</label><input name="area" placeholder="Ventas">
+      <label>Puesto</label><input name="puesto" placeholder="SDR">
+      <label>Teléfono</label><input name="telefono">
+      <label>Fecha de inicio</label><input name="fecha_inicio" placeholder="2026-01-15">
+      <label>Horario</label><input name="horario" placeholder="L–V 09:00–18:00">
+      <label>Acceso</label><select name="modo"><option value="enlace">Enlace de activación</option><option value="temporal">Contraseña temporal</option></select>
+      <label><input name="crearFaltantes" type="checkbox"> Crear áreas y puestos que no existan</label>
+      <button class="btn primary" type="submit">Agregar persona</button>
+      <div id="add-out" class="muted"></div>
+    </form>
+    <form id="import" class="cardx form"><h2>Importar CSV o Excel</h2>
+      <p class="muted">Columnas: nombre, email, rol, puesto, area, telefono, fecha_inicio, horario. El mismo acceso para todo el archivo. <button class="btn" id="plantilla" type="button">Descargar plantilla</button></p>
+      <input name="file" type="file" accept=".csv,.xlsx" required>
+      <label>Acceso</label><select name="modo"><option value="enlace">Enlace de activación</option><option value="temporal">Contraseña temporal</option></select>
+      <label><input name="crearFaltantes" type="checkbox"> Crear áreas y puestos que no existan</label>
+      <button class="btn primary" type="submit">Importar</button>
+      <div id="import-out" class="muted"></div>
+    </form>` : ''}
     ${can ? await joinCodeBox() : ''}
-    <div class="grid cards">${people.map((person) => `<a class="cardx person" href="#/equipo/${person.id}">${avatar(person.photoUrl, person.name)}<div><div class="nm">${esc(person.name)}</div><div class="muted">${esc(person.area?.name || 'Sin área')} · ${esc(person.puesto || person.roleLabel)}</div></div></a>`).join('')}</div>
+    <div id="people-grid" class="grid cards">${peopleCards(people)}</div>
     ${can ? await inviteBox() : ''}
   `);
+  const refreshPeople = async () => {
+    const next = await api<Person[]>('/api/empleados');
+    const grid = root.querySelector('#people-grid');
+    if (grid) grid.innerHTML = peopleCards(next);
+  };
+  root.querySelector('#add-person')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const out = root.querySelector('#add-out') as HTMLElement;
+    try {
+      const data = Object.fromEntries(new FormData(form).entries());
+      const result = await api<ImportResult>('/api/empleados', {
+        method: 'POST',
+        body: JSON.stringify({ ...data, crearFaltantes: data.crearFaltantes === 'on' }),
+      });
+      paintImportResult(out, result);
+      form.reset();
+      await refreshPeople();
+    } catch (error) { noteError(out, error); }
+  });
   root.querySelector('#import')?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
     const out = root.querySelector('#import-out') as HTMLElement;
     try {
-      const file = (root.querySelector('input[type=file]') as HTMLInputElement).files?.[0];
+      const file = (form.querySelector('input[type=file]') as HTMLInputElement).files?.[0];
       if (!file) return;
+      const data = new FormData(form);
       const body = new FormData();
       body.append('file', file);
-      const result = await api<{ creados: { email: string; password: string }[]; errores: string[] }>('/api/empleados/importar', { method: 'POST', body });
-      out.className = 'muted';
-      out.textContent = `Creados: ${result.creados.map((row) => `${row.email} (${row.password})`).join(', ') || 'ninguno'}. ${result.errores.join(' ')}`;
+      body.append('modo', String(data.get('modo') || 'enlace'));
+      if (data.get('crearFaltantes')) body.append('crearFaltantes', 'si');
+      const result = await api<ImportResult>('/api/empleados/importar', { method: 'POST', body });
+      paintImportResult(out, result);
+      await refreshPeople();
     } catch (error) { noteError(out, error); }
   });
   root.querySelector('#plantilla')?.addEventListener('click', () => void downloadFile('/api/empleados/plantilla.csv', 'plantilla-equipo.csv').catch((error) => noteError(root.querySelector('#import-out'), error)));

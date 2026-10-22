@@ -355,23 +355,33 @@ export class UI {
   private renderList() {
     const g = this.game;
     const near = new Set(g.peers.map((p) => p.id));
-    const npcs = g.allAvatars().filter((a) => a !== g.player && (!this.filter || a.name.toLowerCase().includes(this.filter)));
+    const npcs = g.allAvatars().filter((a) => a !== g.player && !a.ghost && (!this.filter || a.name.toLowerCase().includes(this.filter)));
+    const ghosts = g.allAvatars().filter((a) => a.ghost && (!this.filter || a.name.toLowerCase().includes(this.filter)));
     const inMeeting = npcs.filter((a) => a.status === 'en_reunion');
     const nearList = npcs.filter((a) => near.has(a.id));
     const online = npcs.filter((a) => a.status !== 'en_reunion' && !near.has(a.id));
     const present = new Set(g.allAvatars().map((a) => a.id));
     const offline = this.hooks.directory.filter((o) => !present.has(o.id) && (!this.filter || o.name.toLowerCase().includes(this.filter)));
 
-    const row = (a: Avatar) => `
-      <div class="member" data-id="${a.id}" title="Clic: centrar cámara · Ir: caminar hasta ${a.name.split(' ')[0]}">
-        <div class="pic"><img src="${this.portrait(a)}"><span class="dot" style="background:${STATUSES[a.status].color}"></span></div>
+    const row = (a: Avatar) => {
+      const away = a.ghost;
+      const label = away ? 'Desconectado' : `${STATUSES[a.status].emoji} ${STATUSES[a.status].label}`;
+      const color = away ? '#6B7280' : STATUSES[a.status].color;
+      return `
+      <div class="member${away ? ' offline' : ''}" data-id="${a.id}" title="Clic: centrar cámara · Ir: caminar hasta ${a.name.split(' ')[0]}">
+        <div class="pic"><img src="${this.portrait(a)}"><span class="dot" style="background:${color}"></span></div>
         <div class="body">
           <div class="nm">${a.name}${a.isNew ? '<span class="new">Nuevo</span>' : ''}</div>
-          <div class="meta"><span class="role ${roleClass(a.role)}">${a.role}</span><span>${STATUSES[a.status].emoji} ${STATUSES[a.status].label}</span></div>
+          <div class="meta"><span class="role ${roleClass(a.role)}">${a.role}</span><span>${label}</span></div>
         </div>
         <button class="go" data-msg="${a.id}">Mensaje</button>
         <button class="go" data-go="${a.id}">Ir</button>
       </div>`;
+    };
+    const offlineCard = (o: { id: string; name: string; role: string; photoUrl?: string | null }) => `
+      <div class="member offline" data-id="${o.id}"><div class="pic">${o.photoUrl ? `<img src="${o.photoUrl}" alt="">` : `<div class="ph">${o.name.split(' ').map((w) => w[0]).join('')}</div>`}<span class="dot" style="background:#555"></span></div>
+      <div class="body"><div class="nm">${o.name}</div><div class="meta"><span class="role ${roleClass(o.role)}">${o.role}</span><span>Desconectado</span></div></div>
+      <button class="go" data-msg="${o.id}">Mensaje</button></div>`;
     const section = (title: string, items: string[]) => items.length ? `<div class="section-title">${title} <span class="count">(${items.length})</span></div>${items.join('')}` : '';
 
     let html = '';
@@ -384,10 +394,7 @@ export class UI {
     html += `<div class="section-title">Salas</div>
       <div class="room-row">${g.world.isPrivateLocked() ? ICONS.lock : ICONS.unlock}<span class="rn">Despacho privado</span><button class="switch ${g.world.isPrivateLocked() ? '' : 'on'}" data-act="lock" title="Abrir / cerrar"></button></div>`;
     html += `<div class="room-row"><span class="rn">Compañeros de demostración</span><button class="switch ${g.demoOn ? 'on' : ''}" data-act="demo" title="Mostrar u ocultar NPC"></button></div>`;
-    html += section('Desconectados', offline.map((o) => `
-      <div class="member offline" data-id="${o.id}"><div class="pic">${o.photoUrl ? `<img src="${o.photoUrl}" alt="">` : `<div class="ph">${o.name.split(' ').map((w) => w[0]).join('')}</div>`}<span class="dot" style="background:#555"></span></div>
-      <div class="body"><div class="nm">${o.name}</div><div class="meta"><span class="role ${roleClass(o.role)}">${o.role}</span><span>Desconectado</span></div></div>
-      <button class="go" data-msg="${o.id}">Mensaje</button></div>`));
+    html += section('Desconectados', [...ghosts.map(row), ...offline.map(offlineCard)]);
 
     // Evita re-render si no cambió (mantiene hover/scroll)
     if (this.listEl.dataset.html === html) return;

@@ -8,11 +8,13 @@ datasource db {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  passwordHash String
-  createdAt    DateTime     @default(now())
-  memberships  Membership[]
+  id                 String       @id @default(cuid())
+  email              String       @unique
+  passwordHash       String
+  mustChangePassword Boolean      @default(false)
+  createdAt          DateTime     @default(now())
+  memberships        Membership[]
+  activations        Activation[]
 }
 
 model Company {
@@ -41,6 +43,21 @@ model Company {
   messages       ChatMessage[]
   directMessages DirectMessage[]
   reports        DailyReport[]
+  activations    Activation[]
+}
+
+model Activation {
+  id           String    @id @default(cuid())
+  code         String    @unique
+  companyId    String
+  userId       String
+  membershipId String
+  expiresAt    DateTime
+  usedAt       DateTime?
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
 }
 
 model Membership {
