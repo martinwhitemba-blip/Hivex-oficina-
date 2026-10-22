@@ -14,7 +14,7 @@ Oro sobre negro. Toda la interfaz está en español.
 - Informe de jornada, fichaje, tareas (pendiente / en curso / hecho) y puntos.
 - Panel de mi negocio: rankings, ritmo diario, objetivo contra real, alertas en español y exportación CSV.
 - Panel del dueño: personas en vivo (área, tarea, estado y tiempo), mapa de áreas, reasignar, mover y auditoría. Diseño en `docs/panel-del-dueno.md`.
-- Oficina multijugador por WebSocket, con paso más suave. Pulsa el avatar de un compañero para abrirle un mensaje directo. Audio de proximidad directo entre navegadores, o LiveKit si configuras las claves. Los compañeros de demostración del prototipo se pueden volver a encender desde el interruptor de la lista.
+- Oficina multijugador por WebSocket, con personajes 3D (caminan, esperan y giran; la foto, si está activa, va en la cara y en una chapa). Si el navegador no tiene WebGL, se ve el personaje 2D. Pulsa un compañero para abrirle un mensaje directo. Audio de proximidad directo entre navegadores, o LiveKit si configuras las claves. El interruptor «Compañeros de demostración» los hace pasear entre áreas.
 - Chat con canales y la lista Directos (no leídos). Los mensajes directos se guardan y no salen de la empresa.
 - Planes Starter, Pro y Empresa con topes de personas y áreas. Pantalla Plan y uso. Sin cobro todavía.
 - Módulo de captación marcado como **Próximamente** (modelos y área Llamadas listos, sin telefonía).
