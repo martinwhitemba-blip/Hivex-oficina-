@@ -716,29 +716,29 @@ function buildRig(look: AvatarLook, photo: HTMLImageElement | undefined, id: str
   const hairMat = lit(look.hair, 0.45);
 
   const hip = new THREE.Group();
-  hip.position.y = 28;
+  hip.position.y = 30;
   turn.add(hip);
   const torso = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 20), shirt);
-  torso.scale.set(16, 14.5, 13);
-  torso.position.y = 14;
+  torso.scale.set(19, 16.5, 16);
+  torso.position.y = 13;
   torso.castShadow = true;
   hip.add(torso);
-  const belt = new THREE.Mesh(new THREE.TorusGeometry(11.5, 1.5, 8, 20), lit('#F5C518', 0.32));
+  const belt = new THREE.Mesh(new THREE.TorusGeometry(14, 1.7, 8, 22), lit('#F5C518', 0.32));
   belt.rotation.x = Math.PI / 2;
   belt.position.y = 4;
   hip.add(belt);
 
-  const legL = leg(pants, shoe, -6.4);
-  const legR = leg(pants, shoe, 6.4);
+  const legL = leg(pants, shoe, -7.2);
+  const legR = leg(pants, shoe, 7.2);
   hip.add(legL.pivot, legR.pivot);
-  const armL = arm(skin, lit(shade(look.shirt, -0.18), 0.5), -16);
-  const armR = arm(skin, lit(shade(look.shirt, -0.18), 0.5), 16);
+  const armL = arm(skin, lit(shade(look.shirt, -0.18), 0.5), -18);
+  const armR = arm(skin, lit(shade(look.shirt, -0.18), 0.5), 18);
   armL.pivot.position.y = 22;
   armR.pivot.position.y = 22;
   hip.add(armL.pivot, armR.pivot);
 
-  const head = new THREE.Mesh(new THREE.SphereGeometry(11.2, 28, 22), skin);
-  head.position.y = 64;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(10, 28, 22), skin);
+  head.position.y = 66;
   head.castShadow = true;
   turn.add(head);
   if (!photo) {
@@ -746,21 +746,21 @@ function buildRig(look: AvatarLook, photo: HTMLImageElement | undefined, id: str
     const eyeWhite = lit('#F8F4EE', 0.3);
     const pupil = lit('#1B140F', 0.25);
     for (const side of [-3.1, 3.1]) {
-      const white = new THREE.Mesh(new THREE.SphereGeometry(1.55, 12, 10), eyeWhite);
-      white.position.set(side, 65.2, 9.4);
-      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.72, 10, 8), pupil);
-      dot.position.set(side, 65, 10.6);
+      const white = new THREE.Mesh(new THREE.SphereGeometry(1.45, 12, 10), eyeWhite);
+      white.position.set(side, 67, 8.6);
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.68, 10, 8), pupil);
+      dot.position.set(side, 66.8, 9.8);
       turn.add(white, dot);
     }
     const mouth = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.32, 6, 12, Math.PI), lit('#C47A74', 0.45));
-    mouth.position.set(0, 60.4, 9.6);
+    mouth.position.set(0, 62.2, 8.8);
     mouth.rotation.z = Math.PI;
     turn.add(mouth);
     if (look.glasses) {
       const frame = lit('#16161A', 0.25);
       for (const side of [-3.1, 3.1]) {
         const ring = new THREE.Mesh(new THREE.TorusGeometry(2.1, 0.22, 8, 16), frame);
-        ring.position.set(side, 65, 10.2);
+        ring.position.set(side, 67, 9.2);
         turn.add(ring);
       }
     }
@@ -770,17 +770,17 @@ function buildRig(look: AvatarLook, photo: HTMLImageElement | undefined, id: str
     cap.scale.set(1, 0.72, 0.9);
     turn.add(cap);
     const framed = framedPhoto(photo, anisotropy);
-    const face = new THREE.Mesh(new THREE.CircleGeometry(8.2, 28), new THREE.MeshBasicMaterial({ map: framed, toneMapped: false }));
-    face.position.set(0, 64.2, 9.1);
+    const face = new THREE.Mesh(new THREE.CircleGeometry(7.4, 28), new THREE.MeshBasicMaterial({ map: framed, toneMapped: false }));
+    face.position.set(0, 66.2, 8.2);
     face.userData.avatarId = id;
-    const faceRing = new THREE.Mesh(new THREE.TorusGeometry(8.5, 0.7, 8, 28), lit('#F5C518', 0.28));
+    const faceRing = new THREE.Mesh(new THREE.TorusGeometry(7.7, 0.72, 8, 28), lit('#F5C518', 0.28));
     faceRing.position.copy(face.position);
     turn.add(face, faceRing);
     const badgeMat = new THREE.SpriteMaterial({ map: framed, transparent: true, depthTest: true });
     badgeMat.userData.keep = true;
     const badge = new THREE.Sprite(badgeMat);
-    badge.position.set(15, 66, 4);
-    badge.scale.set(34, 34, 1);
+    badge.position.set(0, 46, 16);
+    badge.scale.set(30, 30, 1);
     badge.renderOrder = 4;
     turn.add(badge);
   }
@@ -796,12 +796,12 @@ function buildRig(look: AvatarLook, photo: HTMLImageElement | undefined, id: str
 function leg(pants: THREE.Material, shoe: THREE.Material, x: number) {
   const pivot = new THREE.Group();
   pivot.position.set(x, 0, 0);
-  const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(3.5, 8, 4, 8), pants);
+  const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(4.6, 7, 4, 8), pants);
   thigh.position.y = -7;
   thigh.castShadow = true;
   const knee = new THREE.Group();
   knee.position.y = -12;
-  const shin = new THREE.Mesh(new THREE.CapsuleGeometry(3.1, 7, 4, 8), pants);
+  const shin = new THREE.Mesh(new THREE.CapsuleGeometry(4.1, 6.5, 4, 8), pants);
   shin.position.y = -6;
   shin.castShadow = true;
   const foot = new THREE.Mesh(new THREE.CapsuleGeometry(3.2, 4.5, 3, 8), shoe);
@@ -816,7 +816,7 @@ function leg(pants: THREE.Material, shoe: THREE.Material, x: number) {
 function arm(skin: THREE.Material, sleeve: THREE.Material, x: number) {
   const pivot = new THREE.Group();
   pivot.position.set(x, 0, 0);
-  const upper = new THREE.Mesh(new THREE.CapsuleGeometry(2.8, 7, 3, 8), sleeve);
+  const upper = new THREE.Mesh(new THREE.CapsuleGeometry(3.6, 7, 3, 8), sleeve);
   upper.position.y = -6;
   upper.castShadow = true;
   const hand = new THREE.Mesh(new THREE.SphereGeometry(2.5, 12, 10), skin);
@@ -827,8 +827,8 @@ function arm(skin: THREE.Material, sleeve: THREE.Material, x: number) {
 
 function hairFor(style: AvatarLook['hairStyle'], material: THREE.Material) {
   const group = new THREE.Group();
-  const cap = new THREE.Mesh(new THREE.SphereGeometry(11.6, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.48), material);
-  cap.position.y = 68;
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(10.4, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.48), material);
+  cap.position.y = 70;
   cap.castShadow = true;
   group.add(cap);
   if (style === 1) {
