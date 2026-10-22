@@ -97,6 +97,20 @@ table.data th, table.data td { text-align: left; padding: 8px 6px; border-bottom
 .detail-hero { display: flex; gap: 14px; align-items: center; }
 .detail-hero img { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; }
 svg.chart { width: 100%; height: 160px; background: #101012; border-radius: 12px; }
+.page h2 { margin: 22px 0 10px; font-size: 18px; letter-spacing: -.2px; }
+.cardx h2 { margin: 0 0 8px; letter-spacing: -.3px; }
+.form input:focus, .form select:focus, .auth-card input:focus, .toolbar input:focus, .toolbar select:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 28%, transparent);
+}
+.btn { transition: transform .15s ease, filter .15s ease, border-color .15s ease; }
+.btn:hover { transform: translateY(-1px); }
+.btn.primary:hover { filter: brightness(1.06); }
+table.data tr:hover td { background: rgba(255,255,255,.03); }
+.kcard, .bubble, .peer-row { transition: border-color .15s ease, transform .15s ease; }
+.kcard:hover, .peer-row:hover { border-color: color-mix(in srgb, var(--gold) 50%, transparent); }
+.toolbar .btn, .join-actions .btn, .import-result .btn { width: auto; }
 @media (max-width: 860px) {
   .auth-shell { grid-template-columns: 1fr; gap: 16px; }
   .auth-hero h1 { font-size: 34px; }
@@ -104,4 +118,8 @@ svg.chart { width: 100%; height: 160px; background: #101012; border-radius: 12px
   .ph h1 { font-size: 22px; }
   .floor { height: 620px; }
   .barline { grid-template-columns: 1fr; }
+  .page { padding: 12px 12px 96px; }
+  .cardx { padding: 12px; }
+  .auth-card { padding: 16px; }
+  .pn { gap: 8px; }
 }
