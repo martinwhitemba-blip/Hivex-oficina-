@@ -420,4 +420,60 @@ describe('API de empresa', () => {
       await prisma.plan.update({ where: { id: plan!.id }, data: { maxWorkers: 8 } });
     }
   }, 60000);
+
+  it('aísla la marca de cada empresa y rechaza colores que no se leen', async () => {
+    const a = await json('POST', '/api/auth/registro', undefined, {
+      name: 'Marta Marca', email: 'marta@marca.test', password: 'clave-segura', companyName: 'Marca A',
+    });
+    const b = await json('POST', '/api/auth/registro', undefined, {
+      name: 'Boris Marca', email: 'boris@marca.test', password: 'clave-segura', companyName: 'Marca B',
+    });
+    const tokenA = a.body.token as string;
+    const tokenB = b.body.token as string;
+    const dark = await json('PATCH', '/api/marca', tokenA, { nombre: 'Acme', oficina: 'Oficina Acme', primario: '#111111', acento: '#22C55E' });
+    expect(dark.status).toBe(400);
+    expect(String(dark.body.error)).toContain('no se lee');
+    const saved = await json('PATCH', '/api/marca', tokenA, { nombre: 'Acme', oficina: 'Oficina Acme', primario: '#22C55E', acento: '#38BDF8' });
+    expect(saved.status).toBe(200);
+    expect(saved.body.nombre).toBe('Acme');
+    expect(saved.body.oficina).toBe('Oficina Acme');
+    expect(saved.body.poweredBy).toBe('HIVEX');
+    const other = await json('GET', '/api/marca', tokenB);
+    expect(other.body.nombre).toBe('Marca B');
+    expect(other.body.oficina).not.toBe('Oficina Acme');
+    expect(other.body.primario).toBe('#F5C518');
+
+    const code = await json('POST', '/api/empresa/codigo-acceso/regenerar', tokenA);
+    const pub = await json('GET', `/api/marca/codigo/${code.body.code}`);
+    expect(pub.status).toBe(200);
+    expect(pub.body.nombre).toBe('Acme');
+    expect(pub.body.oficina).toBe('Oficina Acme');
+    const missing = await json('GET', '/api/marca/codigo/NOEXISTE');
+    expect(missing.status).toBe(404);
+
+    const invite = await json('POST', '/api/invitaciones', tokenA, { email: 'empleado@marca.test', role: 'empleado' });
+    const accepted = await json('POST', `/api/invitaciones/${invite.body.code}/aceptar`, undefined, { name: 'Emple Marca', password: 'clave-segura' });
+    const forbidden = await json('PATCH', '/api/marca', accepted.body.token, { nombre: 'Hack', oficina: 'Hack', primario: '#22C55E', acento: '#38BDF8' });
+    expect(forbidden.status).toBe(403);
+    const still = await json('GET', '/api/marca', tokenB);
+    expect(still.body.nombre).toBe('Marca B');
+
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const logo = await app.inject({
+      method: 'POST',
+      url: '/api/marca/logo',
+      headers: { authorization: `Bearer ${tokenA}`, 'content-type': 'multipart/form-data; boundary=----hx' },
+      payload: Buffer.concat([
+        Buffer.from('------hx\r\nContent-Disposition: form-data; name="file"; filename="logo.png"\r\nContent-Type: image/png\r\n\r\n'),
+        png,
+        Buffer.from('\r\n------hx--\r\n'),
+      ]),
+    });
+    const logoBody = logo.json() as { logoUrl: string | null; nombre: string };
+    expect(logo.statusCode).toBe(200);
+    expect(logoBody.logoUrl).toContain('/uploads/');
+    expect(logoBody.nombre).toBe('Acme');
+    const leaked = await json('GET', '/api/marca', tokenB);
+    expect(leaked.body.logoUrl).toBeNull();
+  });
 });

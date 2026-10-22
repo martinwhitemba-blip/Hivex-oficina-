@@ -29,6 +29,7 @@ import { broadcastPanel, pushDirect } from './socket';
 import { registerOwnerRoutes } from './ownerRoutes';
 import { assertJoinRate, clientIp } from './rateLimit';
 import { activationCsv, importPeople, rowsFromRecords } from './peopleImport';
+import { registerBrandRoutes } from './branding';
 
 const emailSchema = z.string().trim().email('El correo no es válido').transform((v) => v.toLowerCase());
 const passwordSchema = z.string().min(8, 'La contraseña debe tener al menos 8 caracteres');
@@ -55,6 +56,7 @@ function textField(fields: unknown, name: string) {
 
 export function registerRoutes(app: FastifyInstance) {
   app.get('/api/salud', async () => ({ ok: true, servicio: 'hivex-beta' }));
+  registerBrandRoutes(app);
 
   app.post('/api/auth/registro', async (req) => {
     const body = parseBody(z.object({

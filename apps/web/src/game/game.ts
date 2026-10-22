@@ -120,6 +120,10 @@ export class Game {
   }
 
   /** El lienzo recibe WASD aunque antes hubiera un input del panel. */
+  setPlazaLogo(image: HTMLImageElement | null) {
+    this.stage?.setPlazaLogo(image);
+  }
+
   focusKeyboard() {
     const active = document.activeElement as HTMLElement | null;
     if (active && active !== this.canvas && (isTextField(active) || active.closest('#pages'))) active.blur();

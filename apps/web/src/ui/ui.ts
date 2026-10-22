@@ -111,7 +111,7 @@ export class UI {
     this.sidebar = sb;
     sb.innerHTML = `
       <div class="sb-head">
-        <div class="brand"><img class="wordmark" src="${this.brand.wordmark}" alt="${BRAND_NAME}"><span class="tag">${BRAND_TAGLINE}</span></div>
+        <div class="brand"><div class="brand-block"><img class="wordmark" src="${this.brand.wordmark}" alt="${BRAND_NAME}"><span class="tag">${this.hooks.officeName || BRAND_TAGLINE}</span><span class="powered">powered by HIVEX</span></div></div>
         <button class="icon-btn" data-act="collapse" title="Ocultar panel">${ICONS.sidebar}</button>
       </div>
       <label class="search">${ICONS.search}<input placeholder="Buscar personas" /><kbd>⌘K</kbd></label>
@@ -157,7 +157,7 @@ export class UI {
     top.append(menuBtn);
     top.insertAdjacentHTML('beforeend', `
       <span class="pill btn nav-open show-sm">${ICONS.list}<span class="lbl">Gestión</span></span>
-      <span class="pill btn"><span class="dotg"></span>${this.hooks.officeName || OFFICE_NAME} ${ICONS.chevron}</span>
+      <span class="pill btn office-pill"><span class="dotg"></span><span class="office-label">${this.hooks.officeName || OFFICE_NAME}</span> ${ICONS.chevron}</span>
       <span class="pill hide-sm">${ICONS.calendar}${this.hooks.stats.seguimiento} seguimientos</span>
       <span class="pill">${ICONS.trend}Hoy: ${this.hooks.stats.ventasHoy} ventas · ${fmtEuro(this.hooks.stats.importeHoy)}</span>`);
     this.carPill = h('span', 'pill btn car', ICONS.car + 'Coche');
@@ -216,6 +216,7 @@ export class UI {
 
     // Minimapa + zoom
     const mm = h('div', 'overlay minimap');
+    mm.insertAdjacentHTML('afterbegin', `<div class="mm-caption">${this.hooks.officeName || OFFICE_NAME}</div>`);
     const zoom = h('div', 'zoom');
     const zb = (ic: string, title: string, fn: () => void) => { const b = h('button', '', ic); b.title = title; b.onclick = fn; zoom.append(b); };
     zb(ICONS.plus, 'Acercar', () => this.game.zoomBy(1.15));
@@ -263,6 +264,24 @@ export class UI {
     document.addEventListener('click', (e) => { if (!(e.target as HTMLElement).closest('.bottombar')) emojiPop.classList.remove('show'); });
     // En pantallas estrechas el panel empieza cerrado (drawer).
     if (window.innerWidth < 900) this.toggleSidebar(false);
+  }
+
+  applyMarca(marca: { nombre: string; oficina: string; logoUrl: string | null }) {
+    const word = this.sidebar.querySelector<HTMLImageElement>('.wordmark');
+    const tag = this.sidebar.querySelector('.tag');
+    const caption = this.root.querySelector('.mm-caption');
+    const mark = this.root.querySelector<HTMLImageElement>('.rail .mark img');
+    const menu = this.root.querySelector<HTMLImageElement>('.menu-btn .mk');
+    if (tag) tag.textContent = marca.oficina;
+    if (caption) caption.textContent = marca.oficina;
+    if (marca.logoUrl) {
+      if (word) { word.src = marca.logoUrl; word.alt = marca.nombre; word.style.height = '32px'; word.style.width = 'auto'; }
+      if (mark) { mark.src = marca.logoUrl; mark.alt = marca.nombre; }
+      if (menu) { menu.src = marca.logoUrl; menu.alt = marca.nombre; }
+    }
+    const label = this.root.querySelector('.office-label');
+    if (label) label.textContent = marca.oficina;
+    this.hooks.officeName = marca.oficina;
   }
 
   toggleSidebar(open?: boolean) {

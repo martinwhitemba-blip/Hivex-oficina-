@@ -10,6 +10,7 @@ import { P2PMediaProvider } from './media/p2pMedia';
 import type { ProximityMediaProvider } from './media/proximityMedia';
 import { SocketIoTransport } from './net/socketTransport';
 import { api, clearToken, getToken } from './platform/api';
+import { applyMarca, type Marca } from './platform/brand';
 import { renderAuth, renderPasswordGate, renderView, type Session } from './platform/pages';
 import { UI } from './ui/ui';
 import markUrl from './assets/hivex-mark.png';
@@ -101,7 +102,9 @@ async function enter() {
       return;
     }
     const hud = await api<Hud>('/api/oficina/hud');
-    await startOffice(session, hud);
+    const marca = await api<Marca>('/api/marca');
+    applyMarca(marca);
+    await startOffice(session, hud, marca);
     route();
   } catch (error) {
     clearToken();
@@ -117,11 +120,11 @@ async function enter() {
   }
 }
 
-async function startOffice(current: Session, hud: Hud) {
+async function startOffice(current: Session, hud: Hud, marca: Marca | null) {
   teardownOffice();
   document.body.classList.remove('auth-mode');
   authEl.hidden = true;
-  const emblem = await loadImage(markUrl);
+  const emblem = await loadImage(marca?.logoUrl || markUrl);
   const canvas = document.createElement('canvas');
   canvas.id = 'game';
   document.body.append(canvas);
@@ -174,6 +177,8 @@ async function startOffice(current: Session, hud: Hud) {
     return [{ id: person.id, name: person.name, role: person.role, deskId: person.deskId, look: asLook(person.look) }];
   }));
   game.start();
+  if (marca?.logoUrl && emblem.naturalWidth) game.setPlazaLogo(emblem);
+  ui.applyMarca({ nombre: marca?.nombre || current.membership.company.name, oficina: marca?.oficina || hud.officeName, logoUrl: marca?.logoUrl || null });
   pingTimer = window.setInterval(() => socket?.emit('presence:ping'), 20000);
   socket.emit('presence:ping');
   (window as unknown as { __game?: Game }).__game = game;
@@ -188,6 +193,20 @@ function showPasswordGate() {
   pagesEl.hidden = true;
   renderPasswordGate(authEl, () => { void enter(); });
 }
+
+window.addEventListener('hivex-marca', (event) => {
+  const next = (event as CustomEvent<Marca>).detail;
+  if (!next) return;
+  applyMarca(next);
+  ui?.applyMarca(next);
+  if (!next.logoUrl) {
+    game?.setPlazaLogo(null);
+    return;
+  }
+  void loadImage(next.logoUrl).then((image) => {
+    if (image.naturalWidth) game?.setPlazaLogo(image);
+  });
+});
 
 function logout() {
   clearToken();

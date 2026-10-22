@@ -32,7 +32,7 @@ export class Minimap {
     ctx.drawImage(this.base, 0, 0);
     ctx.setTransform(dpr * this.k, 0, 0, dpr * this.k, 0, 0);
     const cam = this.game.camera;
-    ctx.strokeStyle = '#F5C518';
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim() || '#F5C518';
     ctx.lineWidth = 2 / this.k;
     ctx.strokeRect(cam.left, cam.top, cam.viewW / cam.zoom, cam.viewH / cam.zoom);
     for (const a of this.game.allAvatars()) {

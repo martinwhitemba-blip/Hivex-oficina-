@@ -69,6 +69,8 @@ export class Stage3D {
   private proxRing: THREE.Mesh | null = null;
   private measureHead = new THREE.Vector3();
   private measureFeet = new THREE.Vector3();
+  private plazaLogo: THREE.Mesh | null = null;
+  private plazaAt = new THREE.Vector3();
 
   private constructor() {}
 
@@ -268,6 +270,11 @@ export class Stage3D {
         this.names.delete(id);
       }
     }
+    if (this.plazaLogo) {
+      const dx = this.camera.position.x - this.plazaLogo.position.x;
+      const dz = this.camera.position.z - this.plazaLogo.position.z;
+      this.plazaLogo.rotation.y = Math.atan2(dx, dz);
+    }
     this.stackNames(cam.viewW, cam.viewH);
     this.drawPath(extras.path);
     if (this.marker) {
@@ -284,6 +291,33 @@ export class Stage3D {
       this.proxRing.position.set(me.x, 0.8, me.y);
     }
     renderer.render(this.scene, this.camera);
+  }
+
+  /** Logo de la empresa, de pie en la plaza. Sin imagen, la plaza queda como está. */
+  setPlazaLogo(image: HTMLImageElement | null) {
+    if (!this.ok) return;
+    if (this.plazaLogo) {
+      const material = this.plazaLogo.material as THREE.MeshBasicMaterial;
+      material.map?.dispose();
+      material.dispose();
+      this.plazaLogo.geometry.dispose();
+      this.plazaLogo.removeFromParent();
+      this.plazaLogo = null;
+    }
+    if (!image?.complete || !image.naturalWidth) return;
+    const texture = new THREE.Texture(image);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    texture.anisotropy = 8;
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(78, 78),
+      new THREE.MeshBasicMaterial({ map: texture, transparent: true, toneMapped: false, depthWrite: false }),
+    );
+    mesh.position.copy(this.plazaAt);
+    mesh.raycast = () => {};
+    mesh.renderOrder = 2;
+    this.scene.add(mesh);
+    this.plazaLogo = mesh;
   }
 
   dispose() {
@@ -387,6 +421,7 @@ export class Stage3D {
     plazaRing.rotation.x = Math.PI / 2;
     plazaRing.position.set(plaza.cx * TILE, 1.8, plaza.cy * TILE);
     this.scene.add(plazaRing);
+    this.plazaAt.set(plaza.cx * TILE, 46, plaza.cy * TILE);
 
     const walls: { x: number; z: number }[] = [];
     for (let y = 0; y < world.h; y++) {

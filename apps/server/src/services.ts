@@ -1,10 +1,9 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 import { pointsForReport, streakEnding } from './domain';
-import { env } from './env';
 import { HttpError } from './http';
 import { prisma } from './prisma';
+import { storage } from './storage';
 
 export function photoUrl(photoPath: string | null | undefined) {
   if (!photoPath) return null;
@@ -37,11 +36,9 @@ export async function savePhoto(companyId: string, membershipId: string, bytes: 
   } catch {
     throw new HttpError(400, 'No pudimos leer la imagen. Usa JPG, PNG o WebP.');
   }
-  const relative = path.join(companyId, `${membershipId}.png`);
-  const absolute = path.join(env.uploadDir, relative);
-  fs.mkdirSync(path.dirname(absolute), { recursive: true });
-  fs.writeFileSync(absolute, png);
-  await prisma.membership.update({ where: { id: membershipId }, data: { photoPath: relative.split(path.sep).join('/') } });
+  const relative = `${companyId}/${membershipId}.png`;
+  await storage.put(relative, png);
+  await prisma.membership.update({ where: { id: membershipId }, data: { photoPath: relative } });
   return photoUrl(relative);
 }
 

@@ -44,6 +44,15 @@ model Company {
   directMessages DirectMessage[]
   reports        DailyReport[]
   activations    Activation[]
+  branding       CompanyBranding?
+}
+
+model CompanyBranding {
+  companyId    String  @id
+  logoPath     String?
+  primaryColor String  @default("#F5C518")
+  accentColor  String  @default("#E0A800")
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model Activation {

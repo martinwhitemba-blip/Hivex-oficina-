@@ -1,6 +1,7 @@
 import type { Socket } from 'socket.io-client';
 import { ZONE_LAYOUT } from '../data/zones';
 import { api, clock, esc, getToken, money, num } from './api';
+import { applyMarca, readableOnInk, type Marca } from './brand';
 import logoUrl from '../assets/hivex-logo.png';
 
 export interface Session {
@@ -23,7 +24,7 @@ const NAV = [
 
 export function shell(view: string, title: string, subtitle: string, body: string) {
   const nav = NAV.map(([id, label]) => `<a class="${view === id ? 'on' : ''}" href="#/${id}">${label}</a>`).join('');
-  return `<div class="page"><nav class="pn">${nav}</nav><header class="ph"><div><h1>${title}</h1><p>${subtitle}</p></div></header>${body}</div>`;
+  return `<div class="page"><nav class="pn">${nav}</nav><header class="ph"><div><h1>${title}</h1><p>${subtitle}</p><p class="powered">powered by HIVEX</p></div></header>${body}</div>`;
 }
 
 export function renderPasswordGate(root: HTMLElement, onDone: () => void) {
@@ -130,6 +131,16 @@ export function renderAuth(root: HTMLElement, onDone: () => void) {
       err.textContent = message || (mode === 'unirse' ? 'La invitación no es válida o ha caducado' : 'No se pudo completar la acción');
     }
   };
+  if (!(mode === 'codigo' && params.get('c'))) applyMarca(null);
+  if (mode === 'codigo' && params.get('c')) {
+    void api<Marca>(`/api/marca/codigo/${encodeURIComponent(params.get('c') || '')}`).then((marca) => {
+      applyMarca(marca);
+      const img = root.querySelector<HTMLImageElement>('.logo');
+      if (marca.logoUrl && img) img.src = marca.logoUrl;
+      const lead = root.querySelector('.lead');
+      if (lead) lead.textContent = `${marca.nombre} · ${marca.oficina}. Escribe tu nombre y una contraseña para entrar.`;
+    }).catch(() => applyMarca(null));
+  }
   if (mode === 'activar') {
     const code = params.get('code') || '';
     if (!code) {
@@ -426,6 +437,7 @@ async function renderTeam(root: HTMLElement, session: Session) {
   const can = session.membership.role !== 'empleado';
   const owner = session.membership.role === 'propietario';
   root.innerHTML = shell('equipo', 'Equipo', 'Cada persona tiene su cuenta. En la oficina se sienta en su puesto aunque todavía no haya entrado.', `
+    ${can ? await brandBox() : ''}
     ${can ? `<form id="add-person" class="cardx form"><h2>Agregar persona</h2>
       <p class="muted">Una cuenta real, de una en una. No enviamos correo: o copias el enlace de activación, o generas una contraseña temporal que hay que cambiar al entrar.</p>
       <label>Nombre</label><input name="nombre" required minlength="2">
@@ -491,6 +503,7 @@ async function renderTeam(root: HTMLElement, session: Session) {
     } catch (error) { noteError(out, error); }
   });
   root.querySelector('#plantilla')?.addEventListener('click', () => void downloadFile('/api/empleados/plantilla.csv', 'plantilla-equipo.csv').catch((error) => noteError(root.querySelector('#import-out'), error)));
+  wireBrand(root);
   wireJoinCode(root);
   const invite = root.querySelector('#invite') as HTMLFormElement | null;
   invite?.addEventListener('submit', async (event) => {
@@ -510,6 +523,88 @@ async function renderTeam(root: HTMLElement, session: Session) {
         const state = out.querySelector('#copy-state');
         if (state) state.textContent = ' Enlace copiado.';
       });
+    } catch (error) { noteError(out, error); }
+  });
+}
+
+async function brandBox() {
+  const marca = await api<Marca>('/api/marca');
+  return `<form id="brand" class="cardx form" data-logo="${esc(marca.logoUrl || '')}">
+    <h2>Marca de la empresa</h2>
+    <p class="muted">Nombre, espacio, logo y colores de esta empresa. El resto de empresas no los ve. HIVEX sigue debajo, en pequeño.</p>
+    <div id="brand-preview" class="brand-preview">
+      <img alt="" src="${esc(marca.logoUrl || logoUrl)}">
+      <div><strong id="brand-name">${esc(marca.nombre)}</strong><div class="muted" id="brand-office">${esc(marca.oficina)}</div><div class="swatches"><i id="swatch-p" style="background:${esc(marca.primario)}"></i><i id="swatch-a" style="background:${esc(marca.acento)}"></i></div><div class="powered">powered by HIVEX</div></div>
+    </div>
+    <label>Nombre de la empresa</label><input name="nombre" required minlength="2" value="${esc(marca.nombre)}">
+    <label>Nombre del espacio</label><input name="oficina" required minlength="2" value="${esc(marca.oficina)}" placeholder="Oficina Acme">
+    <label>Color principal</label><input name="primario" type="color" value="${esc(marca.primario)}">
+    <label>Color de acento</label><input name="acento" type="color" value="${esc(marca.acento)}">
+    <label>Logo (PNG, JPG o SVG, hasta 1,5 MB)</label><input name="logo" type="file" accept="image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg">
+    <button class="btn primary" type="submit">Guardar marca</button>
+    <p id="brand-out" class="muted"></p>
+  </form>`;
+}
+
+function wireBrand(root: HTMLElement) {
+  const form = root.querySelector('#brand') as HTMLFormElement | null;
+  if (!form) return;
+  const out = root.querySelector('#brand-out') as HTMLElement;
+  const paint = () => {
+    const data = Object.fromEntries(new FormData(form).entries());
+    const nombre = String(data.nombre || '');
+    const oficina = String(data.oficina || '');
+    const primario = String(data.primario || '#F5C518');
+    const acento = String(data.acento || '#E0A800');
+    const name = root.querySelector('#brand-name');
+    const office = root.querySelector('#brand-office');
+    const swatchP = root.querySelector('#swatch-p') as HTMLElement | null;
+    const swatchA = root.querySelector('#swatch-a') as HTMLElement | null;
+    if (name) name.textContent = nombre;
+    if (office) office.textContent = oficina;
+    if (swatchP) swatchP.style.background = primario;
+    if (swatchA) swatchA.style.background = acento;
+    if (!readableOnInk(primario) || !readableOnInk(acento)) {
+      out.className = 'err';
+      out.textContent = 'Ese color no se lee sobre el fondo oscuro. Elige uno más claro.';
+      return;
+    }
+    out.className = 'muted';
+    out.textContent = '';
+    const marca: Marca = { nombre, oficina, primario, acento, logoUrl: form.dataset.logo || null, poweredBy: 'HIVEX' };
+    applyMarca(marca);
+    window.dispatchEvent(new CustomEvent('hivex-marca', { detail: marca }));
+  };
+  form.addEventListener('input', paint);
+  form.querySelector('input[name=logo]')?.addEventListener('change', () => {
+    const file = (form.querySelector('input[name=logo]') as HTMLInputElement).files?.[0];
+    const img = root.querySelector('#brand-preview img') as HTMLImageElement | null;
+    if (!file || !img) return;
+    const url = URL.createObjectURL(file);
+    img.src = url;
+  });
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    try {
+      if (!readableOnInk(String(data.primario)) || !readableOnInk(String(data.acento))) {
+        throw new Error('Ese color no se lee sobre el fondo oscuro. Elige uno más claro.');
+      }
+      let marca = await api<Marca>('/api/marca', {
+        method: 'PATCH',
+        body: JSON.stringify({ nombre: data.nombre, oficina: data.oficina, primario: data.primario, acento: data.acento }),
+      });
+      const file = (form.querySelector('input[name=logo]') as HTMLInputElement).files?.[0];
+      if (file) {
+        const body = new FormData();
+        body.append('file', file);
+        marca = await api<Marca>('/api/marca/logo', { method: 'POST', body });
+      }
+      form.dataset.logo = marca.logoUrl || '';
+      applyMarca(marca);
+      window.dispatchEvent(new CustomEvent('hivex-marca', { detail: marca }));
+      out.className = 'muted';
+      out.textContent = 'Marca guardada. Solo la ve esta empresa.';
     } catch (error) { noteError(out, error); }
   });
 }
