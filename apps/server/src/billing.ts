@@ -5,6 +5,7 @@ export const PLAN_DEFS = [
   { code: 'starter', name: 'Starter', maxWorkers: 8, maxAreas: 4, description: 'Para un equipo pequeño que empieza a ordenar su oficina.' },
   { code: 'pro', name: 'Pro', maxWorkers: 25, maxAreas: 12, description: 'Varias áreas, panel del dueño y más personas en la oficina.' },
   { code: 'empresa', name: 'Empresa', maxWorkers: 100, maxAreas: 30, description: 'Operación amplia: muchas áreas y equipos en el mismo plano.' },
+  { code: 'grupo', name: 'Grupo', maxWorkers: 1000, maxAreas: 80, description: 'Por encima de 100 personas. El límite de esta empresa se puede acordar aparte.' },
 ] as const;
 
 export async function ensurePlans() {
@@ -13,15 +14,18 @@ export async function ensurePlans() {
   }
 }
 
-export async function attachPlan(companyId: string, code: string, status: 'trial' | 'activa' = 'trial') {
+export async function attachPlan(companyId: string, code: string, status: 'trial' | 'activa' = 'trial', customMaxWorkers?: number | null) {
   await ensurePlans();
   const plan = await prisma.plan.findUnique({ where: { code } });
   if (!plan) throw new HttpError(404, 'Ese plan no existe');
   const trialEndsAt = status === 'trial' ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null;
+  const custom = code === 'grupo'
+    ? (customMaxWorkers == null ? {} : { customMaxWorkers })
+    : { customMaxWorkers: null };
   await prisma.subscription.upsert({
     where: { companyId },
-    create: { companyId, planId: plan.id, status, trialEndsAt },
-    update: { planId: plan.id, status, trialEndsAt },
+    create: { companyId, planId: plan.id, status, trialEndsAt, ...custom },
+    update: { planId: plan.id, status, trialEndsAt, ...custom },
   });
   return plan;
 }
@@ -37,8 +41,9 @@ export async function companyUsage(companyId: string) {
     trialEndsAt: subscription?.trialEndsAt ?? null,
     workers,
     areas,
-    maxWorkers: plan.maxWorkers,
+    maxWorkers: plan.code === 'grupo' && subscription?.customMaxWorkers ? subscription.customMaxWorkers : plan.maxWorkers,
     maxAreas: plan.maxAreas,
+    customMaxWorkers: plan.code === 'grupo' ? subscription?.customMaxWorkers ?? null : null,
   };
 }
 

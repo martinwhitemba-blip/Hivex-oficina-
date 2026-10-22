@@ -46,6 +46,6 @@ Para 100 empresas a la vez, de verdad, hace falta:
 - Postgres gestionado. Delante, PgBouncer (o el pooler del proveedor) además del `connection_limit` de Prisma. SQLite no sirve para varios procesos.
 - Redis gestionado, y `REDIS_URL`, en cuanto haya más de un proceso de la API. Si no, la presencia de una instancia no llega a la otra.
 - Almacén de objetos (S3, R2 o compatible) para fotos y logos. Hoy el disco local se pierde al redesplegar. Las variables `S3_*` son el sitio, todavía sin código que las use.
-- El cobro de los planes sigue siendo un aviso: no hay pasarela. Subir de plan no cobra.
+- El cobro de los planes sigue siendo un aviso: no hay pasarela. Subir de plan, incluido Grupo (techo 1000, o un límite propio por empresa), no cobra.
 
 LiveKit, si se quiere audio de varias personas a la vez, también es un servicio aparte. Sin sus claves, la oficina usa audio directo entre navegadores.

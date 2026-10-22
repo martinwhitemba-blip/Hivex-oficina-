@@ -82,7 +82,7 @@ export function registerOwnerRoutes(app: FastifyInstance) {
     const usage = await companyUsage(actor.company.id);
     return {
       uso: { personas: usage.workers, areas: usage.areas, maxPersonas: usage.maxWorkers, maxAreas: usage.maxAreas },
-      actual: { code: usage.plan.code, name: usage.plan.name, status: usage.status, trialEndsAt: usage.trialEndsAt, description: usage.plan.description },
+      actual: { code: usage.plan.code, name: usage.plan.name, status: usage.status, trialEndsAt: usage.trialEndsAt, description: usage.plan.description, limite: usage.customMaxWorkers },
       planes: PLAN_DEFS,
       pago: { proveedor: payments.kind, mensaje: 'El cobro con tarjeta no está conectado. Cambiar de plan no genera un pago.' },
     };
@@ -91,8 +91,11 @@ export function registerOwnerRoutes(app: FastifyInstance) {
   app.post('/api/plan', async (req) => {
     const actor = await actorFromRequest(req);
     if (!canManageCompany(actor.membership.role)) throw new HttpError(403, 'Solo el propietario cambia el plan');
-    const body = parseBody(z.object({ code: z.enum(['starter', 'pro', 'empresa']) }), req.body);
-    const plan = await attachPlan(actor.company.id, body.code, 'activa');
+    const body = parseBody(z.object({
+      code: z.enum(['starter', 'pro', 'empresa', 'grupo']),
+      limite: z.number().int().min(101, 'El límite propio empieza por encima de 100').max(5000).optional(),
+    }), req.body);
+    const plan = await attachPlan(actor.company.id, body.code, 'activa', body.limite);
     const summary = `${actor.membership.name} dejó el plan en ${plan.name} sin cobro (la pasarela llegará después)`;
     await audit(actor.company.id, actor.membership.id, 'cambiar_plan', summary, { code: body.code });
     return { ok: true, summary };

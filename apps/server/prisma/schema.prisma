@@ -306,8 +306,9 @@ model Subscription {
   id          String    @id @default(cuid())
   companyId   String    @unique
   planId      String
-  status      String    @default("trial")
-  trialEndsAt DateTime?
+  status           String    @default("trial")
+  trialEndsAt      DateTime?
+  customMaxWorkers Int?
   company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   plan        Plan      @relation(fields: [planId], references: [id])
 }

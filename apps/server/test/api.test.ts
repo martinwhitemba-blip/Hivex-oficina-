@@ -496,4 +496,41 @@ describe('API de empresa', () => {
     const legacy = await json('GET', '/api/chat', owner.body.token);
     expect(Array.isArray(legacy.body)).toBe(true);
   });
+
+  it('el plan Grupo guarda un límite propio que no se borra al asegurar los planes', async () => {
+    const owner = await json('POST', '/api/auth/registro', undefined, {
+      name: 'Gala Grupo', email: 'gala@grupo.test', password: 'clave-segura', companyName: 'Grupo SA',
+    });
+    const token = owner.body.token as string;
+    const changed = await json('POST', '/api/plan', token, { code: 'grupo', limite: 250 });
+    expect(changed.status).toBe(200);
+    const view = await json('GET', '/api/plan', token);
+    expect(view.body.actual.code).toBe('grupo');
+    expect(view.body.uso.maxPersonas).toBe(250);
+    expect(view.body.planes.some((plan: { code: string }) => plan.code === 'grupo')).toBe(true);
+
+    const company = await prisma.company.findFirst({ where: { name: 'Grupo SA' }, include: { subscription: true } });
+    await prisma.plan.update({ where: { code: 'grupo' }, data: { maxWorkers: 50 } });
+    await prisma.subscription.update({ where: { id: company!.subscription!.id }, data: { customMaxWorkers: 2 } });
+    await ensurePlans();
+    const restored = await prisma.plan.findUnique({ where: { code: 'grupo' } });
+    const kept = await prisma.subscription.findUnique({ where: { id: company!.subscription!.id } });
+    expect(restored?.maxWorkers).toBe(1000);
+    expect(kept?.customMaxWorkers).toBe(2);
+
+    const first = await json('POST', '/api/empleados', token, { nombre: 'Uno Grupo', email: 'uno@grupo.test', rol: 'empleado', modo: 'enlace' });
+    expect(first.status).toBe(200);
+    const second = await json('POST', '/api/empleados', token, { nombre: 'Dos Grupo', email: 'dos@grupo.test', rol: 'empleado', modo: 'enlace' });
+    expect(second.status).toBe(400);
+    expect(String(second.body.error)).toContain('plan');
+
+    const back = await json('POST', '/api/plan', token, { code: 'starter' });
+    expect(back.status).toBe(200);
+    const after = await json('GET', '/api/plan', token);
+    expect(after.body.actual.code).toBe('starter');
+    expect(after.body.uso.maxPersonas).toBe(8);
+    expect(after.body.actual.limite).toBeNull();
+    const starter = await prisma.plan.findUnique({ where: { code: 'starter' } });
+    expect(starter?.maxWorkers).toBe(8);
+  });
 });

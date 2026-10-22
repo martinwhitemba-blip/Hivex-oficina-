@@ -1053,16 +1053,19 @@ async function renderPlan(root: HTMLElement, session: Session) {
   root.innerHTML = shell('plan', 'Plan y uso', plan.pago.mensaje, `
     <div class="cardx"><h2 style="margin-top:0">${esc(plan.actual.name)} · ${esc(plan.actual.status)}</h2>
       <p>${esc(plan.actual.description)}</p>
-      <p>Personas ${plan.uso.personas} / ${plan.uso.maxPersonas}</p><div class="usage"><span style="width:${pct(plan.uso.personas, plan.uso.maxPersonas)}%"></span></div>
+      <p>Personas ${plan.uso.personas} / ${plan.uso.maxPersonas}${plan.actual.limite ? ` · límite de esta empresa: ${plan.actual.limite}` : ''}</p><div class="usage"><span style="width:${pct(plan.uso.personas, plan.uso.maxPersonas)}%"></span></div>
       <p>Áreas ${plan.uso.areas} / ${plan.uso.maxAreas}</p><div class="usage"><span style="width:${pct(plan.uso.areas, plan.uso.maxAreas)}%"></span></div>
     </div>
     <div class="grid cards">${plan.planes.map((item) => `<article class="cardx"><h2>${esc(item.name)}</h2><p class="muted">Hasta ${item.maxWorkers} personas y ${item.maxAreas} áreas</p><p>${esc(item.description)}</p>
+      ${item.code === 'grupo' && session.membership.role === 'propietario' ? `<label>Límite de esta empresa</label><input id="limite-grupo" type="number" min="101" max="5000" placeholder="1000" value="${plan.actual.limite || ''}">` : ''}
       ${session.membership.role === 'propietario' ? `<button class="btn" data-plan="${item.code}" type="button">${item.code === plan.actual.code ? 'Plan actual' : 'Usar este plan'}</button>` : ''}</article>`).join('')}</div>
   `);
   root.querySelectorAll<HTMLButtonElement>('[data-plan]').forEach((button) => button.onclick = async () => {
-    if (button.dataset.plan === plan.actual.code) return;
+    if (button.dataset.plan === plan.actual.code && button.dataset.plan !== 'grupo') return;
     try {
-      await api('/api/plan', { method: 'POST', body: JSON.stringify({ code: button.dataset.plan }) });
+      const limiteRaw = (root.querySelector('#limite-grupo') as HTMLInputElement | null)?.value || '';
+      const limite = button.dataset.plan === 'grupo' && limiteRaw ? Number(limiteRaw) : undefined;
+      await api('/api/plan', { method: 'POST', body: JSON.stringify({ code: button.dataset.plan, ...(limite ? { limite } : {}) }) });
       location.reload();
     } catch (error) { noteError(null, error); }
   });
@@ -1143,5 +1146,5 @@ interface DirectLine { id: string; body: string; createdAt: string; senderId: st
 interface AreaFull { id: string; name: string; color: string; teamName: string; members: number; rooms: { name: string }[]; kpis: { key: string; label: string; unit?: string; targetDaily: number | null }[] }
 interface OfficeLayout { canEdit: boolean; rooms: { mapRoomId: string; name: string; label: string; areaId: string | null }[]; desks: { seatId: string; membershipId: string | null }[]; areas: { id: string; name: string }[]; people: { id: string; name: string }[] }
 interface TaskItem { id: string; title: string; status: string; area: string | null; assignee: string | null }
-interface PlanView { uso: { personas: number; areas: number; maxPersonas: number; maxAreas: number }; actual: { code: string; name: string; status: string; description: string }; planes: { code: string; name: string; maxWorkers: number; maxAreas: number; description: string }[]; pago: { mensaje: string } }
+interface PlanView { uso: { personas: number; areas: number; maxPersonas: number; maxAreas: number }; actual: { code: string; name: string; status: string; description: string; limite?: number | null }; planes: { code: string; name: string; maxWorkers: number; maxAreas: number; description: string }[]; pago: { mensaje: string } }
 interface LeadView { mensaje: string; activo: boolean; area: { name: string } | null; contadores: { leads: number; campaigns: number; calls: number }; extensiones: string[] }
