@@ -130,6 +130,17 @@ El cliente puede montar el contador sin tocar el escenario 3D:
 - el evento de ventana `hivex-notify` con `detail` igual al número
 - un nodo `[data-hivex-notify]` o `#hivex-notify-mount` en la barra de la oficina
 
+## `photoPlacement`
+
+En `Membership`, `cara` o `gafete` (por defecto `cara`). No va dentro de `look`: viaja al lado.
+
+- `GET /api/auth/yo` → `membership.photoPlacement`
+- `GET /api/empleados/:id` y el directorio de `GET /api/oficina/hud` → `photoPlacement`
+- `PATCH /api/empleados/:id` con `{ "photoPlacement": "cara" | "gafete" }` desde el perfil
+- cada `office:state` lo incluye junto a `look`: `{ "look": { … }, "photoPlacement": "cara" }`
+
+La pista 3D puede leerlo sin cambiar el resto del estado. Quien ya está conectado lo recibe en el siguiente `office:join` o `office:state`.
+
 ## Límite
 
 `office:emote` y `office:bubble` aceptan **como mucho uno por segundo y por persona**, cada uno por su lado. El que llega antes de tiempo se tira sin aviso y sin guardarlo. El resto de eventos de esta página no tiene ese límite: salen de una acción guardada (tarea o misión).

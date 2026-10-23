@@ -7,6 +7,7 @@ import { api, clock, esc, getToken, money, num } from './api';
 import { renderTasks } from './tasksPage';
 import { renderInbox } from './inboxPage';
 import { renderMissions } from './missionsPage';
+import { renderMyDay } from './myDayPage';
 import { paintNotifyNav } from './notifyUnread';
 import { applyMarca, readableOnInk, type Marca } from './brand';
 import logoUrl from '../assets/hivex-logo.png';
@@ -19,6 +20,7 @@ export interface Session {
     jobTitle: { id: string; name: string } | null;
     company: { id: string; name: string; officeName: string; isDemo: boolean };
     look: { skin: string; hair: string; hairStyle: number; shirt: string; pants: string; glasses?: boolean; usePhoto?: boolean; photoUrl?: string | null };
+    photoPlacement?: 'cara' | 'gafete';
   };
   locale?: string | null;
   companyLocale?: string | null;
@@ -33,7 +35,7 @@ export function setProfileLocale(value: string | null | undefined) {
 
 const NAV: [string, MessageKey][] = [
   ['oficina', 'nav.office'], ['dueno', 'nav.owner'], ['negocio', 'nav.business'], ['equipo', 'nav.team'],
-  ['areas', 'nav.areas'], ['mapa', 'nav.map'], ['tareas', 'nav.tasks'], ['misiones', 'nav.missions'], ['avisos', 'nav.inbox'], ['jornada', 'nav.day'],
+  ['areas', 'nav.areas'], ['mapa', 'nav.map'], ['tareas', 'nav.tasks'], ['misiones', 'nav.missions'], ['mi-dia', 'nav.myday'], ['avisos', 'nav.inbox'], ['jornada', 'nav.day'],
   ['chat', 'nav.chat'], ['logros', 'nav.badges'], ['plan', 'nav.plan'], ['captacion', 'nav.leads'],
 ];
 
@@ -220,6 +222,7 @@ export async function renderView(root: HTMLElement, view: string, session: Sessi
     else if (view === 'mapa') await renderMapEditor(root, session);
     else if (view === 'tareas') await renderTasks(root, session);
     else if (view === 'misiones') await renderMissions(root, session);
+    else if (view === 'mi-dia') await renderMyDay(root);
     else if (view === 'avisos') await renderInbox(root);
     else if (view === 'jornada') await renderDay(root, session);
     else if (view === 'chat') await renderChat(root, session, socket);
@@ -244,6 +247,7 @@ async function renderOwner(root: HTMLElement, session: Session, socket: Socket |
       <button class="btn" id="mode" type="button">${t('owner.hideMap')}</button>
       ${canOwn ? `<button class="btn primary" id="new-area" type="button" style="width:auto">${t('owner.newArea')}</button>` : ''}
     </div>
+    <section id="tower" class="tower"><h2>${t('tower.title')}</h2><p class="muted">${t('owner.loading')}</p></section>
     <h2>${t('owner.peopleNow')}</h2>
     <div id="live" class="grid cards"></div>
     <div id="floor-wrap" class="cardx"><h2 style="margin:0 0 8px">${t('owner.mapTitle')}</h2><p class="muted">${t('owner.mapHint')}</p><div class="floor" id="floor"></div></div>
@@ -333,6 +337,7 @@ async function renderOwner(root: HTMLElement, session: Session, socket: Socket |
         try {
           await api(`/api/dueno/tareas/${taskId}/reasignar`, { method: 'POST', body: JSON.stringify({ assigneeId: card.dataset.drop }) });
           socket?.emit('panel:sync');
+          await paintTower();
         } catch (error) { noteError(null, error); }
       };
     });
@@ -370,6 +375,7 @@ async function renderOwner(root: HTMLElement, session: Session, socket: Socket |
   });
   socket?.emit('panel:sync');
   await load();
+  await paintTower();
 }
 
 async function openArea(id: string, snap: OwnerSnap) {
@@ -391,6 +397,7 @@ async function reassign(taskId: string, snap: OwnerSnap) {
   if (!snap.people[index]) return;
   try {
     await api(`/api/dueno/tareas/${taskId}/reasignar`, { method: 'POST', body: JSON.stringify({ assigneeId: snap.people[index].id }) });
+    await paintTower();
   } catch (error) { noteError(null, error); }
 }
 
@@ -751,6 +758,14 @@ async function renderEmployee(root: HTMLElement, id: string, session: Session) {
     ${mine ? `<form id="photo" class="cardx"><label>${t('person.photo')}</label><input type="file" accept="image/*" name="file" required><button class="btn" type="submit">${t('person.upload')}</button><p id="photo-out" class="muted"></p></form>
       <label class="cardx"><input id="use-photo" type="checkbox" ${person.look?.usePhoto ? 'checked' : ''}> ${t('person.usePhoto')}</label>
       <p class="muted">${t('person.photoHint')}</p>
+      <form id="placement" class="cardx">
+        <h2>${t('person.placement')}</h2>
+        <p class="muted">${t('person.placementHint')}</p>
+        <label><input type="radio" name="photoPlacement" value="cara" ${person.photoPlacement === 'gafete' ? '' : 'checked'}> ${t('person.face')}</label>
+        <label><input type="radio" name="photoPlacement" value="gafete" ${person.photoPlacement === 'gafete' ? 'checked' : ''}> ${t('person.badgeWear')}</label>
+        <button class="btn" type="submit">${t('person.savePlacement')}</button>
+        <p id="placement-out" class="muted"></p>
+      </form>
       <form id="look" class="cardx form"><h2>${t('person.character')}</h2>
         <p class="muted">${t('person.characterHint')}</p>
         <div class="look-grid">
@@ -792,6 +807,16 @@ async function renderEmployee(root: HTMLElement, id: string, session: Session) {
       input.checked = !input.checked;
       noteError(root.querySelector('#photo-out'), error);
     }
+  });
+  root.querySelector('#placement')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const photoPlacement = String(new FormData(form).get('photoPlacement') || 'cara');
+    try {
+      await api(`/api/empleados/${id}`, { method: 'PATCH', body: JSON.stringify({ photoPlacement }) });
+      const out = root.querySelector('#placement-out') as HTMLElement;
+      out.textContent = t('person.placementSaved');
+    } catch (error) { noteError(root.querySelector('#placement-out'), error); }
   });
   root.querySelector('#look')?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -1222,7 +1247,40 @@ interface OwnerSnap { people: OwnerPerson[]; areas: { id: string; name: string; 
 interface PanelKpi { label: string; unit: string; total: number; pct: number | null; byDate?: Record<string, number>; ranking?: { name: string; value: number }[] }
 interface Panel { isDemo: boolean; alerts: { level: string; text: string }[]; areas: { name: string; color: string; kpis: PanelKpi[] }[]; employees: { name: string; score: number }[] }
 interface Person { id: string; name: string; photoUrl: string | null; puesto: string | null; roleLabel: string; area: { name: string } | null }
-interface EmployeeDetail extends Person { status: string; score?: number; points?: number; schedule?: string; phone?: string; activeHours?: number; look?: { usePhoto?: boolean; skin?: string; hair?: string; hairStyle?: number; shirt?: string; pants?: string; glasses?: boolean }; history?: { date: string; note: string; isDemo: boolean; values: Record<string, number> }[]; badges?: { label: string }[] }
+interface EmployeeDetail extends Person { status: string; score?: number; points?: number; schedule?: string; phone?: string; activeHours?: number; photoPlacement?: 'cara' | 'gafete'; look?: { usePhoto?: boolean; skin?: string; hair?: string; hairStyle?: number; shirt?: string; pants?: string; glasses?: boolean }; history?: { date: string; note: string; isDemo: boolean; values: Record<string, number> }[]; badges?: { label: string }[] }
+
+interface TowerView {
+  people: { id: string; name: string; areaName: string; taskTitle: string; overdue: number; missionPct: number | null; rankPlace: number; points: number; doneThisWeek: number }[];
+  overdue: { id: string; title: string; assignee: string | null; dueDate: string | null; area: string; priority: string }[];
+  missions: { id: string; title: string; areaName: string | null; current: number; target: number; pct: number; awarded: boolean }[];
+  ranking: { place: number; name: string; areaName: string; doneThisWeek: number; points: number }[];
+}
+
+async function paintTower() {
+  const host = document.querySelector('#tower');
+  if (!host) return;
+  const tower = await api<TowerView>('/api/torre');
+  host.innerHTML = `<h2>${t('tower.title')}</h2>
+    <p class="muted">${t('tower.subtitle')}</p>
+    <div class="tower-grid">
+      <article class="cardx"><h3>${t('tower.doing')}</h3>${tower.people.slice(0, 8).map((person) => `<div class="rank-row"><span><b>${esc(person.name)}</b> · ${esc(person.areaName)}</span><span>${esc(person.taskTitle || t('owner.noTask'))}${person.overdue ? ' · ' + t('myday.overdueCount', { n: person.overdue }) : ''}</span></div>`).join('') || `<p class="muted">${t('owner.nobody')}</p>`}</article>
+      <article class="cardx"><h3>${t('tower.ranking')}</h3>${tower.ranking.slice(0, 8).map((row) => `<div class="rank-row"><span>${t('tower.place', { place: row.place, name: row.name })}</span><span>${t('tower.doneWeek', { n: row.doneThisWeek })}</span></div>`).join('')}</article>
+      <article class="cardx"><h3>${t('tower.missions')}</h3>${tower.missions.map((goal) => `<div class="mission"><strong>${esc(goal.areaName || '')} · ${esc(goal.title)}</strong><div class="mission-bar"><span style="width:${Math.max(0, Math.min(100, goal.pct))}%"></span></div><p>${t('missions.progress', { current: goal.current, target: goal.target })}${goal.awarded ? ' · ' + t('missions.done') : ''}</p></div>`).join('') || `<p class="muted">${t('missions.empty')}</p>`}</article>
+      <article class="cardx"><h3>${t('tower.overdue')}</h3>${tower.overdue.map((task) => `<div class="rank-row late"><span><b>${esc(task.title)}</b><div class="muted">${esc(task.assignee || t('owner.unassigned'))} · ${esc(task.dueDate || '')}</div></span><button class="btn" data-re="${esc(task.id)}" type="button">${t('owner.reassign')}</button></div>`).join('') || `<p class="muted">${t('tower.noneLate')}</p>`}</article>
+    </div>`;
+  host.querySelectorAll<HTMLButtonElement>('[data-re]').forEach((button) => {
+    button.onclick = () => {
+      const people = tower.people.map((person, index) => `${index + 1}. ${person.name}`).join('\n');
+      const pick = prompt(`${t('owner.promptWho')}\n${people}`);
+      const index = Number(pick) - 1;
+      const person = tower.people[index];
+      if (!person) return;
+      void api(`/api/dueno/tareas/${button.dataset.re}/reasignar`, { method: 'POST', body: JSON.stringify({ assigneeId: person.id }) })
+        .then(() => paintTower())
+        .catch((error) => noteError(null, error));
+    };
+  });
+}
 interface DirectPerson { id: string; name: string; puesto: string; unread: number; ultimo: { body: string; createdAt: string; mio: boolean } | null }
 interface DirectLine { id: string; body: string; createdAt: string; senderId: string; recipientId: string; senderName: string }
 interface AreaFull { id: string; name: string; color: string; teamName: string; members: number; rooms: { name: string }[]; kpis: { key: string; label: string; unit?: string; targetDaily: number | null }[] }

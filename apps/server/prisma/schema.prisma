@@ -97,6 +97,7 @@ model Membership {
   currentTaskId    String?
   streakDays       Int            @default(0)
   streakLastDate   String?
+  photoPlacement   String         @default("cara")
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   jobTitle      JobTitle?      @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)

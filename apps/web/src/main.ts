@@ -47,7 +47,7 @@ interface Hud {
   rankings: { ventas: { title: string; subtitle: string; rows: { name: string; value: number; fmt: string }[] }; citas: { title: string; subtitle: string; rows: { name: string; value: number; fmt: string }[] } };
   rooms: { mapRoomId: string; name: string; label: string }[];
   deskId: string | null;
-  directory: { id: string; name: string; role: string; photoUrl?: string | null; deskId?: string | null; look?: Session['membership']['look'] }[];
+  directory: { id: string; name: string; role: string; photoUrl?: string | null; deskId?: string | null; look?: Session['membership']['look']; photoPlacement?: 'cara' | 'gafete' }[];
   alertCount: number;
   directUnread?: number;
   media: { mode: 'livekit' | 'p2p'; notice: string };

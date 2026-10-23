@@ -36,6 +36,7 @@ import { registerTaskRoutes } from './taskRoutes';
 import { registerNotifyRoutes } from './notifyRoutes';
 import { registerMissionRoutes } from './missionRoutes';
 import { refreshGoalsForReport } from './missions';
+import { controlTower, myDay } from './dayBoard';
 import { notifyAchievement, remindDue, unreadCount } from './notify';
 import { taskWhere } from './taskBoard';
 
@@ -599,6 +600,7 @@ export function registerRoutes(app: FastifyInstance) {
       startDate: z.string().nullable().optional(),
       status: z.enum(['en_linea', 'ausente', 'en_reunion', 'cafe', 'en_llamada']).optional(),
       usePhoto: z.boolean().optional(),
+      photoPlacement: z.enum(['cara', 'gafete']).optional(),
       look: z.object({
         skin: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'El color tiene que ser hexadecimal').optional(),
         hair: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'El color tiene que ser hexadecimal').optional(),
@@ -618,6 +620,7 @@ export function registerRoutes(app: FastifyInstance) {
     if (body.schedule !== undefined) data.schedule = body.schedule;
     if (body.bio !== undefined) data.bio = body.bio;
     if (body.status) data.status = body.status;
+    if (body.photoPlacement) data.photoPlacement = body.photoPlacement;
     if (body.usePhoto !== undefined || body.look) {
       const current = parseLook(person.lookJson);
       data.lookJson = JSON.stringify({
@@ -828,6 +831,9 @@ export function registerRoutes(app: FastifyInstance) {
   registerNotifyRoutes(app);
   registerMissionRoutes(app);
 
+  app.get('/api/mi-dia', async (req) => myDay(await auth(req)));
+  app.get('/api/torre', async (req) => controlTower(await auth(req)));
+
   app.get('/api/oficina', async (req) => {
     const actor = await auth(req);
     const [rooms, desks, areas, people] = await Promise.all([
@@ -958,6 +964,7 @@ export function registerRoutes(app: FastifyInstance) {
         status: p.status === 'desconectado' ? 'desconectado' : p.status,
         deskId: p.desks[0]?.seatId ?? null,
         look: { ...parseLook(p.lookJson), photoUrl: photoUrl(p.photoPath) },
+        photoPlacement: p.photoPlacement === 'gafete' ? 'gafete' : 'cara',
       })),
       alertCount: filteredAlerts.length,
       directUnread: await directUnreadTotal(actor.company.id, actor.membership.id),
@@ -1180,6 +1187,7 @@ function memberDto(actor: Actor, person: PersonRow) {
     points: metrics ? person.points : undefined,
     photoUrl: photoUrl(person.photoPath),
     look: { ...parseLook(person.lookJson), photoUrl: photoUrl(person.photoPath) },
+    photoPlacement: person.photoPlacement === 'gafete' ? 'gafete' : 'cara',
     deskId: person.desks[0]?.seatId ?? null,
   };
 }
@@ -1199,6 +1207,7 @@ function publicSession(actor: Actor) {
       status: actor.membership.status,
       points: actor.membership.points,
       photoUrl: photoUrl(actor.membership.photoPath),
+      photoPlacement: actor.membership.photoPlacement === 'gafete' ? 'gafete' : 'cara',
       look: { ...parseLook(actor.membership.lookJson), photoUrl: photoUrl(actor.membership.photoPath) },
       area: actor.area,
       jobTitle: actor.jobTitle,

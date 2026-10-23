@@ -143,6 +143,7 @@ interface PresenceState {
   status: string;
   mode: 'walk' | 'car';
   look: ReturnType<typeof parseLook> & { photoUrl?: string | null };
+  photoPlacement: 'cara' | 'gafete';
   sitting: boolean;
 }
 
@@ -286,6 +287,7 @@ export function attachSocket(io: Server) {
         acceptLanguage: typeof socket.handshake.headers['accept-language'] === 'string' ? socket.handshake.headers['accept-language'] : null,
       });
       socket.data.look = { ...parseLook(membership.lookJson), photoUrl: photoUrl(membership.photoPath) };
+      socket.data.photoPlacement = membership.photoPlacement === 'gafete' ? 'gafete' : 'cara';
       socket.data.lastPing = Date.now();
       next();
     } catch {
@@ -441,6 +443,7 @@ function sanitize(incoming: Partial<PresenceState>, socket: Socket): PresenceSta
     status,
     mode: incoming?.mode === 'car' ? 'car' : 'walk',
     look: socket.data.look,
+    photoPlacement: socket.data.photoPlacement === 'gafete' ? 'gafete' : 'cara',
     sitting: Boolean(incoming?.sitting),
   };
 }

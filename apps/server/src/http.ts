@@ -42,6 +42,9 @@ export interface Actor {
     bio: string;
     startDate: string | null;
     lookJson: string;
+    photoPlacement: string;
+    streakDays: number;
+    streakLastDate: string | null;
     jobTitleId: string | null;
     active: boolean;
   };

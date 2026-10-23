@@ -171,3 +171,8 @@ table.data tr:hover td { background: rgba(255,255,255,.03); }
 .mission-celebrate { background: rgba(245,197,24,.16); border: 1px solid rgba(245,197,24,.5); border-radius: 12px; padding: 10px 14px; font-weight: 700; }
 .mission form.manual, .mission-new { display: grid; gap: 6px; margin-top: 8px; }
 .mission .btn { width: auto; }
+.day-grid, .tower-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin: 12px 0; }
+.day-list { list-style: none; padding: 0; margin: 0 0 16px; }
+.day-list li { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.rank-row { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.tower { margin: 8px 0 18px; }
