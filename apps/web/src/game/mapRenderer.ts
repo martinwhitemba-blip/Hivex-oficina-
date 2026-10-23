@@ -4,7 +4,8 @@
  * Todo procedural: no hay sprites con copyright.
  */
 import { TILE, BRAND } from '../config';
-import { SAMPLE_RANKINGS, fmtEuro } from '../data/sampleData';
+import { SAMPLE_RANKINGS } from '../data/sampleData';
+import { knownPhrase, moneyOf } from '../i18n';
 import type { MapObject, RoomDef } from './types';
 import { Cell, type World } from './world';
 import { circle, ellipse, fillRR, rng, rr, shade, shadow, text, type Ctx } from './draw';
@@ -253,13 +254,14 @@ export class MapRenderer {
 
   private drawLabel(ctx: Ctx, room: RoomDef) {
     if (!room.label || !room.labelPos) return;
+    const label = knownPhrase(room.label);
     const cx = room.labelPos.x * T, cy = (room.labelPos.y + 0.5) * T;
     ctx.font = `800 9px Inter, system-ui, sans-serif`;
-    const tw = ctx.measureText(room.label).width + 18;
+    const tw = ctx.measureText(label).width + 18;
     shadow(ctx, cx, cy + 9, tw / 2, 3, 0.15);
     fillRR(ctx, cx - tw / 2, cy - 8, tw, 16, 4, '#121214', BRAND.goldDeep, 1.5);
     circle(ctx, cx - tw / 2 + 7, cy, 2.5, room.accent ?? BRAND.gold);
-    text(ctx, room.label, cx + 3, cy + 0.5, 9, BRAND.gold, 800);
+    text(ctx, label, cx + 3, cy + 0.5, 9, BRAND.gold, 800);
   }
 
   // ─────────────────────────────── Objetos ───────────────────────────────
@@ -459,7 +461,7 @@ export class MapRenderer {
       if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.stroke();
-    text(ctx, label, x + w / 2, top + 9, 7.5, '#5EEAD4', 800);
+    text(ctx, knownPhrase(label), x + w / 2, top + 9, 7.5, '#5EEAD4', 800);
   }
 
   private whiteboard(ctx: Ctx, x: number, y: number, w: number) {
@@ -492,7 +494,7 @@ export class MapRenderer {
     circle(ctx, x + w - 33, y + 19, 3, '#FFFFFF', '#6B3F1F', 1);
     // tazas
     for (let i = 0; i < 3; i++) circle(ctx, x + 52 + i * 12, y + 16, 3.5, ['#F5C518', '#FFFFFF', '#2BB3A3'][i], '#6B7280', 1);
-    text(ctx, 'CAFÉ', x + w / 2 + 20, y + 26, 6, '#6B7280', 800);
+    text(ctx, knownPhrase('CAFÉ'), x + w / 2 + 20, y + 26, 6, '#6B7280', 800);
   }
 
   private fridge(ctx: Ctx, x: number, y: number, w: number, h: number) {
@@ -543,7 +545,7 @@ export class MapRenderer {
     ctx.shadowBlur = 10;
     fillRR(ctx, x + 2, y + 1, w - 4, h - 4, 5, '#0D0D0F', BRAND.gold, 2);
     ctx.restore();
-    text(ctx, data.title, x + w / 2, y + 10, 8.5, BRAND.gold, 900);
+    text(ctx, knownPhrase(data.title), x + w / 2, y + 10, 8.5, BRAND.gold, 900);
     ctx.fillStyle = 'rgba(245,197,24,0.35)';
     ctx.fillRect(x + 10, y + 16, w - 20, 1);
     const medal = ['#F5C518', '#C9CDD2', '#CD7F32'];
@@ -552,7 +554,7 @@ export class MapRenderer {
       circle(ctx, x + 14, ry, 4, medal[i]);
       text(ctx, String(i + 1), x + 14, ry + 0.5, 6, '#111', 900);
       text(ctx, row.name, x + 22, ry + 0.5, 7.5, '#F3F4F6', 700, 'left');
-      text(ctx, row.fmt === '€' ? fmtEuro(row.value) : String(row.value), x + w - 10, ry + 0.5, 7.5, BRAND.goldSoft, 800, 'right');
+      text(ctx, row.fmt === '€' ? moneyOf(row.value) : String(row.value), x + w - 10, ry + 0.5, 7.5, BRAND.goldSoft, 800, 'right');
     });
   }
 

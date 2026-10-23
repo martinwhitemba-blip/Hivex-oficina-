@@ -12,6 +12,7 @@ import { Camera } from './camera';
 import { circle, fillRR, text, type Ctx } from './draw';
 import { Avatar } from './entities';
 import { Input, isTextField } from './input';
+import { t } from '../i18n';
 import { MapRenderer } from './mapRenderer';
 import { Npc, SeatPool } from './npc';
 import type { AvatarLook, AvatarState, MapDefinition, RoomDef, StatusId } from './types';
@@ -106,9 +107,20 @@ export class Game {
   }
 
   // ───────────── API pública para la UI ─────────────
+  refreshLabels() {
+    this.canvas.setAttribute('aria-label', t('office.aria'));
+  }
+
+  watchParent() {
+    const parent = this.canvas.parentElement;
+    if (!parent) return;
+    new ResizeObserver(() => this.resize()).observe(parent);
+    this.resize();
+  }
+
   start() {
     this.canvas.tabIndex = 0;
-    this.canvas.setAttribute('aria-label', 'Oficina');
+    this.canvas.setAttribute('aria-label', t('office.aria'));
     if (this.canvas.parentElement) new ResizeObserver(() => this.resize()).observe(this.canvas.parentElement);
     this.resize();
     // Zoom inicial según tamaño de pantalla (móvil más alejado para ver más oficina).

@@ -1,4 +1,5 @@
 /** Reglas puras: permisos, fechas, métricas, alertas y puntos. Sin base de datos. */
+import { translate, type Locale } from '../../../packages/i18n/src/index';
 
 export type AppRole = 'propietario' | 'administrador' | 'empleado';
 
@@ -118,7 +119,9 @@ export function buildAlerts(input: {
   people: { id: string; name: string; areaId: string | null }[];
   kpis: KpiRef[];
   reports: ReportRow[];
+  locale?: Locale;
 }): Alert[] {
+  const locale = input.locale || 'es';
   const alerts: Alert[] = [];
   const byPerson = new Map<string, ReportRow[]>();
   for (const report of input.reports) {
@@ -140,7 +143,7 @@ export function buildAlerts(input: {
     if (missed >= 3) {
       alerts.push({
         level: 'critico',
-        text: `${person.name} no ha pasado el informe de ${missed} jornadas`,
+        text: translate(locale, 'alerts.missed', { name: person.name, count: missed }),
       });
     }
 
@@ -154,7 +157,7 @@ export function buildAlerts(input: {
         const pct = Math.round((ausentes / citas) * 100);
         alerts.push({
           level: 'critico',
-          text: `A las citas que agenda ${person.name} no se presenta el ${pct}% (${Math.round(ausentes)} de ${Math.round(citas)})`,
+          text: translate(locale, 'alerts.noshow', { name: person.name, pct, missed: Math.round(ausentes), total: Math.round(citas) }),
         });
       }
     }
@@ -171,7 +174,7 @@ export function buildAlerts(input: {
         if (sum < target * 0.8) {
           alerts.push({
             level: 'aviso',
-            text: `${person.name} está por debajo del objetivo de ${kpi.label}: ${Math.round(sum)} de ${Math.round(target)} en los últimos ${days} días con informe`,
+            text: translate(locale, 'alerts.below', { name: person.name, kpi: kpi.label, sum: Math.round(sum), target: Math.round(target), days }),
           });
         }
       } else {
@@ -179,7 +182,7 @@ export function buildAlerts(input: {
         if (avg > kpi.targetDaily * 1.2) {
           alerts.push({
             level: 'aviso',
-            text: `${person.name} está por encima del objetivo de ${kpi.label}: media ${Math.round(avg)} (objetivo ${Math.round(kpi.targetDaily)})`,
+            text: translate(locale, 'alerts.above', { name: person.name, kpi: kpi.label, avg: Math.round(avg), target: Math.round(kpi.targetDaily) }),
           });
         }
       }

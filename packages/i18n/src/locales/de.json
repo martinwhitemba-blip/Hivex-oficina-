@@ -1,0 +1,712 @@
+{
+  "lang": {
+    "label": "Sprache"
+  },
+  "role": {
+    "owner": "Inhaber",
+    "admin": "Administrator",
+    "employee": "Mitarbeiter"
+  },
+  "status": {
+    "en_linea": "Online",
+    "ausente": "Abwesend",
+    "en_reunion": "In einer Besprechung",
+    "cafe": "Virtueller Kaffee",
+    "en_llamada": "Im Gespräch",
+    "desconectado": "Offline"
+  },
+  "time": {
+    "hm": "{h} Std. {m} Min.",
+    "ms": "{m} Min. {s} Sek."
+  },
+  "brand": {
+    "tagline": "Virtuelles Büro",
+    "powered": "powered by HIVEX",
+    "title": "Marke des Unternehmens",
+    "lead": "Name, Raum, Logo und Farben dieses Unternehmens. Andere Unternehmen sehen sie nicht. HIVEX bleibt darunter, klein.",
+    "company": "Name des Unternehmens",
+    "space": "Name des Raums",
+    "spacePh": "Büro Acme",
+    "primary": "Hauptfarbe",
+    "accent": "Akzentfarbe",
+    "logo": "Logo (PNG, JPG oder SVG, bis 1,5 MB)",
+    "language": "Sprache des Unternehmens",
+    "languageHint": "Wer keine Sprache gewählt hat, sieht das Büro in dieser Sprache.",
+    "save": "Marke speichern",
+    "contrast": "Diese Farbe ist auf dem dunklen Hintergrund nicht lesbar. Wählen Sie eine hellere.",
+    "saved": "Marke gespeichert. Nur dieses Unternehmen sieht sie."
+  },
+  "auth": {
+    "eyebrow": "HIVEX · Virtuelles Büro",
+    "heroLead": "Ihr Team,",
+    "heroEm": "im Büro",
+    "heroPitch": "Ein Büro, das man sieht, mit echten Menschen, Bereichen und Rollen. Gold auf Schwarz, für den Arbeitsalltag.",
+    "enter": "Anmelden",
+    "register": "Unternehmen anlegen",
+    "codeLink": "Mit Code eintreten",
+    "enterTitle": "Betreten Sie Ihr Büro",
+    "registerTitle": "Legen Sie Ihr Unternehmen an",
+    "joinTitle": "Treten Sie dem Team bei",
+    "codeTitle": "Mit Code eintreten",
+    "activateTitle": "Aktivieren Sie Ihr Konto",
+    "leadDefault": "Jedes Unternehmen hat sein Büro. Sie sehen sofort, was jede Person gerade tut.",
+    "leadCode": "Geben Sie den Firmencode, Ihren Namen und ein Passwort ein. Sie betreten das Büro als Mitarbeiter.",
+    "leadJoin": "Die Einladung sendet keine E-Mail. Wählen Sie Ihren Namen und das Passwort, mit dem Sie sich danach anmelden.",
+    "leadActivate": "Wählen Sie das Passwort für die Anmeldung. Wir senden keine E-Mail: Ihr Unternehmen gibt Ihnen den Link.",
+    "code": "Code",
+    "inviteCode": "Einladungscode",
+    "email": "E-Mail",
+    "yourName": "Ihr Name",
+    "companyName": "Name des Unternehmens",
+    "password": "Passwort",
+    "newPassword": "Neues Passwort",
+    "repeatPassword": "Passwort wiederholen",
+    "submitEnter": "Anmelden",
+    "submitOffice": "Büro betreten",
+    "submitActivate": "Konto aktivieren",
+    "submitContinue": "Weiter",
+    "haveAccount": "Ich habe schon ein Konto",
+    "demo": "Demo testen: martin@hivex.demo / hivex-demo. Offener Code: HIVEX2026. Bei einer Einladung die E-Mail der Einladung und das gewählte Passwort verwenden.",
+    "session": "Sie sind angemeldet als {name}.",
+    "logoutContinue": "Abmelden und fortfahren",
+    "goOffice": "Zu meinem Büro",
+    "passwordMismatch": "Die Passwörter stimmen nicht überein",
+    "inviteFallback": "Die Einladung ist ungültig oder abgelaufen",
+    "activationFallback": "Der Aktivierungslink ist ungültig oder abgelaufen",
+    "actionFailed": "Die Aktion konnte nicht abgeschlossen werden",
+    "brandLead": "{name} · {office}. Geben Sie Ihren Namen und ein Passwort ein, um einzutreten.",
+    "gateEyebrow": "HIVEX · Virtuelles Büro",
+    "gatePitch": "Das vorläufige Passwort gilt nur für diese erste Anmeldung.",
+    "gateTitle": "Ändern Sie das vorläufige Passwort",
+    "gateLead": "Wählen Sie ein eigenes Passwort mit mindestens 8 Zeichen. Bis dahin bleibt das Büro geschlossen.",
+    "tempPassword": "Vorläufiges Passwort",
+    "saveEnter": "Speichern und eintreten",
+    "passwordFail": "Das Passwort konnte nicht geändert werden"
+  },
+  "nav": {
+    "office": "Büro",
+    "owner": "Inhaber",
+    "business": "Mein Geschäft",
+    "team": "Team",
+    "areas": "Bereiche",
+    "map": "Karte",
+    "tasks": "Aufgaben",
+    "day": "Arbeitstag",
+    "chat": "Chat",
+    "badges": "Erfolge",
+    "plan": "Tarif",
+    "leads": "Gewinnung",
+    "menu": "Verwaltung"
+  },
+  "common": {
+    "loadFail": "Laden fehlgeschlagen",
+    "error": "Fehler",
+    "bootFail": "HIVEX konnte nicht geöffnet werden.",
+    "reload": "Neu laden",
+    "unexpected": "Unerwarteter Fehler",
+    "timeout": "Zeitüberschreitung ({label})",
+    "sessionFail": "Die Sitzung konnte nicht geprüft werden",
+    "enterFail": "Anmeldung fehlgeschlagen",
+    "downloadFail": "Die Datei konnte nicht heruntergeladen werden"
+  },
+  "owner": {
+    "title": "Inhaber-Übersicht",
+    "subtitle": "Was jede Person gerade tut.",
+    "search": "Person oder Aufgabe suchen",
+    "allAreas": "Alle Bereiche",
+    "allStatuses": "Alle Status",
+    "hideMap": "Grundriss ausblenden",
+    "showMap": "Grundriss zeigen",
+    "newArea": "Neuer Bereich",
+    "peopleNow": "Personen gerade",
+    "mapTitle": "Bereichskarte",
+    "mapHint": "Jede Zone ist ein aktiver Bereich. Klicken Sie, um zu sehen, wer dort ist und wie die heutigen Kennzahlen stehen.",
+    "noRole": "Ohne Rolle",
+    "noTask": "Keine aktive Aufgabe",
+    "onTask": "Seit {time} an dieser Aufgabe",
+    "noTaskTime": "Keine Aufgabenzeit",
+    "performance": "Leistung",
+    "move": "Verschieben",
+    "noMatch": "Niemand entspricht dem Filter.",
+    "zoneMeta": "{online} online · {people}",
+    "people": {
+      "one": "{n} Person",
+      "other": "{n} Personen"
+    },
+    "nobody": "Niemand zugewiesen",
+    "unassigned": "Nicht zugewiesen",
+    "reassign": "Neu zuweisen",
+    "noTasks": "Es gibt keine offenen Aufgaben.",
+    "audit": "Protokoll",
+    "loading": "Wird geladen…",
+    "noMoves": "Noch keine Änderungen.",
+    "tasksNow": "Laufende Aufgaben",
+    "promptArea": "Name des neuen Bereichs",
+    "promptWho": "Wem soll sie zugewiesen werden?",
+    "promptMove": "In welchen Bereich soll diese Person wechseln?",
+    "connected": "{count} jetzt online",
+    "noKpis": "Heute keine Kennzahlen",
+    "seeArea": "Leistung des Bereichs ansehen",
+    "roomPeople": "{room} · {people} · {online} online"
+  },
+  "business": {
+    "title": "Mein Geschäft",
+    "demo": "Die Zahlen dieses Unternehmens sind Demonstrationsdaten.",
+    "live": "Leistung nach Bereich und Person.",
+    "noAlerts": "Keine Hinweise in diesem Zeitraum.",
+    "export": "CSV exportieren",
+    "who": "Wer macht was",
+    "rhythm": "Der Rhythmus, Tag für Tag",
+    "noSeries": "Noch keine Tagesreihe."
+  },
+  "import": {
+    "created": {
+      "one": "{n} Konto erstellt",
+      "other": "{n} Konten erstellt"
+    },
+    "withErrors": {
+      "one": "{n} mit Fehler.",
+      "other": "{n} mit Fehlern."
+    },
+    "noErrors": "Keine Fehler.",
+    "noEmail": "Es wurde keine E-Mail gesendet.",
+    "colName": "Name",
+    "colEmail": "E-Mail",
+    "colRole": "Rolle",
+    "colArea": "Bereich",
+    "colAccess": "Zugang",
+    "row": "Zeile {n}",
+    "download": "Zugangs-CSV herunterladen"
+  },
+  "team": {
+    "title": "Team",
+    "subtitle": "Jede Person hat ein Konto. Im Büro sitzt sie an ihrem Platz, auch bevor sie sich angemeldet hat.",
+    "addTitle": "Person hinzufügen",
+    "addLead": "Ein echtes Konto, eins nach dem anderen. Wir senden keine E-Mail: Sie kopieren den Aktivierungslink oder erzeugen ein vorläufiges Passwort, das beim Eintritt geändert werden muss.",
+    "name": "Name",
+    "email": "E-Mail",
+    "role": "Rolle",
+    "area": "Bereich",
+    "areaPh": "Vertrieb",
+    "job": "Stelle",
+    "phone": "Telefon",
+    "start": "Startdatum",
+    "schedule": "Arbeitszeit",
+    "access": "Zugang",
+    "linkMode": "Aktivierungslink",
+    "tempMode": "Vorläufiges Passwort",
+    "createMissing": "Bereiche und Stellen anlegen, die es noch nicht gibt",
+    "addButton": "Person hinzufügen",
+    "importTitle": "CSV oder Excel importieren",
+    "importLead": "Spalten: nombre, email, rol, puesto, area, telefono, fecha_inicio, horario. Englische Namen gehen auch (name, role, job_title, department, phone, start_date, schedule). Derselbe Zugang gilt für die ganze Datei.",
+    "template": "Vorlage herunterladen",
+    "importButton": "Importieren",
+    "noArea": "Ohne Bereich",
+    "schedulePh": "Mo–Fr 09:00–18:00"
+  },
+  "join": {
+    "title": "Zugangscode",
+    "lead": "Wer den Code hat, betritt das Büro als Mitarbeiter, ohne Bereich oder Stelle. Es wird keine E-Mail gesendet. Teilen Sie den Link oder den Code.",
+    "code": "Code",
+    "noCode": "Kein Code",
+    "link": "Link zum Teilen",
+    "copy": "Link kopieren",
+    "regen": "Code neu erzeugen",
+    "active": "Code aktiv",
+    "copied": "Link kopiert.",
+    "newCode": "Neuer Code. Der alte gilt nicht mehr.",
+    "on": "Code aktiv.",
+    "off": "Code deaktiviert."
+  },
+  "invite": {
+    "title": "Einladen",
+    "lead": "Es wird keine E-Mail gesendet. Beim Erstellen der Einladung erhalten Sie einen Link zum Kopieren und Weitergeben.",
+    "admin": "Administrator / Bereichsleitung",
+    "create": "Einladung erstellen",
+    "share": "Es wurde keine E-Mail gesendet. Teilen Sie diesen Link:",
+    "copied": "Link kopiert."
+  },
+  "person": {
+    "score": "Punktzahl",
+    "points": "{n} Punkte",
+    "photo": "Profilfoto",
+    "upload": "Foto hochladen",
+    "usePhoto": "Mein Foto als Avatar verwenden",
+    "photoHint": "Aus: im Büro sieht man die Spielfigur in Ihren Farben. An: das Foto füllt das Gesicht. Dafür muss ein Foto hochgeladen sein.",
+    "character": "Figur",
+    "characterHint": "Farben, Haar und Kleidung des Avatars. So erscheint er im Büro, solange das Foto aus ist.",
+    "skin": "Haut",
+    "hair": "Haar",
+    "style": "Frisur",
+    "short": "Kurz",
+    "long": "Lang",
+    "bun": "Dutt",
+    "buzz": "Rasiert",
+    "shirt": "Shirt",
+    "pants": "Hose",
+    "glasses": "Brille",
+    "save": "Figur speichern",
+    "saved": "Figur gespeichert. Gehen Sie zurück ins Büro, um sie zu sehen.",
+    "history": "Verlauf",
+    "date": "Datum",
+    "note": "Notiz",
+    "metrics": "Kennzahlen",
+    "noReports": "Keine sichtbaren Berichte",
+    "badges": "Abzeichen: {list}. Stunden online (30 Tage): {hours}.",
+    "none": "keine"
+  },
+  "areas": {
+    "title": "Bereiche und Stellen",
+    "subtitle": "Nichts ist fest: anlegen, umbenennen oder löschen. Jeder neue Bereich öffnet eine Zone im Grundriss.",
+    "new": "Neuer Bereich",
+    "name": "Name",
+    "color": "Farbe",
+    "teamName": "Teamname",
+    "create": "Bereich und Zone anlegen",
+    "meta": "{team} · {people} · {rooms}",
+    "noZone": "ohne Zone",
+    "kpiLine": "{label} ({key}) Ziel {target}",
+    "noKpis": "Keine Kennzahlen",
+    "editKpis": "Kennzahlen bearbeiten",
+    "jobs": "Stellen",
+    "noJobs": "Noch keine Stellen.",
+    "jobPh": "Neue Stelle",
+    "add": "Hinzufügen",
+    "kpiPrompt": "Kennzahlen durch Semikolon getrennt. Beispiel: anrufe|Anrufe|40; termine|Termine|5"
+  },
+  "mapEdit": {
+    "title": "Büro-Editor",
+    "subtitle": "Ändern Sie den Namen jedes Raums, den zugehörigen Bereich und wer an welchem Platz sitzt.",
+    "labelPh": "Schild",
+    "saveRoom": "Raum speichern",
+    "desks": "Plätze",
+    "free": "Frei",
+    "assign": "Zuweisen",
+    "ownerOnly": "Nur der Inhaber speichert Änderungen am Grundriss.",
+    "saved": "Gespeichert",
+    "assigned": "Zugewiesen"
+  },
+  "tasks": {
+    "title": "Aufgaben",
+    "subtitle": "Eine einfache Tafel nach Bereich. Sie zählt für die Punktzahl.",
+    "newPh": "Neue Aufgabe",
+    "create": "Erstellen",
+    "pending": "Offen",
+    "doing": "In Arbeit",
+    "done": "Erledigt"
+  },
+  "day": {
+    "title": "Tagesbericht",
+    "needArea": "Weisen Sie einen Bereich zu, um Kennzahlen zu erfassen.",
+    "clocked": "Sie sind seit {time} anwesend",
+    "notClocked": "Sie haben heute noch nicht eingestempelt",
+    "in": "Kommen stempeln",
+    "out": "Gehen stempeln",
+    "demo": "Der heutige Bericht ist eine Demonstration. Wenn Sie ihn speichern, gehört er Ihnen.",
+    "manual": "Die Zahlen können von Hand oder über die Integrations-API erfasst werden.",
+    "target": "Ziel {n}",
+    "noKpis": "Ihr Profil hat noch keine Kennzahlen.",
+    "note": "Freie Notiz",
+    "save": "Tag speichern",
+    "points": "Tag gespeichert. +{n} Punkte",
+    "updated": "Tag aktualisiert"
+  },
+  "chat": {
+    "title": "Team-Chat",
+    "subtitle": "Kanäle des Unternehmens und Direktnachrichten. Eine Direktnachricht erreicht nur eine Kollegin oder einen Kollegen Ihres Unternehmens.",
+    "channels": "Kanäle",
+    "directs": "Direkt",
+    "channel": "Kanal",
+    "general": "Allgemein",
+    "placeholder": "Nachricht schreiben",
+    "send": "Senden",
+    "emptyChannel": "In diesem Kanal gibt es noch keine Nachrichten.",
+    "emptyThread": "Sie haben sich noch nicht geschrieben. Die Nachricht bleibt gespeichert.",
+    "noPeople": "Es gibt niemand anderen im Unternehmen.",
+    "coworker": "Kollege",
+    "with": "Direkt mit {name}",
+    "pick": "Wählen Sie eine Kollegin oder einen Kollegen. Sie können auch den Avatar im Büro anklicken.",
+    "offline": "Der Live-Chat ist nicht verbunden. Laden Sie die Seite neu.",
+    "pickPeer": "Wählen Sie jemanden aus der Direktliste",
+    "sendFail": "Senden fehlgeschlagen"
+  },
+  "badges": {
+    "title": "Punkte und Abzeichen",
+    "subtitle": "Man verdient sie mit dem Tagesbericht, erreichten Zielen und erledigten Aufgaben.",
+    "heading": "Abzeichen",
+    "none": "Noch keine Abzeichen.",
+    "pts": "{n} Pkt."
+  },
+  "plan": {
+    "title": "Tarif und Nutzung",
+    "people": "Personen {used} / {max}",
+    "limit": "Limit dieses Unternehmens: {n}",
+    "areas": "Bereiche {used} / {max}",
+    "upTo": "Bis zu {people} Personen und {areas} Bereiche",
+    "companyLimit": "Limit dieses Unternehmens",
+    "current": "Aktueller Tarif",
+    "use": "Diesen Tarif nutzen",
+    "billing": "Kartenzahlung ist nicht angebunden. Ein Tarifwechsel erzeugt keine Zahlung."
+  },
+  "leads": {
+    "title": "Lead-Gewinnung",
+    "soon": "Demnächst",
+    "counts": "Leads {leads} · Kampagnen {campaigns} · Anrufe {calls}",
+    "prepared": "Bereich bereit: {name}",
+    "enable": "Vorlage für den Bereich Anrufe aktivieren",
+    "message": "Lead-Gewinnung und Kundenanrufe sind vorbereitet, aber der Wähler funktioniert noch nicht.",
+    "ext": {
+      "provider": "Ein Telefonanbieter (Zadarma oder Twilio) hinter TelephonyProvider",
+      "routing": "Lead-Verteilung, wenn ein Anruf oder ein Formular eingeht",
+      "models": "Die Modelle Lead, Call und Campaign gehören schon zum Unternehmen (companyId)"
+    }
+  },
+  "office": {
+    "railOwner": "Inhaber-Übersicht",
+    "railBusiness": "Mein Geschäft",
+    "railPlan": "Tarif und Nutzung",
+    "hidePanel": "Leiste ausblenden",
+    "search": "Personen suchen",
+    "roomsTab": "Belegte Räume",
+    "callsTab": "Anrufe und Ankündigungen",
+    "meetingsToday": "Termine heute: {n}",
+    "followups": "Offene Nachverfolgung: {n}",
+    "see": "Ansehen",
+    "you": "(Sie)",
+    "yourStatus": "Ihr Status",
+    "statusToast": "Ihr Status: {label}",
+    "callsSoon": "Anrufe und Ankündigungen: demnächst",
+    "people": "Personen",
+    "peopleRooms": "Personen und Räume",
+    "manage": "Verwaltung",
+    "followupsShort": "{n} Nachverfolgungen",
+    "todaySales": "Heute: {sales} Verkäufe · {money}",
+    "car": "Auto",
+    "carTitle": "Auto-Modus (C) · hupen mit H",
+    "meetingsPill": "{n} Termine heute",
+    "demoData": "Demonstrationsdaten",
+    "follow": "Sie folgen {name}",
+    "back": "Zurück",
+    "pending": "Offene Nachverfolgung",
+    "avatar": "Ihr Avatar",
+    "mic": "Mikrofon",
+    "micOn": "Mikrofon an",
+    "micOff": "Mikrofon stumm",
+    "cam": "Kamera",
+    "camOn": "Kamera an",
+    "camOff": "Kamera aus",
+    "react": "Reaktionen",
+    "screen": "Bildschirm teilen",
+    "screenSoon": "Bildschirm teilen kommt, sobald LiveKit eingerichtet ist",
+    "callClient": "Kundengespräch",
+    "callShort": "Anrufen",
+    "hand": "Hand heben",
+    "audio": "Audio",
+    "audioSoon": "Audio-Einstellungen: demnächst",
+    "leave": "Abmelden",
+    "help": "Hilfe",
+    "zoomIn": "Heranzoomen",
+    "zoomOut": "Wegzoomen",
+    "center": "Auf mich zentrieren",
+    "hideMap": "Minikarte ausblenden",
+    "showMap": "Minikarte einblenden",
+    "honk": "Hupen (H)",
+    "helpTitle": "So bewegen Sie sich im Büro",
+    "walk": "Gehen",
+    "clickGo": "Klick / Tippen auf die Karte",
+    "clickGoHelp": "Dorthin gehen (sucht den Weg)",
+    "joy": "Joystick (Handy)",
+    "joyHelp": "Mit dem Daumen gehen",
+    "clickMate": "Klick auf eine Kollegin oder einen Kollegen",
+    "clickMateHelp": "Zu ihm gehen · in der Liste: Kamera zentrieren",
+    "carHelp": "Auto-Modus (schneller)",
+    "honkHelp": "Hupen (im Auto-Modus)",
+    "door": "Das private Büro öffnen oder schließen",
+    "zoomHelp": "Zoom",
+    "escHelp": "Wieder Ihnen folgen",
+    "keys": "W A S D / Pfeile",
+    "wheel": "Rad / Ziehen / + −",
+    "helpNote": "HIVEX-Beta · das Büro ist Mehrspieler · Demo-Kennzahlen sind als Demonstration markiert.",
+    "gotIt": "Verstanden",
+    "demoNoMessage": "Diese Demonstrationsfigur empfängt keine Nachrichten",
+    "inRoom": "Sie sind in {name}",
+    "common": "Gemeinsame Zone",
+    "nearTalk": "Gespräch in der Nähe",
+    "demoAudio": "Demonstrationskollegen, ohne echtes Audio",
+    "focusHint": "Klick: Kamera zentrieren · Gehen: zu {name} laufen",
+    "new": "Neu",
+    "message": "Nachricht",
+    "go": "Gehen",
+    "nearSub": "Audio nach Nähe (simuliert)",
+    "nearYou": "In Ihrer Nähe",
+    "inMeeting": "In einer Besprechung",
+    "inOffice": "Im Büro",
+    "rooms": "Räume",
+    "private": "Privates Büro",
+    "lockTitle": "Öffnen / schließen",
+    "demoMates": "Demonstrationskollegen",
+    "demoTitle": "NPCs zeigen oder ausblenden",
+    "offline": "Offline",
+    "aria": "Büro"
+  },
+  "media": {
+    "livekit": "Nähe-Audio und -Video mit LiveKit.",
+    "p2p": "Nähe-Audio läuft direkt zwischen den Browsern. Für mehrere Personen gleichzeitig setzen Sie LIVEKIT_URL, LIVEKIT_API_KEY und LIVEKIT_API_SECRET auf dem Server.",
+    "p2pClient": "Nähe-Audio läuft direkt zwischen den Browsern. Für mehrere Personen gleichzeitig LIVEKIT_URL, LIVEKIT_API_KEY und LIVEKIT_API_SECRET setzen.",
+    "micOff": "Das Mikrofon ist aus. Schalten Sie es ein, wenn Sie mit Personen in der Nähe sprechen wollen.",
+    "micFail": "Das Mikrofon ließ sich nicht öffnen. Nähe-Audio ist in diesem Browser aus.",
+    "camGroup": "Gruppenvideo funktioniert besser mit LiveKit. Im Direktmodus wird nur Audio geteilt.",
+    "p2pShort": "Nähe-Audio läuft direkt zwischen den Browsern. Für mehrere Personen gleichzeitig LiveKit einrichten.",
+    "simulated": "Simuliertes Audio: es wird nicht an andere gesendet."
+  },
+  "map": {
+    "plaque": {
+      "atlas": "TEAM ATLAS",
+      "vega": "TEAM VEGA",
+      "meeting": "BESPRECHUNGSRAUM",
+      "cafe": "CAFÉ",
+      "direction": "LEITUNG",
+      "open": "OFFENE ZONE"
+    },
+    "name": {
+      "atlas": "Team Atlas",
+      "vega": "Team Vega",
+      "meeting": "Besprechungsraum",
+      "cafe": "Café / Küche",
+      "private": "Privates Büro",
+      "open": "Offene Zone",
+      "lounge": "Lounge"
+    },
+    "tv": {
+      "calls": "ANRUFE {n}",
+      "meetings": "TERMINE {n}"
+    },
+    "rank": {
+      "today": "RANGLISTE HEUTE",
+      "amount": "Betrag",
+      "meetings": "TERMIN-RANGLISTE",
+      "meetingsSub": "Termine"
+    }
+  },
+  "mail": {
+    "invite": {
+      "subject": "Einladung zu {company} bei HIVEX",
+      "text": "Sie sind ins Büro von {company} eingeladen. Wir senden diese Nachricht nicht: geben Sie sie von Hand weiter.\nLink: {link}"
+    },
+    "activation": {
+      "subject": "Aktivieren Sie Ihr Konto bei {company}",
+      "text": "{name}, Ihr Unternehmen {company} hat Ihr Konto angelegt. Wir senden diese Nachricht nicht: der Link wird von Hand weitergegeben.\nLink: {link}"
+    },
+    "chat": {
+      "joined": "{name} ist {company} beigetreten."
+    }
+  },
+  "alerts": {
+    "missed": "{name} hat den Bericht für {count} Arbeitstage nicht abgegeben",
+    "noshow": "{pct} % der Termine, die {name} ansetzt, erscheinen nicht ({missed} von {total})",
+    "below": "{name} liegt unter dem Ziel für {kpi}: {sum} von {target} in den letzten {days} Tagen mit Bericht",
+    "above": "{name} liegt über dem Ziel für {kpi}: Schnitt {avg} (Ziel {target})"
+  },
+  "plans": {
+    "starter": {
+      "name": "Starter",
+      "description": "Für ein kleines Team, das sein Büro zu ordnen beginnt."
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Mehrere Bereiche, die Inhaber-Übersicht und mehr Personen im Büro."
+    },
+    "empresa": {
+      "name": "Unternehmen",
+      "description": "Ein breiter Betrieb: viele Bereiche und Teams auf demselben Grundriss."
+    },
+    "grupo": {
+      "name": "Gruppe",
+      "description": "Über 100 Personen. Das Limit dieses Unternehmens kann gesondert vereinbart werden."
+    }
+  },
+  "errors": {
+    "access": {
+      "denied": "Zugang eingeschränkt"
+    },
+    "notFound": "Nicht gefunden",
+    "internal": "Interner Serverfehler",
+    "validation": "Die Daten sind ungültig",
+    "auth": {
+      "required": "Melden Sie sich an, um fortzufahren",
+      "expired": "Die Sitzung ist abgelaufen. Melden Sie sich erneut an",
+      "unknown": "Wir finden Ihren Benutzer in keinem Unternehmen",
+      "temp": "Ändern Sie das vorläufige Passwort, bevor Sie fortfahren.",
+      "bad": "E-Mail oder Passwort ist falsch",
+      "current": "Das aktuelle Passwort stimmt nicht",
+      "exists": "Diese E-Mail hat schon ein Konto. Melden Sie sich an oder bitten Sie um eine Einladung.",
+      "passwordShort": "Das Passwort muss mindestens 8 Zeichen haben",
+      "name": "Geben Sie Ihren Namen ein",
+      "company": "Geben Sie den Namen des Unternehmens ein",
+      "password": "Geben Sie das Passwort ein",
+      "passwordCurrent": "Geben Sie das aktuelle Passwort ein"
+    },
+    "activation": {
+      "expired": "Der Aktivierungslink ist ungültig oder abgelaufen",
+      "missing": "Der Code fehlt"
+    },
+    "code": {
+      "invalid": "Dieser Zugangscode ist ungültig oder deaktiviert",
+      "write": "Geben Sie den Code ein",
+      "password": "Das Passwort passt nicht zu diesem Konto",
+      "disabled": "Ihr Zugang zu diesem Unternehmen ist deaktiviert",
+      "see": "Nur die Leitung kann den Zugangscode sehen",
+      "change": "Nur die Leitung kann den Zugangscode ändern",
+      "regen": "Nur die Leitung kann den Code neu erzeugen"
+    },
+    "email": {
+      "otherCompany": "Diese E-Mail gehört schon zu einem anderen Unternehmen",
+      "samePassword": "Diese E-Mail gibt es schon. Verwenden Sie dasselbe Passwort, um beizutreten.",
+      "oneCompany": "Diese E-Mail gehört schon zu einem Unternehmen"
+    },
+    "invite": {
+      "expired": "Die Einladung ist ungültig oder abgelaufen",
+      "forbidden": "Nur die Leitung kann einladen",
+      "staffOnly": "Eine Bereichsleitung kann nur Mitarbeitende des eigenen Bereichs einladen",
+      "ownArea": "Sie können nur in Ihren Bereich einladen",
+      "hidden": "Sie können die Einladungen nicht sehen"
+    },
+    "area": {
+      "missingReload": "Bereich nicht gefunden. Laden Sie die Seite neu: diesen Bereich gibt es nicht mehr.",
+      "create": "Nur der Inhaber kann Bereiche anlegen",
+      "duplicate": "Ein Bereich mit diesem Namen gibt es schon",
+      "edit": "Sie können Bereiche nicht bearbeiten",
+      "own": "Sie können nur Ihren Bereich bearbeiten",
+      "rename": "Nur der Inhaber kann Bereiche umbenennen",
+      "delete": "Nur der Inhaber kann Bereiche löschen",
+      "missing": "Bereich nicht gefunden",
+      "name": "Geben Sie den Namen des Bereichs ein"
+    },
+    "job": {
+      "missingReload": "Stelle nicht gefunden. Laden Sie die Seite neu: diese Stelle gibt es nicht mehr.",
+      "create": "Nur der Inhaber kann Stellen anlegen",
+      "duplicate": "Diese Stelle gibt es schon",
+      "rename": "Nur der Inhaber kann Stellen umbenennen",
+      "missing": "Stelle nicht gefunden",
+      "delete": "Nur der Inhaber kann Stellen löschen",
+      "write": "Geben Sie die Stelle ein"
+    },
+    "company": {
+      "ownerOnly": "Nur der Inhaber kann das Unternehmen bearbeiten",
+      "missing": "Unternehmen nicht gefunden"
+    },
+    "kpi": {
+      "forbidden": "Sie können keine Kennzahlen festlegen",
+      "own": "Sie können Kennzahlen nur für Ihren Bereich festlegen",
+      "label": "Die Bezeichnung fehlt",
+      "duplicate": "Der Schlüssel „{key}“ ist doppelt"
+    },
+    "profile": {
+      "edit": "Sie können dieses Profil nicht bearbeiten"
+    },
+    "date": {
+      "start": "Das Startdatum muss JJJJ-MM-TT sein",
+      "iso": "Das Datum muss JJJJ-MM-TT sein",
+      "invalid": "Datum ungültig"
+    },
+    "photo": {
+      "forbidden": "Sie können dieses Foto nicht ändern",
+      "missing": "Hängen Sie ein Bild an",
+      "read": "Wir konnten das Bild nicht lesen. Verwenden Sie JPG, PNG oder WebP."
+    },
+    "person": {
+      "create": "Die Person konnte nicht angelegt werden",
+      "file": "Hängen Sie eine CSV- oder Excel-Datei an",
+      "hire": "Sie können keine Personen anlegen",
+      "name": "Geben Sie den Namen ein",
+      "missingCompany": "Wir finden diese Person im Unternehmen nicht",
+      "missing": "Mitarbeiter nicht gefunden",
+      "notInArea": "Die Person ist nicht in diesem Bereich"
+    },
+    "report": {
+      "forbidden": "Sie können die Berichte dieser Person nicht sehen"
+    },
+    "clock": {
+      "none": "Sie haben keinen offenen Kommen-Stempel"
+    },
+    "task": {
+      "ask": "Bitten Sie Ihre Leitung, die Aufgabe anzulegen",
+      "ownArea": "Sie können Aufgaben nur in Ihrem Bereich anlegen",
+      "missing": "Aufgabe nicht gefunden",
+      "moveOwn": "Sie können nur Ihre eigenen Aufgaben verschieben",
+      "otherArea": "Aufgabe aus einem anderen Bereich",
+      "delete": "Sie können keine Aufgaben löschen",
+      "title": "Geben Sie den Titel ein"
+    },
+    "map": {
+      "edit": "Nur der Inhaber kann die Karte bearbeiten",
+      "room": "Unbekannter Raum",
+      "assign": "Nur der Inhaber kann Plätze zuweisen",
+      "seat": "Dieser Platz ist nicht auf der Karte",
+      "roomName": "Geben Sie den Namen des Raums ein"
+    },
+    "integration": {
+      "see": "Nur der Inhaber sieht den Integrationsschlüssel",
+      "rotate": "Nur der Inhaber kann den Schlüssel erneuern",
+      "header": "Der Kopf X-API-Key fehlt",
+      "bad": "Integrationsschlüssel falsch"
+    },
+    "chat": {
+      "other": "Sie können den Chat eines anderen Bereichs nicht betreten",
+      "message": "Schreiben Sie eine Nachricht",
+      "length": "Schreiben Sie eine Nachricht mit höchstens 1000 Zeichen",
+      "pick": "Wählen Sie eine Kollegin oder einen Kollegen Ihres Unternehmens",
+      "missing": "Diese Person ist nicht in Ihrem Unternehmen",
+      "send": "Die Nachricht konnte nicht gesendet werden"
+    },
+    "plan": {
+      "missing": "Diesen Tarif gibt es nicht",
+      "workers": "Ihr Tarif {plan} erlaubt bis zu {max} Personen und Sie sind schon am Limit. Öffnen Sie Tarif und Nutzung. Die Online-Zahlung ist noch nicht angebunden.",
+      "areas": "Ihr Tarif {plan} erlaubt bis zu {max} Bereiche und Sie sind schon am Limit. Öffnen Sie Tarif und Nutzung. Die Online-Zahlung ist noch nicht angebunden.",
+      "limit": "Ein eigenes Limit beginnt über 100"
+    },
+    "owner": {
+      "panel": "Die Inhaber-Übersicht ist für den Inhaber und die Bereichsleitungen",
+      "audit": "Sie können das Protokoll nicht sehen",
+      "reassign": "Sie können Aufgaben nicht neu zuweisen",
+      "otherTask": "Diese Aufgabe gehört zu einem anderen Bereich",
+      "person": "Person nicht gefunden",
+      "assign": "Sie können nur innerhalb Ihres Bereichs zuweisen",
+      "move": "Nur der Inhaber verschiebt Personen zwischen Bereichen",
+      "ownerStay": "Der Inhaber wird von hier nicht zwischen Bereichen verschoben",
+      "plan": "Nur der Inhaber wechselt den Tarif",
+      "module": "Nur der Inhaber schaltet das Modul ein"
+    },
+    "rate": "Zu viele Versuche. Warten Sie ein paar Minuten und versuchen Sie es erneut.",
+    "zone": {
+      "full": "Auf dem Grundriss sind keine freien Zonen mehr. In dieser Beta hat die Karte eine feste Zahl von Flächen."
+    },
+    "metrics": {
+      "area": "Diese Person hat keinen Bereich. Weisen Sie einen Bereich zu, bevor Sie Kennzahlen speichern.",
+      "unknown": "„{key}“ ist keine Kennzahl von {area}. Gültige Schlüssel: {keys}"
+    },
+    "import": {
+      "repeat": "Diese E-Mail ist in der Datei doppelt",
+      "here": "Diese E-Mail ist schon in Ihrem Unternehmen",
+      "area": "Den Bereich „{area}“ gibt es nicht. Markieren Sie die Option, um ihn anzulegen.",
+      "areaOwner": "Nur der Inhaber kann beim Import Bereiche anlegen",
+      "job": "Die Stelle „{job}“ gibt es nicht. Markieren Sie die Option, um sie anzulegen.",
+      "email": "Die E-Mail ist ungültig",
+      "role": "Die Rolle muss Mitarbeiter oder Administrator sein",
+      "lead": "Eine Bereichsleitung kann nur Mitarbeitende anlegen",
+      "ownArea": "Sie können nur Personen Ihres Bereichs anlegen"
+    },
+    "brand": {
+      "edit": "Nur die Leitung kann die Marke ändern",
+      "contrast": "Diese Farbe ist auf dem dunklen Hintergrund nicht lesbar. Wählen Sie eine hellere.",
+      "logo": "Hängen Sie ein Logo an",
+      "size": "Das Logo ist zu groß. Das Maximum ist 1,5 MB.",
+      "svg": "Dieses SVG kann nicht verwendet werden",
+      "type": "Verwenden Sie ein Logo als PNG, JPG oder SVG.",
+      "company": "Geben Sie den Namen des Unternehmens ein",
+      "space": "Geben Sie den Namen des Raums ein",
+      "hex": "Die Farbe muss hexadezimal sein"
+    },
+    "locale": "Die Sprache muss es, en, fr oder de sein"
+  }
+}

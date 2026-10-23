@@ -12,6 +12,7 @@ model User {
   email              String       @unique
   passwordHash       String
   mustChangePassword Boolean      @default(false)
+  locale             String?
   createdAt          DateTime     @default(now())
   memberships        Membership[]
   activations        Activation[]
@@ -27,6 +28,7 @@ model Company {
   moduloLlamadas Boolean   @default(false)
   joinCode       String?   @unique
   joinCodeEnabled Boolean  @default(false)
+  locale         String    @default("es")
   createdAt      DateTime      @default(now())
   subscription   Subscription?
   audits         AuditLog[]
@@ -63,6 +65,7 @@ model Activation {
   membershipId String
   expiresAt    DateTime
   usedAt       DateTime?
+  locale       String    @default("es")
   company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -229,6 +232,7 @@ model Invite {
   code       String    @unique
   expiresAt  DateTime
   acceptedAt DateTime?
+  locale     String    @default("es")
   company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   area       Area?     @relation(fields: [areaId], references: [id], onDelete: SetNull)
   jobTitle   JobTitle? @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)

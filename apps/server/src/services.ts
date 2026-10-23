@@ -60,7 +60,7 @@ export async function upsertReport(input: {
   const known = new Map(member.area.kpis.map((kpi) => [kpi.key, kpi]));
   for (const key of Object.keys(input.metrics)) {
     if (!known.has(key)) {
-      throw new HttpError(400, `«${key}» no es una métrica de ${member.area.name}. Claves válidas: ${[...known.keys()].join(', ') || 'ninguna'}`);
+      throw new HttpError(400, `«${key}» no es una métrica de ${member.area.name}. Claves válidas: ${[...known.keys()].join(', ') || 'ninguna'}`, 'errors.metrics.unknown', { key, area: member.area.name, keys: [...known.keys()].join(', ') || 'ninguna' });
     }
   }
   const existing = await prisma.dailyReport.findUnique({

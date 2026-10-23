@@ -45,6 +45,8 @@ a.btn.block { display: block; width: 100%; margin-top: 14px; box-sizing: border-
 .pn a { flex: none; text-decoration: none; color: #C9CDD2; border: 1px solid rgba(255,255,255,.08); background: rgba(20,20,22,.8); border-radius: 999px; padding: 7px 10px; font-size: 12px; font-weight: 700; transition: transform .15s ease, background .15s ease, color .15s ease; }
 .pn a:hover { transform: translateY(-1px); color: var(--gold); border-color: rgba(245,197,24,.45); }
 .pn a.on { background: var(--gold); color: #0B0B0C; border-color: var(--gold); }
+.lang-switch { background: #0B0B0C; color: #F2F2F3; border: 1px solid #F5C518; border-radius: 8px; font: inherit; height: 30px; padding: 0 8px; }
+.auth-hero .lang-switch { border-radius: 15px; margin-bottom: 12px; }
 .ph { display: flex; justify-content: space-between; gap: 12px; align-items: flex-end; margin-bottom: 14px; flex-wrap: wrap; }
 .ph h1 { margin: 0; font-size: 28px; letter-spacing: -.4px; }
 .ph p { margin: 4px 0 0; color: #9A9AA2; }

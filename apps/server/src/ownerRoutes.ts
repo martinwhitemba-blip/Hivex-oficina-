@@ -1,3 +1,4 @@
+import { translate, type MessageKey } from '../../../packages/i18n/src/index';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { assertCanAddArea, attachPlan, audit, companyUsage, PLAN_DEFS } from './billing';
@@ -8,6 +9,11 @@ import { ownerSnapshot } from './ownerSnapshot';
 import { payments } from './payments';
 import { prisma } from './prisma';
 import { assignFreeZone } from './zones';
+
+function planText(locale: Parameters<typeof translate>[0], code: string, field: 'name' | 'description') {
+  const key = `plans.${code}.${field}` as MessageKey;
+  return translate(locale, key);
+}
 
 export function registerOwnerRoutes(app: FastifyInstance) {
   app.get('/api/dueno', async (req) => {
@@ -82,9 +88,9 @@ export function registerOwnerRoutes(app: FastifyInstance) {
     const usage = await companyUsage(actor.company.id);
     return {
       uso: { personas: usage.workers, areas: usage.areas, maxPersonas: usage.maxWorkers, maxAreas: usage.maxAreas },
-      actual: { code: usage.plan.code, name: usage.plan.name, status: usage.status, trialEndsAt: usage.trialEndsAt, description: usage.plan.description, limite: usage.customMaxWorkers },
-      planes: PLAN_DEFS,
-      pago: { proveedor: payments.kind, mensaje: 'El cobro con tarjeta no está conectado. Cambiar de plan no genera un pago.' },
+      actual: { code: usage.plan.code, name: planText(actor.locale, usage.plan.code, 'name'), status: usage.status, trialEndsAt: usage.trialEndsAt, description: planText(actor.locale, usage.plan.code, 'description'), limite: usage.customMaxWorkers },
+      planes: PLAN_DEFS.map((plan) => ({ ...plan, name: planText(actor.locale, plan.code, 'name'), description: planText(actor.locale, plan.code, 'description') })),
+      pago: { proveedor: payments.kind, mensaje: translate(actor.locale, 'plan.billing') },
     };
   });
 
@@ -114,11 +120,11 @@ export function registerOwnerRoutes(app: FastifyInstance) {
       activo: actor.company.moduloLlamadas,
       area: area ? { id: area.id, name: area.name } : null,
       contadores: { leads, campaigns, calls },
-      mensaje: 'Captación de leads y atención a clientes está preparada, pero el marcador todavía no funciona.',
+      mensaje: translate(actor.locale, 'leads.message'),
       extensiones: [
-        'Proveedor de telefonía (Zadarma o Twilio) detrás de TelephonyProvider',
-        'Reparto de leads al entrar una llamada o un formulario',
-        'Los modelos Lead, Call y Campaign ya pertenecen a la empresa (companyId)',
+        translate(actor.locale, 'leads.ext.provider'),
+        translate(actor.locale, 'leads.ext.routing'),
+        translate(actor.locale, 'leads.ext.models'),
       ],
     };
   });

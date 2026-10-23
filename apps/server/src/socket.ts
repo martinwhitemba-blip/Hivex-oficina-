@@ -1,6 +1,8 @@
 import type { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import { localizeError, resolveLocale, translate, type Locale } from '../../../packages/i18n/src/index';
 import { isoDate, roleLabel } from './domain';
+import { HttpError } from './http';
 import { env } from './env';
 import { ownerSnapshot, type LivePresence } from './ownerSnapshot';
 import { prisma } from './prisma';
@@ -129,6 +131,11 @@ export function attachSocket(io: Server) {
       socket.data.role = membership.jobTitle?.name || roleLabel(membership.role);
       socket.data.areaId = membership.areaId;
       socket.data.appRole = membership.role;
+      socket.data.locale = resolveLocale({
+        user: user.locale,
+        company: membership.company.locale,
+        acceptLanguage: typeof socket.handshake.headers['accept-language'] === 'string' ? socket.handshake.headers['accept-language'] : null,
+      });
       socket.data.look = { ...parseLook(membership.lookJson), photoUrl: photoUrl(membership.photoPath) };
       socket.data.lastPing = Date.now();
       next();
@@ -208,7 +215,12 @@ export function attachSocket(io: Server) {
         const message = await sendDirect(companyId, membershipId, String(payload?.to || ''), String(payload?.body || ''));
         pushDirect(companyId, message);
       } catch (error) {
-        socket.emit('dm:error', { error: error instanceof Error ? error.message : 'No se pudo enviar el mensaje' });
+        const locale = (socket.data.locale || 'es') as Locale;
+        if (error instanceof HttpError) {
+          socket.emit('dm:error', localizeError(locale, error.message, error.code, error.params));
+        } else {
+          socket.emit('dm:error', { error: translate(locale, 'errors.chat.send'), code: 'chat.send' });
+        }
       }
     });
 

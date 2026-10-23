@@ -1,14 +1,19 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import jwt from 'jsonwebtoken';
 import type { ZodType } from 'zod';
+import { localizeError, resolveLocale, type Locale } from '../../../packages/i18n/src/index';
 import { env } from './env';
 import { prisma } from './prisma';
 
 export class HttpError extends Error {
   statusCode: number;
-  constructor(statusCode: number, message: string) {
+  code?: string;
+  params?: Record<string, string | number>;
+  constructor(statusCode: number, message: string, code?: string, params?: Record<string, string | number>) {
     super(message);
     this.statusCode = statusCode;
+    this.code = code;
+    this.params = params;
   }
 }
 
@@ -49,7 +54,12 @@ export interface Actor {
     apiKey: string;
     isDemo: boolean;
     moduloLlamadas: boolean;
+    locale: string;
   };
+  /** Preferencia guardada en el perfil. Vacía si la persona no ha elegido. */
+  userLocale: string | null;
+  /** Idioma ya resuelto: perfil, luego empresa, luego Accept-Language, luego es. */
+  locale: Locale;
   area: { id: string; name: string; color: string; teamName: string } | null;
   jobTitle: { id: string; name: string } | null;
 }
@@ -92,7 +102,27 @@ export async function actorFromRequest(req: FastifyRequest): Promise<Actor> {
     company: membership.company,
     area: membership.area,
     jobTitle: membership.jobTitle,
+    userLocale: user.locale,
+    locale: resolveLocale({
+      user: user.locale,
+      company: membership.company.locale,
+      acceptLanguage: typeof req.headers['accept-language'] === 'string' ? req.headers['accept-language'] : null,
+    }),
   };
+}
+
+export function replyError(err: unknown, reply: FastifyReply, locale: Locale) {
+  if (err instanceof HttpError) {
+    const body = localizeError(locale, err.message, err.code, err.params);
+    return reply.code(err.statusCode).send(body);
+  }
+  const status = typeof err === 'object' && err && 'statusCode' in err ? Number((err as { statusCode: number }).statusCode) : 500;
+  const message = err instanceof Error ? err.message : 'Error interno';
+  if (status >= 500) console.error(err);
+  const code = status >= 500 ? 500 : (status >= 400 && status < 600 ? status : 500);
+  const text = code >= 500 ? 'Error interno del servidor' : message;
+  const body = localizeError(locale, text);
+  return reply.code(code).send(body);
 }
 
 export function signToken(userId: string) {
@@ -100,11 +130,5 @@ export function signToken(userId: string) {
 }
 
 export function sendError(err: unknown, reply: FastifyReply) {
-  if (err instanceof HttpError) {
-    return reply.code(err.statusCode).send({ error: err.message });
-  }
-  const status = typeof err === 'object' && err && 'statusCode' in err ? Number((err as { statusCode: number }).statusCode) : 500;
-  const message = err instanceof Error ? err.message : 'Error interno';
-  if (status >= 500) console.error(err);
-  return reply.code(status >= 400 && status < 600 ? status : 500).send({ error: status >= 500 ? 'Error interno del servidor' : message });
+  return replyError(err, reply, 'es');
 }

@@ -52,14 +52,14 @@ export async function assertCanAddWorker(companyId: string) {
   if (company?.isDemo) return;
   const usage = await companyUsage(companyId);
   if (usage.workers >= usage.maxWorkers) {
-    throw new HttpError(409, `Tu plan ${usage.plan.name} permite hasta ${usage.maxWorkers} personas y ya estás en el límite. Entra en Plan y uso para verlo. El cobro en línea todavía no está conectado.`);
+    throw new HttpError(409, `Tu plan ${usage.plan.name} permite hasta ${usage.maxWorkers} personas y ya estás en el límite. Entra en Plan y uso para verlo. El cobro en línea todavía no está conectado.`, 'errors.plan.workers', { plan: usage.plan.name, max: usage.maxWorkers });
   }
 }
 
 export async function assertCanAddArea(companyId: string) {
   const usage = await companyUsage(companyId);
   if (usage.areas >= usage.maxAreas) {
-    throw new HttpError(409, `Tu plan ${usage.plan.name} permite hasta ${usage.maxAreas} áreas y ya estás en el límite. Entra en Plan y uso para verlo. El cobro en línea todavía no está conectado.`);
+    throw new HttpError(409, `Tu plan ${usage.plan.name} permite hasta ${usage.maxAreas} áreas y ya estás en el límite. Entra en Plan y uso para verlo. El cobro en línea todavía no está conectado.`, 'errors.plan.areas', { plan: usage.plan.name, max: usage.maxAreas });
   }
 }
 

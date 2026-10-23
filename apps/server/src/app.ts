@@ -7,7 +7,9 @@ import Fastify from 'fastify';
 import { Server } from 'socket.io';
 import { ACCESS_REALM, installAccessGate, requestAllowed } from './accessGate';
 import { allowedOrigins, env } from './env';
-import { HttpError } from './http';
+import { replyError } from './http';
+import { localeForRequest } from './locale';
+import { resolveLocale, translate } from '../../../packages/i18n/src/index';
 import { registerRoutes } from './routes';
 import { attachSocket } from './socket';
 
@@ -37,7 +39,10 @@ export async function buildApp() {
     return reply
       .code(401)
       .header('WWW-Authenticate', `Basic realm="${ACCESS_REALM}", charset="UTF-8"`)
-      .send({ error: 'Acceso restringido' });
+      .send({
+        error: translate(resolveLocale({ acceptLanguage: typeof req.headers['accept-language'] === 'string' ? req.headers['accept-language'] : null }), 'errors.access.denied'),
+        code: 'access.denied',
+      });
   });
   await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
   fs.mkdirSync(env.uploadDir, { recursive: true });
@@ -49,7 +54,8 @@ export async function buildApp() {
     app.setNotFoundHandler((req, reply) => {
       const pathName = req.url.split('?')[0];
       if (pathName.startsWith('/api') || pathName.startsWith('/socket.io') || pathName.startsWith('/uploads')) {
-        return reply.code(404).send({ error: 'No encontrado' });
+        const locale = resolveLocale({ acceptLanguage: typeof req.headers['accept-language'] === 'string' ? req.headers['accept-language'] : null });
+        return reply.code(404).send({ error: translate(locale, 'errors.notFound'), code: 'notFound' });
       }
       // Una ruta de la aplicación (#/unirse, /codigo, …) no es un archivo.
       // Responder 200 con el index evita el HTML "Not Found" de Fastify.
@@ -57,13 +63,10 @@ export async function buildApp() {
     });
   }
 
-  app.setErrorHandler((error, _req, reply) => {
-    if (error instanceof HttpError) return reply.code(error.statusCode).send({ error: error.message });
-    const err = error as { statusCode?: number; message?: string };
-    const status = err.statusCode || 500;
-    if (status >= 500) app.log.error(error);
-    const message = status >= 500 ? 'Error interno del servidor' : (err.message || 'Error');
-    return reply.code(status).send({ error: message });
+  app.setErrorHandler(async (error, req, reply) => {
+    const locale = await localeForRequest(req).catch(() => 'es' as const);
+    if (typeof error === 'object' && error && 'statusCode' in error && Number((error as { statusCode?: number }).statusCode) >= 500) app.log.error(error);
+    return replyError(error, reply, locale);
   });
 
   const io = new Server(app.server, {

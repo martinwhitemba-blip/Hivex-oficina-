@@ -1,0 +1,712 @@
+{
+  "lang": {
+    "label": "Language"
+  },
+  "role": {
+    "owner": "Owner",
+    "admin": "Administrator",
+    "employee": "Employee"
+  },
+  "status": {
+    "en_linea": "Online",
+    "ausente": "Away",
+    "en_reunion": "In a meeting",
+    "cafe": "Virtual coffee",
+    "en_llamada": "On a call",
+    "desconectado": "Offline"
+  },
+  "time": {
+    "hm": "{h}h {m}m",
+    "ms": "{m}m {s}s"
+  },
+  "brand": {
+    "tagline": "Virtual office",
+    "powered": "powered by HIVEX",
+    "title": "Company brand",
+    "lead": "Name, space, logo and colours of this company. Other companies do not see them. HIVEX stays underneath, small.",
+    "company": "Company name",
+    "space": "Space name",
+    "spacePh": "Acme office",
+    "primary": "Primary colour",
+    "accent": "Accent colour",
+    "logo": "Logo (PNG, JPG or SVG, up to 1.5 MB)",
+    "language": "Company language",
+    "languageHint": "People who have not chosen a language see the office in this language.",
+    "save": "Save brand",
+    "contrast": "That colour does not read on the dark background. Choose a lighter one.",
+    "saved": "Brand saved. Only this company can see it."
+  },
+  "auth": {
+    "eyebrow": "HIVEX · Virtual office",
+    "heroLead": "Your team,",
+    "heroEm": "in the office",
+    "heroPitch": "An office you can see, with real people, areas and roles. Gold on black, built for the working day.",
+    "enter": "Sign in",
+    "register": "Create a company",
+    "codeLink": "Join with a code",
+    "enterTitle": "Enter your office",
+    "registerTitle": "Create your company",
+    "joinTitle": "Join the team",
+    "codeTitle": "Join with a code",
+    "activateTitle": "Activate your account",
+    "leadDefault": "Every company has its own office. You see, right now, what each person is doing.",
+    "leadCode": "Enter the company code, your name and a password. You will join the office as an employee.",
+    "leadJoin": "The invitation does not send email. Choose your name and the password you will use afterwards.",
+    "leadActivate": "Choose the password you will use to sign in. We do not send email: your company gives you the link.",
+    "code": "Code",
+    "inviteCode": "Invitation code",
+    "email": "Email",
+    "yourName": "Your name",
+    "companyName": "Company name",
+    "password": "Password",
+    "newPassword": "New password",
+    "repeatPassword": "Repeat the password",
+    "submitEnter": "Sign in",
+    "submitOffice": "Enter the office",
+    "submitActivate": "Activate account",
+    "submitContinue": "Continue",
+    "haveAccount": "I already have an account",
+    "demo": "Try the demo: martin@hivex.demo / hivex-demo. Open code: HIVEX2026. If you were invited, use the invitation email and the password you chose.",
+    "session": "You are signed in as {name}.",
+    "logoutContinue": "Sign out and continue",
+    "goOffice": "Go to my office",
+    "passwordMismatch": "The passwords do not match",
+    "inviteFallback": "The invitation is not valid or has expired",
+    "activationFallback": "The activation link is not valid or has expired",
+    "actionFailed": "The action could not be completed",
+    "brandLead": "{name} · {office}. Enter your name and a password to join.",
+    "gateEyebrow": "HIVEX · Virtual office",
+    "gatePitch": "The temporary password only works for this first sign-in.",
+    "gateTitle": "Change the temporary password",
+    "gateLead": "Choose a password of your own, at least 8 characters. Until then the office stays closed.",
+    "tempPassword": "Temporary password",
+    "saveEnter": "Save and enter",
+    "passwordFail": "The password could not be changed"
+  },
+  "nav": {
+    "office": "Office",
+    "owner": "Owner",
+    "business": "My business",
+    "team": "Team",
+    "areas": "Areas",
+    "map": "Map",
+    "tasks": "Tasks",
+    "day": "Workday",
+    "chat": "Chat",
+    "badges": "Achievements",
+    "plan": "Plan",
+    "leads": "Leads",
+    "menu": "Manage"
+  },
+  "common": {
+    "loadFail": "Could not load",
+    "error": "Error",
+    "bootFail": "HIVEX could not be opened.",
+    "reload": "Reload",
+    "unexpected": "Unexpected error",
+    "timeout": "Timed out ({label})",
+    "sessionFail": "The session could not be checked",
+    "enterFail": "Could not sign in",
+    "downloadFail": "The file could not be downloaded"
+  },
+  "owner": {
+    "title": "Owner dashboard",
+    "subtitle": "What each person is doing, right now.",
+    "search": "Search for a person or a task",
+    "allAreas": "All areas",
+    "allStatuses": "All statuses",
+    "hideMap": "Hide the floor",
+    "showMap": "Show the floor",
+    "newArea": "New area",
+    "peopleNow": "People right now",
+    "mapTitle": "Area map",
+    "mapHint": "Each zone is a live area. Click one to see who is there and today's indicators.",
+    "noRole": "No role",
+    "noTask": "No active task",
+    "onTask": "On this task for {time}",
+    "noTaskTime": "No task time",
+    "performance": "Performance",
+    "move": "Move",
+    "noMatch": "Nobody matches the filter.",
+    "zoneMeta": "{online} online · {people}",
+    "people": {
+      "one": "{n} person",
+      "other": "{n} people"
+    },
+    "nobody": "Nobody assigned",
+    "unassigned": "Unassigned",
+    "reassign": "Reassign",
+    "noTasks": "There are no open tasks.",
+    "audit": "Audit",
+    "loading": "Loading…",
+    "noMoves": "There are no changes yet.",
+    "tasksNow": "Tasks in progress",
+    "promptArea": "Name of the new area",
+    "promptWho": "Who should it go to?",
+    "promptMove": "Which area should this person move to?",
+    "connected": "{count} online now",
+    "noKpis": "No indicators today",
+    "seeArea": "See the area's performance",
+    "roomPeople": "{room} · {people} · {online} online"
+  },
+  "business": {
+    "title": "My business",
+    "demo": "The figures for this company are demonstration data.",
+    "live": "Performance by area and by person.",
+    "noAlerts": "No alerts in this period.",
+    "export": "Export CSV",
+    "who": "Who does what",
+    "rhythm": "The pace, day by day",
+    "noSeries": "There is no daily series yet."
+  },
+  "import": {
+    "created": {
+      "one": "{n} account created",
+      "other": "{n} accounts created"
+    },
+    "withErrors": {
+      "one": "{n} with an error.",
+      "other": "{n} with errors."
+    },
+    "noErrors": "No errors.",
+    "noEmail": "No email was sent.",
+    "colName": "Name",
+    "colEmail": "Email",
+    "colRole": "Role",
+    "colArea": "Area",
+    "colAccess": "Access",
+    "row": "Row {n}",
+    "download": "Download the access CSV"
+  },
+  "team": {
+    "title": "Team",
+    "subtitle": "Each person has an account. In the office they sit at their desk even before they have signed in.",
+    "addTitle": "Add a person",
+    "addLead": "A real account, one at a time. We do not send email: either you copy the activation link, or you generate a temporary password that must be changed on entry.",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "area": "Area",
+    "areaPh": "Sales",
+    "job": "Role title",
+    "phone": "Phone",
+    "start": "Start date",
+    "schedule": "Schedule",
+    "access": "Access",
+    "linkMode": "Activation link",
+    "tempMode": "Temporary password",
+    "createMissing": "Create areas and roles that do not exist yet",
+    "addButton": "Add person",
+    "importTitle": "Import CSV or Excel",
+    "importLead": "Columns: nombre, email, rol, puesto, area, telefono, fecha_inicio, horario. English names work too (name, role, job_title, department, phone, start_date, schedule). The same access mode applies to the whole file.",
+    "template": "Download the template",
+    "importButton": "Import",
+    "noArea": "No area",
+    "schedulePh": "Mon–Fri 09:00–18:00"
+  },
+  "join": {
+    "title": "Access code",
+    "lead": "Anyone with the code joins the office as an employee, with no area or role. No email is sent. Share the link or the code.",
+    "code": "Code",
+    "noCode": "No code",
+    "link": "Link to share",
+    "copy": "Copy link",
+    "regen": "Regenerate code",
+    "active": "Code active",
+    "copied": "Link copied.",
+    "newCode": "New code. The previous one no longer works.",
+    "on": "Code active.",
+    "off": "Code turned off."
+  },
+  "invite": {
+    "title": "Invite",
+    "lead": "No email is sent. When you create the invitation we give you a link to copy and share by hand.",
+    "admin": "Administrator / area lead",
+    "create": "Create invitation",
+    "share": "No email was sent. Share this link:",
+    "copied": "Link copied."
+  },
+  "person": {
+    "score": "Score",
+    "points": "{n} points",
+    "photo": "Profile photo",
+    "upload": "Upload photo",
+    "usePhoto": "Use my photo as the avatar",
+    "photoHint": "Off: the office shows the game character, in your colours. On: the photo fills the face. You need to have uploaded a photo.",
+    "character": "Character",
+    "characterHint": "Colours, hair and clothes of the avatar. That is what the office shows unless you turn the photo on.",
+    "skin": "Skin",
+    "hair": "Hair",
+    "style": "Hairstyle",
+    "short": "Short",
+    "long": "Long",
+    "bun": "Bun",
+    "buzz": "Buzz cut",
+    "shirt": "Shirt",
+    "pants": "Trousers",
+    "glasses": "Glasses",
+    "save": "Save character",
+    "saved": "Character saved. Go back to the office to see it.",
+    "history": "History",
+    "date": "Date",
+    "note": "Note",
+    "metrics": "Metrics",
+    "noReports": "No visible reports",
+    "badges": "Badges: {list}. Hours online (30 days): {hours}.",
+    "none": "none"
+  },
+  "areas": {
+    "title": "Areas and roles",
+    "subtitle": "Nothing is fixed: create, rename or delete. Each new area opens a zone on the floor.",
+    "new": "New area",
+    "name": "Name",
+    "color": "Colour",
+    "teamName": "Team name",
+    "create": "Create area and zone",
+    "meta": "{team} · {people} · {rooms}",
+    "noZone": "no zone",
+    "kpiLine": "{label} ({key}) target {target}",
+    "noKpis": "No indicators",
+    "editKpis": "Edit indicators",
+    "jobs": "Roles",
+    "noJobs": "There are no roles yet.",
+    "jobPh": "New role",
+    "add": "Add",
+    "kpiPrompt": "Indicators separated by semicolons. Example: calls|Calls|40; meetings|Meetings|5"
+  },
+  "mapEdit": {
+    "title": "Office editor",
+    "subtitle": "Change each room's name, the area it belongs to, and who sits at each desk.",
+    "labelPh": "Sign",
+    "saveRoom": "Save room",
+    "desks": "Desks",
+    "free": "Free",
+    "assign": "Assign",
+    "ownerOnly": "Only the owner saves changes to the floor.",
+    "saved": "Saved",
+    "assigned": "Assigned"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "subtitle": "A simple board by area. It counts toward the score.",
+    "newPh": "New task",
+    "create": "Create",
+    "pending": "To do",
+    "doing": "In progress",
+    "done": "Done"
+  },
+  "day": {
+    "title": "Workday report",
+    "needArea": "Assign an area to record indicators.",
+    "clocked": "You clocked in at {time}",
+    "notClocked": "You have not clocked in today",
+    "in": "Clock in",
+    "out": "Clock out",
+    "demo": "Today's report is demonstration data. If you save it, it becomes yours.",
+    "manual": "The numbers can be entered by hand or through the integration API.",
+    "target": "target {n}",
+    "noKpis": "Your profile has no indicators yet.",
+    "note": "Free note",
+    "save": "Save the day",
+    "points": "Day saved. +{n} points",
+    "updated": "Day updated"
+  },
+  "chat": {
+    "title": "Team chat",
+    "subtitle": "Company channels and direct messages. A direct message only reaches a coworker in your company.",
+    "channels": "Channels",
+    "directs": "Direct",
+    "channel": "Channel",
+    "general": "General",
+    "placeholder": "Write a message",
+    "send": "Send",
+    "emptyChannel": "There are no messages in this channel yet.",
+    "emptyThread": "You have not written to each other yet. The message is kept.",
+    "noPeople": "There is nobody else in the company.",
+    "coworker": "Coworker",
+    "with": "Direct message with {name}",
+    "pick": "Choose a coworker. You can also click their avatar in the office.",
+    "offline": "Live chat is not connected. Reload the page.",
+    "pickPeer": "Choose a coworker from the Direct list",
+    "sendFail": "Could not send"
+  },
+  "badges": {
+    "title": "Points and badges",
+    "subtitle": "Earned by filing the workday, hitting targets and closing tasks.",
+    "heading": "Badges",
+    "none": "There are no badges yet.",
+    "pts": "{n} pts"
+  },
+  "plan": {
+    "title": "Plan and usage",
+    "people": "People {used} / {max}",
+    "limit": "this company's limit: {n}",
+    "areas": "Areas {used} / {max}",
+    "upTo": "Up to {people} people and {areas} areas",
+    "companyLimit": "This company's limit",
+    "current": "Current plan",
+    "use": "Use this plan",
+    "billing": "Card payments are not connected. Changing plan does not create a charge."
+  },
+  "leads": {
+    "title": "Lead capture",
+    "soon": "Coming soon",
+    "counts": "Leads {leads} · Campaigns {campaigns} · Calls {calls}",
+    "prepared": "Area ready: {name}",
+    "enable": "Turn on the Calls area template",
+    "message": "Lead capture and customer calls are prepared, but the dialer does not work yet.",
+    "ext": {
+      "provider": "A telephony provider (Zadarma or Twilio) behind TelephonyProvider",
+      "routing": "Lead routing when a call or a form comes in",
+      "models": "The Lead, Call and Campaign models already belong to the company (companyId)"
+    }
+  },
+  "office": {
+    "railOwner": "Owner dashboard",
+    "railBusiness": "My business",
+    "railPlan": "Plan and usage",
+    "hidePanel": "Hide panel",
+    "search": "Search people",
+    "roomsTab": "Rooms in use",
+    "callsTab": "Calls and announcements",
+    "meetingsToday": "Meetings today: {n}",
+    "followups": "Follow-ups waiting: {n}",
+    "see": "View",
+    "you": "(you)",
+    "yourStatus": "Your status",
+    "statusToast": "Your status: {label}",
+    "callsSoon": "Calls and announcements: coming soon",
+    "people": "People",
+    "peopleRooms": "People and rooms",
+    "manage": "Manage",
+    "followupsShort": "{n} follow-ups",
+    "todaySales": "Today: {sales} sales · {money}",
+    "car": "Car",
+    "carTitle": "Car mode (C) · honk with H",
+    "meetingsPill": "{n} meetings today",
+    "demoData": "demonstration data",
+    "follow": "Following {name}",
+    "back": "Back",
+    "pending": "Follow-ups waiting",
+    "avatar": "Your avatar",
+    "mic": "Microphone",
+    "micOn": "Microphone on",
+    "micOff": "Microphone muted",
+    "cam": "Camera",
+    "camOn": "Camera on",
+    "camOff": "Camera off",
+    "react": "Reactions",
+    "screen": "Share screen",
+    "screenSoon": "Screen sharing arrives when you configure LiveKit",
+    "callClient": "Customer call",
+    "callShort": "Call",
+    "hand": "Raise hand",
+    "audio": "Audio",
+    "audioSoon": "Audio settings: coming soon",
+    "leave": "Sign out",
+    "help": "Help",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "center": "Centre on me",
+    "hideMap": "Hide minimap",
+    "showMap": "Show minimap",
+    "honk": "Honk (H)",
+    "helpTitle": "How to move around the office",
+    "walk": "Walk",
+    "clickGo": "Click / tap the map",
+    "clickGoHelp": "Go there (finds a path)",
+    "joy": "Joystick (phone)",
+    "joyHelp": "Walk with your thumb",
+    "clickMate": "Click a coworker",
+    "clickMateHelp": "Walk to them · in the list: centre the camera",
+    "carHelp": "Car mode (faster)",
+    "honkHelp": "Honk (in car mode)",
+    "door": "Open or close the private office",
+    "zoomHelp": "Zoom",
+    "escHelp": "Follow yourself again",
+    "keys": "W A S D / arrows",
+    "wheel": "Wheel / pinch / + −",
+    "helpNote": "HIVEX beta · the office is multiplayer · demo metrics are marked as demonstration.",
+    "gotIt": "Got it",
+    "demoNoMessage": "That demonstration character does not receive messages",
+    "inRoom": "You are in {name}",
+    "common": "Common area",
+    "nearTalk": "Nearby conversation",
+    "demoAudio": "Demonstration coworkers, no real audio",
+    "focusHint": "Click: centre the camera · Go: walk to {name}",
+    "new": "New",
+    "message": "Message",
+    "go": "Go",
+    "nearSub": "Proximity audio (simulated)",
+    "nearYou": "Near you",
+    "inMeeting": "In a meeting",
+    "inOffice": "In the office",
+    "rooms": "Rooms",
+    "private": "Private office",
+    "lockTitle": "Open / close",
+    "demoMates": "Demonstration coworkers",
+    "demoTitle": "Show or hide NPCs",
+    "offline": "Offline",
+    "aria": "Office"
+  },
+  "media": {
+    "livekit": "Proximity audio and video with LiveKit.",
+    "p2p": "Proximity audio goes directly between browsers. For several people at once, set LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET on the server.",
+    "p2pClient": "Proximity audio goes directly between browsers. For several people at once, set LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET.",
+    "micOff": "The microphone is off. Turn it on when you want to talk to people nearby.",
+    "micFail": "The microphone could not be opened. Proximity audio is off in this browser.",
+    "camGroup": "Group video works better with LiveKit. Direct mode only shares audio.",
+    "p2pShort": "Proximity audio goes directly between browsers. For several people at once, set up LiveKit.",
+    "simulated": "Simulated audio: it is not sent to other people."
+  },
+  "map": {
+    "plaque": {
+      "atlas": "TEAM ATLAS",
+      "vega": "TEAM VEGA",
+      "meeting": "MEETING ROOM",
+      "cafe": "CAFÉ",
+      "direction": "LEADERSHIP",
+      "open": "OPEN AREA"
+    },
+    "name": {
+      "atlas": "Team Atlas",
+      "vega": "Team Vega",
+      "meeting": "Meeting room",
+      "cafe": "Café / kitchen",
+      "private": "Private office",
+      "open": "Open area",
+      "lounge": "Lounge"
+    },
+    "tv": {
+      "calls": "CALLS {n}",
+      "meetings": "MEETINGS {n}"
+    },
+    "rank": {
+      "today": "RANKING TODAY",
+      "amount": "Amount",
+      "meetings": "MEETING RANKING",
+      "meetingsSub": "Meetings"
+    }
+  },
+  "mail": {
+    "invite": {
+      "subject": "Invitation to {company} on HIVEX",
+      "text": "You are invited to the {company} office. We do not send this message: share it by hand.\nLink: {link}"
+    },
+    "activation": {
+      "subject": "Activate your account at {company}",
+      "text": "{name}, your company {company} created your account. We do not send this message: the link is shared by hand.\nLink: {link}"
+    },
+    "chat": {
+      "joined": "{name} has joined {company}."
+    }
+  },
+  "alerts": {
+    "missed": "{name} has not filed the report for {count} workdays",
+    "noshow": "{pct}% of the meetings {name} books are no-shows ({missed} of {total})",
+    "below": "{name} is below the target for {kpi}: {sum} of {target} over the last {days} days with a report",
+    "above": "{name} is above the target for {kpi}: average {avg} (target {target})"
+  },
+  "plans": {
+    "starter": {
+      "name": "Starter",
+      "description": "For a small team that is starting to organise its office."
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Several areas, the owner dashboard and more people in the office."
+    },
+    "empresa": {
+      "name": "Company",
+      "description": "A wide operation: many areas and teams on the same floor."
+    },
+    "grupo": {
+      "name": "Group",
+      "description": "Above 100 people. This company's limit can be agreed separately."
+    }
+  },
+  "errors": {
+    "access": {
+      "denied": "Access is restricted"
+    },
+    "notFound": "Not found",
+    "internal": "Internal server error",
+    "validation": "The data is not valid",
+    "auth": {
+      "required": "Sign in to continue",
+      "expired": "The session has expired. Sign in again",
+      "unknown": "We could not find your user in any company",
+      "temp": "Change the temporary password before continuing.",
+      "bad": "Email or password is wrong",
+      "current": "The current password does not match",
+      "exists": "That email already has an account. Sign in or ask for an invitation.",
+      "passwordShort": "The password must be at least 8 characters",
+      "name": "Enter your name",
+      "company": "Enter the company name",
+      "password": "Enter the password",
+      "passwordCurrent": "Enter the current password"
+    },
+    "activation": {
+      "expired": "The activation link is not valid or has expired",
+      "missing": "The code is missing"
+    },
+    "code": {
+      "invalid": "That access code is not valid or is turned off",
+      "write": "Enter the code",
+      "password": "The password does not match that account",
+      "disabled": "Your access to this company is turned off",
+      "see": "Only leadership can see the access code",
+      "change": "Only leadership can change the access code",
+      "regen": "Only leadership can regenerate the code"
+    },
+    "email": {
+      "otherCompany": "That email already belongs to another company",
+      "samePassword": "That email already exists. Use the same password to join.",
+      "oneCompany": "That email already belongs to a company"
+    },
+    "invite": {
+      "expired": "The invitation is not valid or has expired",
+      "forbidden": "Only leadership can invite",
+      "staffOnly": "An area lead can only invite employees of their area",
+      "ownArea": "You can only invite people to your area",
+      "hidden": "You cannot see invitations"
+    },
+    "area": {
+      "missingReload": "Area not found. Reload the page: that area no longer exists.",
+      "create": "Only the owner can create areas",
+      "duplicate": "An area with that name already exists",
+      "edit": "You cannot edit areas",
+      "own": "You can only edit your area",
+      "rename": "Only the owner can rename areas",
+      "delete": "Only the owner can delete areas",
+      "missing": "Area not found",
+      "name": "Enter the area name"
+    },
+    "job": {
+      "missingReload": "Role not found. Reload the page: that role no longer exists.",
+      "create": "Only the owner can create roles",
+      "duplicate": "That role already exists",
+      "rename": "Only the owner can rename roles",
+      "missing": "Role not found",
+      "delete": "Only the owner can delete roles",
+      "write": "Enter the role"
+    },
+    "company": {
+      "ownerOnly": "Only the owner can edit the company",
+      "missing": "Company not found"
+    },
+    "kpi": {
+      "forbidden": "You cannot define indicators",
+      "own": "You can only define indicators for your area",
+      "label": "The label is missing",
+      "duplicate": "The key «{key}» is repeated"
+    },
+    "profile": {
+      "edit": "You cannot edit this profile"
+    },
+    "date": {
+      "start": "The start date must be YYYY-MM-DD",
+      "iso": "The date must be YYYY-MM-DD",
+      "invalid": "The date is not valid"
+    },
+    "photo": {
+      "forbidden": "You cannot change this photo",
+      "missing": "Attach an image",
+      "read": "We could not read the image. Use JPG, PNG or WebP."
+    },
+    "person": {
+      "create": "The person could not be created",
+      "file": "Attach a CSV or Excel file",
+      "hire": "You cannot add people",
+      "name": "Enter the name",
+      "missingCompany": "We could not find that person in the company",
+      "missing": "Employee not found",
+      "notInArea": "The person is not in that area"
+    },
+    "report": {
+      "forbidden": "You cannot see this person's reports"
+    },
+    "clock": {
+      "none": "You do not have an open clock-in"
+    },
+    "task": {
+      "ask": "Ask your lead to create the task",
+      "ownArea": "You can only create tasks in your area",
+      "missing": "Task not found",
+      "moveOwn": "You can only move your own tasks",
+      "otherArea": "Task from another area",
+      "delete": "You cannot delete tasks",
+      "title": "Enter the title"
+    },
+    "map": {
+      "edit": "Only the owner can edit the map",
+      "room": "Unknown room",
+      "assign": "Only the owner can assign desks",
+      "seat": "That seat is not on the map",
+      "roomName": "Enter the room name"
+    },
+    "integration": {
+      "see": "Only the owner sees the integration key",
+      "rotate": "Only the owner can rotate the key",
+      "header": "The X-API-Key header is missing",
+      "bad": "The integration key is wrong"
+    },
+    "chat": {
+      "other": "You cannot enter another area's chat",
+      "message": "Write a message",
+      "length": "Write a message of up to 1000 characters",
+      "pick": "Choose a coworker in your company",
+      "missing": "That person is not in your company",
+      "send": "The message could not be sent"
+    },
+    "plan": {
+      "missing": "That plan does not exist",
+      "workers": "Your {plan} plan allows up to {max} people and you are already at the limit. Open Plan and usage to see it. Online billing is not connected yet.",
+      "areas": "Your {plan} plan allows up to {max} areas and you are already at the limit. Open Plan and usage to see it. Online billing is not connected yet.",
+      "limit": "A custom limit starts above 100"
+    },
+    "owner": {
+      "panel": "The owner dashboard is for the owner and area leads",
+      "audit": "You cannot see the audit",
+      "reassign": "You cannot reassign tasks",
+      "otherTask": "That task belongs to another area",
+      "person": "Person not found",
+      "assign": "You can only assign inside your area",
+      "move": "Only the owner moves people between areas",
+      "ownerStay": "The owner is not moved between areas from here",
+      "plan": "Only the owner changes the plan",
+      "module": "Only the owner turns the module on"
+    },
+    "rate": "Too many attempts. Wait a few minutes and try again.",
+    "zone": {
+      "full": "There are no free zones left on the floor. In this beta the map has a fixed number of spaces."
+    },
+    "metrics": {
+      "area": "This person has no area. Assign an area before saving metrics.",
+      "unknown": "«{key}» is not a metric of {area}. Valid keys: {keys}"
+    },
+    "import": {
+      "repeat": "That email is repeated in the file",
+      "here": "That email is already in your company",
+      "area": "The area «{area}» does not exist. Tick the option to create it.",
+      "areaOwner": "Only the owner can create areas while importing",
+      "job": "The role «{job}» does not exist. Tick the option to create it.",
+      "email": "The email is not valid",
+      "role": "The role must be employee or administrator",
+      "lead": "An area lead can only add employees",
+      "ownArea": "You can only add people from your area"
+    },
+    "brand": {
+      "edit": "Only leadership can change the brand",
+      "contrast": "That colour does not read on the dark background. Choose a lighter one.",
+      "logo": "Attach a logo",
+      "size": "The logo is too large. The maximum is 1.5 MB.",
+      "svg": "That SVG cannot be used",
+      "type": "Use a PNG, JPG or SVG logo.",
+      "company": "Enter the company name",
+      "space": "Enter the space name",
+      "hex": "The colour must be hexadecimal"
+    },
+    "locale": "The language must be es, en, fr or de"
+  }
+}

@@ -24,6 +24,7 @@ import { prisma } from './prisma';
 import { awardBadge, parseLook, photoUrl, savePhoto, upsertReport } from './services';
 import { assertCanAddArea, assertCanAddWorker, attachPlan, audit } from './billing';
 import { assignFreeZone } from './zones';
+import { renderEmail, resolveLocale, translate, type Locale } from '../../../packages/i18n/src/index';
 import { directDirectory, directThread, directUnreadTotal, sendDirect } from './direct';
 import { broadcastPanel, pushDirect } from './socket';
 import { registerOwnerRoutes } from './ownerRoutes';
@@ -78,6 +79,7 @@ export function registerRoutes(app: FastifyInstance) {
         slug: slugify(body.companyName),
         officeName: body.officeName || 'Oficina principal',
         apiKey: `hx_${randomCode(24)}`,
+        locale: acceptLocale(req),
       },
     });
     await prisma.membership.create({
@@ -124,7 +126,7 @@ export function registerRoutes(app: FastifyInstance) {
     const row = await prisma.activation.findUnique({ where: { code }, include: { company: true, user: true } });
     if (!row || row.usedAt || row.expiresAt < new Date()) throw new HttpError(404, 'El enlace de activación no es válido o ha caducado');
     const membership = await prisma.membership.findFirst({ where: { id: row.membershipId, companyId: row.companyId } });
-    return { email: row.user.email, nombre: membership?.name ?? '', empresa: row.company.name };
+    return { email: row.user.email, nombre: membership?.name ?? '', empresa: row.company.name, locale: row.locale };
   });
 
   app.post('/api/activar', async (req) => {
@@ -194,6 +196,13 @@ export function registerRoutes(app: FastifyInstance) {
     return publicSession(actor);
   });
 
+  app.patch('/api/cuenta/idioma', async (req) => {
+    const actor = await auth(req);
+    const body = parseBody(z.object({ locale: z.enum(['es', 'en', 'fr', 'de']) }), req.body);
+    await prisma.user.update({ where: { id: actor.userId }, data: { locale: body.locale } });
+    return { locale: body.locale };
+  });
+
   app.get('/api/invitaciones/:code', async (req) => {
     const code = (req.params as { code: string }).code;
     const invite = await prisma.invite.findUnique({ where: { code }, include: { company: true, area: true, jobTitle: true } });
@@ -204,6 +213,7 @@ export function registerRoutes(app: FastifyInstance) {
       empresa: invite.company.name,
       area: invite.area?.name ?? null,
       puesto: invite.jobTitle?.name ?? null,
+      locale: invite.locale,
     };
   });
 
@@ -272,10 +282,18 @@ export function registerRoutes(app: FastifyInstance) {
         areaId: body.areaId || null,
         jobTitleId: body.jobTitleId || null,
         code,
+        locale: actor.locale,
         expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14),
       },
     });
-    return { code: invite.code, enlace: `#/unirse?code=${invite.code}`, caduca: invite.expiresAt };
+    const enlace = `#/unirse?code=${invite.code}`;
+    return {
+      code: invite.code,
+      enlace,
+      caduca: invite.expiresAt,
+      locale: invite.locale,
+      plantilla: renderEmail(actor.locale, 'invite', { company: actor.company.name, link: enlace, email: body.email, name: body.email }),
+    };
   });
 
   app.get('/api/invitaciones', async (req) => {
@@ -435,7 +453,7 @@ export function registerRoutes(app: FastifyInstance) {
     }), req.body);
     const keys = new Set<string>();
     for (const kpi of body.kpis) {
-      if (keys.has(kpi.key)) throw new HttpError(400, `La clave «${kpi.key}» está repetida`);
+      if (keys.has(kpi.key)) throw new HttpError(400, `La clave «${kpi.key}» está repetida`, 'errors.kpi.duplicate', { key: kpi.key });
       keys.add(kpi.key);
     }
     await prisma.$transaction(async (tx) => {
@@ -972,6 +990,7 @@ export function registerRoutes(app: FastifyInstance) {
       people: people.map((p) => ({ id: p.id, name: p.name, areaId: p.areaId })),
       kpis: kpis.map((k) => ({ areaId: k.areaId, key: k.key, label: k.label, targetDaily: k.targetDaily, higherIsBetter: k.higherIsBetter })),
       reports: rangeReports.map(toRow),
+      locale: actor.locale,
     }).filter((alert) => {
       if (actor.membership.role === 'propietario') return true;
       return alert.text.includes(actor.membership.name) || (actor.area ? alert.text.length > 0 && actor.membership.role === 'administrador' : false);
@@ -982,6 +1001,7 @@ export function registerRoutes(app: FastifyInstance) {
         people: people.filter((p) => p.areaId === actor.membership.areaId).map((p) => ({ id: p.id, name: p.name, areaId: p.areaId })),
         kpis: kpis.filter((k) => k.areaId === actor.membership.areaId).map((k) => ({ areaId: k.areaId, key: k.key, label: k.label, targetDaily: k.targetDaily, higherIsBetter: k.higherIsBetter })),
         reports: rangeReports.filter((r) => r.membership.areaId === actor.membership.areaId).map(toRow),
+        locale: actor.locale,
       })
       : actor.membership.role === 'empleado'
         ? alerts.filter((alert) => alert.text.includes(actor.membership.name))
@@ -999,8 +1019,8 @@ export function registerRoutes(app: FastifyInstance) {
         demo: actor.company.isDemo,
       },
       rankings: {
-        ventas: { title: 'RANKING HOY', subtitle: 'Importe', rows: rank('importe', '€') },
-        citas: { title: 'RANKING CITAS', subtitle: 'Citas', rows: rank('citas', '') },
+        ventas: { title: translate(actor.locale, 'map.rank.today'), subtitle: translate(actor.locale, 'map.rank.amount'), rows: rank('importe', '€') },
+        citas: { title: translate(actor.locale, 'map.rank.meetings'), subtitle: translate(actor.locale, 'map.rank.meetingsSub'), rows: rank('citas', '') },
       },
       rooms: rooms.map((room) => ({ mapRoomId: room.mapRoomId, name: room.name, label: room.label, areaId: room.areaId })),
       deskId: desk?.seatId ?? null,
@@ -1015,7 +1035,7 @@ export function registerRoutes(app: FastifyInstance) {
       })),
       alertCount: filteredAlerts.length,
       directUnread: await directUnreadTotal(actor.company.id, actor.membership.id),
-      media: mediaInfo(),
+      media: mediaInfo(actor.locale),
     };
   });
 
@@ -1091,13 +1111,13 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.get('/api/medios', async (req) => {
-    await auth(req);
-    return mediaInfo();
+    const actor = await auth(req);
+    return mediaInfo(actor.locale);
   });
 
   app.post('/api/medios/token', async (req) => {
     const actor = await auth(req);
-    const info = mediaInfo();
+    const info = mediaInfo(actor.locale);
     if (info.mode !== 'livekit') throw new HttpError(400, info.notice);
     const { AccessToken } = await import('livekit-server-sdk');
     const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
@@ -1163,14 +1183,19 @@ export function registerRoutes(app: FastifyInstance) {
   });
 }
 
-function mediaInfo() {
+function mediaInfo(locale: Locale) {
   if (process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET) {
-    return { mode: 'livekit' as const, notice: 'Audio y vídeo de proximidad con LiveKit.' };
+    return { mode: 'livekit' as const, notice: translate(locale, 'media.livekit') };
   }
   return {
     mode: 'p2p' as const,
-    notice: 'Audio de proximidad en modo directo entre navegadores. Para varias personas a la vez, configura LIVEKIT_URL, LIVEKIT_API_KEY y LIVEKIT_API_SECRET en el servidor.',
+    notice: translate(locale, 'media.p2p'),
   };
+}
+
+function acceptLocale(req: { headers: { 'accept-language'?: string | string[] } }) {
+  const header = req.headers['accept-language'];
+  return resolveLocale({ acceptLanguage: typeof header === 'string' ? header : null });
 }
 
 function kpiDto(kpi: { id: string; key: string; label: string; unit: string; targetDaily: number | null; higherIsBetter: boolean; sort: number }) {
@@ -1257,6 +1282,8 @@ function publicSession(actor: Actor) {
       },
     },
     debeCambiarContrasena: actor.mustChangePassword,
+    locale: actor.userLocale,
+    companyLocale: actor.company.locale,
   };
 }
 
@@ -1327,6 +1354,7 @@ async function buildPanel(actor: Actor, query: { from?: string; to?: string }) {
     people: visible.map((p) => ({ id: p.id, name: p.name, areaId: p.areaId })),
     kpis: kpis.map((k) => ({ areaId: k.areaId, key: k.key, label: k.label, targetDaily: k.targetDaily, higherIsBetter: k.higherIsBetter })),
     reports: rows,
+    locale: actor.locale,
   });
   const tasks = await prisma.task.findMany({ where: { companyId: actor.company.id, assigneeId: { in: [...visibleIds] } } });
   const employees = visible.map((person) => {

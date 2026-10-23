@@ -33,6 +33,7 @@ export async function brandDto(companyId: string) {
     acento: company.branding?.accentColor || DEFAULTS.acento,
     logoUrl: photoUrl(company.branding?.logoPath),
     poweredBy: 'HIVEX',
+    idioma: company.locale || 'es',
   };
 }
 
@@ -57,13 +58,14 @@ export function registerBrandRoutes(app: FastifyInstance) {
       oficina: z.string().trim().min(2, 'Escribe el nombre del espacio').max(60),
       primario: z.string().regex(HEX, 'El color tiene que ser hexadecimal'),
       acento: z.string().regex(HEX, 'El color tiene que ser hexadecimal'),
+      idioma: z.enum(['es', 'en', 'fr', 'de']).optional(),
     }), req.body);
     if (!readableOnInk(body.primario) || !readableOnInk(body.acento)) {
       throw new HttpError(400, 'Ese color no se lee sobre el fondo oscuro. Elige uno más claro.');
     }
     await prisma.company.update({
       where: { id: actor.company.id },
-      data: { name: body.nombre, officeName: body.oficina },
+      data: { name: body.nombre, officeName: body.oficina, ...(body.idioma ? { locale: body.idioma } : {}) },
     });
     await prisma.companyBranding.upsert({
       where: { companyId: actor.company.id },

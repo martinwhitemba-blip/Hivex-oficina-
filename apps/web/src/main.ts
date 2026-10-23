@@ -4,6 +4,7 @@ import { io, type Socket } from 'socket.io-client';
 import { BRAND_NAME, BRAND_TAGLINE } from './config';
 import { applyRooms, cloneOfficeMap } from './data/zones';
 import { Game } from './game/game';
+import { bootLocale, getLocale, pinLocale, t, type Locale } from './i18n';
 import type { AvatarLook, StatusId } from './game/types';
 import { LiveKitMediaProvider } from './media/livekitMedia';
 import { P2PMediaProvider } from './media/p2pMedia';
@@ -11,7 +12,7 @@ import type { ProximityMediaProvider } from './media/proximityMedia';
 import { SocketIoTransport } from './net/socketTransport';
 import { ApiError, api, clearToken, getToken } from './platform/api';
 import { applyMarca, type Marca } from './platform/brand';
-import { paintSessionNotice, renderAuth, renderPasswordGate, renderView, type Session } from './platform/pages';
+import { paintSessionNotice, renderAuth, renderPasswordGate, renderView, setProfileLocale, type Session } from './platform/pages';
 import { isPublicJoin, viewForSession } from './routing';
 import { UI } from './ui/ui';
 import markUrl from './assets/hivex-mark.png';
@@ -19,6 +20,7 @@ import wordmarkUrl from './assets/hivex-wordmark.png';
 import logoUrl from './assets/hivex-logo.png';
 import faviconUrl from './assets/hivex-favicon.png';
 
+bootLocale();
 document.title = `${BRAND_NAME} · ${BRAND_TAGLINE}`;
 (document.getElementById('favicon') as HTMLLinkElement).href = faviconUrl;
 
@@ -52,22 +54,22 @@ const bootErrorEl = document.getElementById('boot-error')!;
 const bootErrorText = document.getElementById('boot-error-text')!;
 
 function showBootError(message: string) {
-  bootErrorText.textContent = message || 'No se pudo abrir HIVEX.';
+  bootErrorText.textContent = message || t('common.bootFail');
   bootErrorEl.hidden = false;
 }
 
 document.getElementById('boot-reload')?.addEventListener('click', () => location.reload());
 window.addEventListener('error', (event) => {
-  showBootError(event.message || 'Error inesperado');
+  showBootError(event.message || t('common.unexpected'));
 });
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason;
-  showBootError(reason instanceof Error ? reason.message : 'Error inesperado');
+  showBootError(reason instanceof Error ? reason.message : t('common.unexpected'));
 });
 
 function withTimeout<T>(work: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error(`Tiempo de espera agotado (${label})`)), ms);
+    const timer = window.setTimeout(() => reject(new Error(t('common.timeout', { label }))), ms);
     work.then((value) => { window.clearTimeout(timer); resolve(value); }, (error) => { window.clearTimeout(timer); reject(error); });
   });
 }
@@ -77,6 +79,7 @@ function nextFrame() {
 }
 
 let session: Session | null = null;
+let officeMedia: ProximityMediaProvider | null = null;
 let socket: Socket | null = null;
 let game: Game | null = null;
 let ui: UI | null = null;
@@ -135,15 +138,20 @@ function openPublicJoin() {
   if (!getToken()) return;
   void withTimeout(api<Session>('/api/auth/yo'), 12000, 'sesión').then((next) => {
     session = next;
+    setProfileLocale(next.locale ?? null);
+    const before = getLocale();
+    bootLocale({ user: next.locale, company: next.companyLocale });
     if (!isPublicJoin(location.hash)) return;
+    if (getLocale() !== before) renderAuth(authEl, () => { void enter(); });
     paintSessionNotice(authEl, next.membership.name, () => logout({ keepHash: true }), () => { location.hash = '#/oficina'; });
   }).catch((error) => {
     if (error instanceof ApiError && error.status === 401) {
       clearToken();
       session = null;
+      setProfileLocale(null);
       return;
     }
-    showBootError(error instanceof Error ? error.message : 'No se pudo comprobar la sesión');
+    showBootError(error instanceof Error ? error.message : t('common.sessionFail'));
   });
 }
 
@@ -168,6 +176,8 @@ async function enter() {
       return;
     }
     session = await withTimeout(api<Session>('/api/auth/yo'), 12000, 'sesión');
+    setProfileLocale(session.locale ?? null);
+    bootLocale({ user: session.locale, company: session.companyLocale });
     if (session.debeCambiarContrasena) {
       showPasswordGate();
       return;
@@ -182,7 +192,7 @@ async function enter() {
     try { applyMarca(marca); } catch (error) { console.error(error); }
     await startOffice(session, hud, marca);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'No se pudo entrar';
+    const message = error instanceof Error ? error.message : t('common.enterFail');
     if (error instanceof ApiError && error.status === 401) {
       clearToken();
       session = null;
@@ -214,6 +224,8 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null) {
   const media: ProximityMediaProvider = hud.media.mode === 'livekit'
     ? new LiveKitMediaProvider()
     : new P2PMediaProvider(socket, current.membership.id);
+  officeMedia = media;
+  (media as { notice: string }).notice = hud.media.notice;
   const map = cloneOfficeMap();
   applyRooms(map, hud.rooms);
   game = new Game(canvas, map, {
@@ -306,6 +318,8 @@ function logout(opts?: { keepHash?: boolean }) {
   clearToken();
   teardownOffice();
   session = null;
+  setProfileLocale(null);
+  officeMedia = null;
   if (!opts?.keepHash) location.hash = '#/entrar';
   if (isPublicJoin(location.hash)) openPublicJoin();
   else showAuth();
@@ -343,6 +357,43 @@ function route() {
   pagesEl.classList.remove('hidden');
   ui.setActive(view.split('/')[0]);
   void renderView(pagesEl, view, session, socket);
+}
+
+document.addEventListener('change', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement) || !target.classList.contains('lang-switch')) return;
+  const locale = target.value as Locale;
+  if (!['es', 'en', 'fr', 'de'].includes(locale)) return;
+  pinLocale(locale);
+  if (getToken()) void api('/api/cuenta/idioma', { method: 'PATCH', body: JSON.stringify({ locale }) }).catch(() => {});
+  void refreshAfterLocale();
+});
+
+window.addEventListener('hivex-auth-rerender', () => {
+  if (!session || !isPublicJoin(location.hash)) return;
+  paintSessionNotice(authEl, session.membership.name, () => logout({ keepHash: true }), () => { location.hash = '#/oficina'; });
+});
+
+async function refreshAfterLocale() {
+  if (session?.debeCambiarContrasena && !isPublicJoin(location.hash)) {
+    showPasswordGate();
+    return;
+  }
+  if (isPublicJoin(location.hash) || !getToken()) {
+    if (isPublicJoin(location.hash)) openPublicJoin();
+    else showAuth();
+    return;
+  }
+  ui?.relabel();
+  if (game) {
+    try {
+      const hud = await api<Hud>('/api/oficina/hud');
+      game.mapRenderer.setRankings(hud.rankings);
+      if (officeMedia) (officeMedia as { notice: string }).notice = hud.media.notice;
+    } catch { /* la oficina sigue en el idioma anterior para los datos del servidor */ }
+    game.mapRenderer.render();
+  }
+  route();
 }
 
 window.addEventListener('hivex-unread', (event) => {

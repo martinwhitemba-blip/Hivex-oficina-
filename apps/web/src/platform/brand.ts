@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+
 export interface Marca {
   nombre: string;
   oficina: string;
@@ -5,6 +7,7 @@ export interface Marca {
   acento: string;
   logoUrl: string | null;
   poweredBy: string;
+  idioma?: string;
 }
 
 const INK = '#0B0B0C';
@@ -18,8 +21,8 @@ export function applyMarca(marca: Marca | null) {
   root.style.setProperty('--gold-soft', primary);
   root.style.setProperty('--line', hexAlpha(primary, 0.22));
   const name = marca?.nombre || 'HIVEX';
-  const office = marca?.oficina || 'Oficina virtual';
-  document.title = marca ? `${name} · ${office}` : 'HIVEX · Oficina virtual';
+  const office = marca?.oficina || t('brand.tagline');
+  document.title = marca ? `${name} · ${office}` : `HIVEX · ${t('brand.tagline')}`;
 }
 
 export function readableOnInk(color: string) {

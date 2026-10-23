@@ -1,0 +1,712 @@
+{
+  "lang": {
+    "label": "Langue"
+  },
+  "role": {
+    "owner": "Propriétaire",
+    "admin": "Administrateur",
+    "employee": "Employé"
+  },
+  "status": {
+    "en_linea": "En ligne",
+    "ausente": "Absent",
+    "en_reunion": "En réunion",
+    "cafe": "Café virtuel",
+    "en_llamada": "En appel",
+    "desconectado": "Hors ligne"
+  },
+  "time": {
+    "hm": "{h} h {m} min",
+    "ms": "{m} min {s} s"
+  },
+  "brand": {
+    "tagline": "Bureau virtuel",
+    "powered": "powered by HIVEX",
+    "title": "Marque de l'entreprise",
+    "lead": "Nom, espace, logo et couleurs de cette entreprise. Les autres ne les voient pas. HIVEX reste en dessous, en petit.",
+    "company": "Nom de l'entreprise",
+    "space": "Nom de l'espace",
+    "spacePh": "Bureau Acme",
+    "primary": "Couleur principale",
+    "accent": "Couleur d'accent",
+    "logo": "Logo (PNG, JPG ou SVG, jusqu'à 1,5 Mo)",
+    "language": "Langue de l'entreprise",
+    "languageHint": "Qui n'a pas choisi de langue voit le bureau dans cette langue.",
+    "save": "Enregistrer la marque",
+    "contrast": "Cette couleur ne se lit pas sur le fond sombre. Choisissez-en une plus claire.",
+    "saved": "Marque enregistrée. Seule cette entreprise la voit."
+  },
+  "auth": {
+    "eyebrow": "HIVEX · Bureau virtuel",
+    "heroLead": "Votre équipe,",
+    "heroEm": "au bureau",
+    "heroPitch": "Un bureau que l'on voit, avec de vraies personnes, des espaces et des postes. Or sur noir, pensé pour le quotidien.",
+    "enter": "Se connecter",
+    "register": "Créer une entreprise",
+    "codeLink": "Entrer avec un code",
+    "enterTitle": "Entrez dans votre bureau",
+    "registerTitle": "Créez votre entreprise",
+    "joinTitle": "Rejoignez l'équipe",
+    "codeTitle": "Entrer avec un code",
+    "activateTitle": "Activez votre compte",
+    "leadDefault": "Chaque entreprise a son bureau. Vous voyez, à l'instant, ce que fait chaque personne.",
+    "leadCode": "Saisissez le code de l'entreprise, votre nom et un mot de passe. Vous entrerez au bureau comme employé.",
+    "leadJoin": "L'invitation n'envoie pas d'e-mail. Choisissez votre nom et le mot de passe avec lequel vous reviendrez.",
+    "leadActivate": "Choisissez le mot de passe de connexion. Nous n'envoyons pas d'e-mail : votre entreprise vous transmet le lien.",
+    "code": "Code",
+    "inviteCode": "Code d'invitation",
+    "email": "E-mail",
+    "yourName": "Votre nom",
+    "companyName": "Nom de l'entreprise",
+    "password": "Mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "repeatPassword": "Répétez le mot de passe",
+    "submitEnter": "Se connecter",
+    "submitOffice": "Entrer au bureau",
+    "submitActivate": "Activer le compte",
+    "submitContinue": "Continuer",
+    "haveAccount": "J'ai déjà un compte",
+    "demo": "Essayez la démo : martin@hivex.demo / hivex-demo. Code ouvert : HIVEX2026. Si vous êtes invité, utilisez l'e-mail de l'invitation et le mot de passe choisi.",
+    "session": "Vous êtes connecté en tant que {name}.",
+    "logoutContinue": "Se déconnecter et continuer",
+    "goOffice": "Aller à mon bureau",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "inviteFallback": "L'invitation n'est pas valable ou a expiré",
+    "activationFallback": "Le lien d'activation n'est pas valable ou a expiré",
+    "actionFailed": "L'action n'a pas pu aboutir",
+    "brandLead": "{name} · {office}. Saisissez votre nom et un mot de passe pour entrer.",
+    "gateEyebrow": "HIVEX · Bureau virtuel",
+    "gatePitch": "Le mot de passe temporaire ne vaut que pour cette première connexion.",
+    "gateTitle": "Changez le mot de passe temporaire",
+    "gateLead": "Choisissez votre propre mot de passe, d'au moins 8 caractères. En attendant, le bureau reste fermé.",
+    "tempPassword": "Mot de passe temporaire",
+    "saveEnter": "Enregistrer et entrer",
+    "passwordFail": "Le mot de passe n'a pas pu être changé"
+  },
+  "nav": {
+    "office": "Bureau",
+    "owner": "Direction",
+    "business": "Mon activité",
+    "team": "Équipe",
+    "areas": "Espaces",
+    "map": "Plan",
+    "tasks": "Tâches",
+    "day": "Journée",
+    "chat": "Discussion",
+    "badges": "Succès",
+    "plan": "Forfait",
+    "leads": "Prospection",
+    "menu": "Gestion"
+  },
+  "common": {
+    "loadFail": "Chargement impossible",
+    "error": "Erreur",
+    "bootFail": "HIVEX n'a pas pu s'ouvrir.",
+    "reload": "Recharger",
+    "unexpected": "Erreur inattendue",
+    "timeout": "Délai dépassé ({label})",
+    "sessionFail": "La session n'a pas pu être vérifiée",
+    "enterFail": "Connexion impossible",
+    "downloadFail": "Le fichier n'a pas pu être téléchargé"
+  },
+  "owner": {
+    "title": "Tableau du dirigeant",
+    "subtitle": "Ce que fait chaque personne, en ce moment.",
+    "search": "Chercher une personne ou une tâche",
+    "allAreas": "Tous les espaces",
+    "allStatuses": "Tous les statuts",
+    "hideMap": "Masquer le plan",
+    "showMap": "Voir le plan",
+    "newArea": "Nouvel espace",
+    "peopleNow": "Personnes en ce moment",
+    "mapTitle": "Plan des espaces",
+    "mapHint": "Chaque zone est un espace actif. Cliquez pour voir qui s'y trouve et les indicateurs du jour.",
+    "noRole": "Sans poste",
+    "noTask": "Aucune tâche en cours",
+    "onTask": "Sur cette tâche depuis {time}",
+    "noTaskTime": "Pas de temps de tâche",
+    "performance": "Performance",
+    "move": "Déplacer",
+    "noMatch": "Personne ne correspond au filtre.",
+    "zoneMeta": "{online} en ligne · {people}",
+    "people": {
+      "one": "{n} personne",
+      "other": "{n} personnes"
+    },
+    "nobody": "Personne assignée",
+    "unassigned": "Non assignée",
+    "reassign": "Réassigner",
+    "noTasks": "Il n'y a pas de tâches ouvertes.",
+    "audit": "Journal",
+    "loading": "Chargement…",
+    "noMoves": "Aucun mouvement pour l'instant.",
+    "tasksNow": "Tâches en cours",
+    "promptArea": "Nom du nouvel espace",
+    "promptWho": "À qui l'assigner ?",
+    "promptMove": "Vers quel espace déplacer cette personne ?",
+    "connected": "{count} connectées maintenant",
+    "noKpis": "Pas d'indicateurs aujourd'hui",
+    "seeArea": "Voir la performance de l'espace",
+    "roomPeople": "{room} · {people} · {online} en ligne"
+  },
+  "business": {
+    "title": "Mon activité",
+    "demo": "Les chiffres de cette entreprise sont une démonstration.",
+    "live": "Performance par espace et par personne.",
+    "noAlerts": "Aucune alerte sur cette période.",
+    "export": "Exporter en CSV",
+    "who": "Qui fait quoi",
+    "rhythm": "Le rythme, jour après jour",
+    "noSeries": "Pas encore de série quotidienne."
+  },
+  "import": {
+    "created": {
+      "one": "{n} compte créé",
+      "other": "{n} comptes créés"
+    },
+    "withErrors": {
+      "one": "{n} avec une erreur.",
+      "other": "{n} avec des erreurs."
+    },
+    "noErrors": "Aucune erreur.",
+    "noEmail": "Aucun e-mail n'a été envoyé.",
+    "colName": "Nom",
+    "colEmail": "E-mail",
+    "colRole": "Rôle",
+    "colArea": "Espace",
+    "colAccess": "Accès",
+    "row": "Ligne {n}",
+    "download": "Télécharger le CSV des accès"
+  },
+  "team": {
+    "title": "Équipe",
+    "subtitle": "Chaque personne a un compte. Au bureau, elle est à son poste même si elle n'est pas encore entrée.",
+    "addTitle": "Ajouter une personne",
+    "addLead": "Un vrai compte, un par un. Nous n'envoyons pas d'e-mail : vous copiez le lien d'activation, ou vous générez un mot de passe temporaire à changer à l'entrée.",
+    "name": "Nom",
+    "email": "E-mail",
+    "role": "Rôle",
+    "area": "Espace",
+    "areaPh": "Ventes",
+    "job": "Poste",
+    "phone": "Téléphone",
+    "start": "Date de début",
+    "schedule": "Horaires",
+    "access": "Accès",
+    "linkMode": "Lien d'activation",
+    "tempMode": "Mot de passe temporaire",
+    "createMissing": "Créer les espaces et les postes qui n'existent pas",
+    "addButton": "Ajouter la personne",
+    "importTitle": "Importer un CSV ou un Excel",
+    "importLead": "Colonnes : nombre, email, rol, puesto, area, telefono, fecha_inicio, horario. Les noms anglais marchent aussi (name, role, job_title, department, phone, start_date, schedule). Le même accès vaut pour tout le fichier.",
+    "template": "Télécharger le modèle",
+    "importButton": "Importer",
+    "noArea": "Sans espace",
+    "schedulePh": "lun–ven 09:00–18:00"
+  },
+  "join": {
+    "title": "Code d'accès",
+    "lead": "Qui a le code entre au bureau comme employé, sans espace ni poste. Aucun e-mail n'est envoyé. Partagez le lien ou le code.",
+    "code": "Code",
+    "noCode": "Sans code",
+    "link": "Lien à partager",
+    "copy": "Copier le lien",
+    "regen": "Régénérer le code",
+    "active": "Code actif",
+    "copied": "Lien copié.",
+    "newCode": "Nouveau code. L'ancien ne fonctionne plus.",
+    "on": "Code actif.",
+    "off": "Code désactivé."
+  },
+  "invite": {
+    "title": "Inviter",
+    "lead": "Aucun e-mail n'est envoyé. En créant l'invitation, vous obtenez un lien à copier et à partager à la main.",
+    "admin": "Administrateur / responsable d'espace",
+    "create": "Créer l'invitation",
+    "share": "Aucun e-mail n'a été envoyé. Partagez ce lien :",
+    "copied": "Lien copié."
+  },
+  "person": {
+    "score": "Note",
+    "points": "{n} points",
+    "photo": "Photo de profil",
+    "upload": "Envoyer la photo",
+    "usePhoto": "Utiliser ma photo comme avatar",
+    "photoHint": "Désactivé : au bureau on voit le personnage de jeu, avec vos couleurs. Activé : la photo occupe le visage. Il faut avoir envoyé une photo.",
+    "character": "Personnage",
+    "characterHint": "Couleurs, cheveux et vêtements de l'avatar. C'est ce que le bureau montre, sauf si vous activez la photo.",
+    "skin": "Peau",
+    "hair": "Cheveux",
+    "style": "Coiffure",
+    "short": "Court",
+    "long": "Long",
+    "bun": "Chignon",
+    "buzz": "Rasé",
+    "shirt": "T-shirt",
+    "pants": "Pantalon",
+    "glasses": "Lunettes",
+    "save": "Enregistrer le personnage",
+    "saved": "Personnage enregistré. Retournez au bureau pour le voir.",
+    "history": "Historique",
+    "date": "Date",
+    "note": "Note",
+    "metrics": "Mesures",
+    "noReports": "Aucun rapport visible",
+    "badges": "Badges : {list}. Heures en ligne (30 jours) : {hours}.",
+    "none": "aucun"
+  },
+  "areas": {
+    "title": "Espaces et postes",
+    "subtitle": "Rien n'est figé : créez, renommez ou supprimez. Chaque nouvel espace ouvre une zone sur le plan.",
+    "new": "Nouvel espace",
+    "name": "Nom",
+    "color": "Couleur",
+    "teamName": "Nom de l'équipe",
+    "create": "Créer l'espace et la zone",
+    "meta": "{team} · {people} · {rooms}",
+    "noZone": "sans zone",
+    "kpiLine": "{label} ({key}) objectif {target}",
+    "noKpis": "Pas d'indicateurs",
+    "editKpis": "Modifier les indicateurs",
+    "jobs": "Postes",
+    "noJobs": "Il n'y a pas encore de postes.",
+    "jobPh": "Nouveau poste",
+    "add": "Ajouter",
+    "kpiPrompt": "Indicateurs séparés par des points-virgules. Exemple : appels|Appels|40; rendez-vous|Rendez-vous|5"
+  },
+  "mapEdit": {
+    "title": "Éditeur du bureau",
+    "subtitle": "Changez le nom de chaque salle, l'espace auquel elle appartient et qui s'assoit à chaque poste.",
+    "labelPh": "Étiquette",
+    "saveRoom": "Enregistrer la salle",
+    "desks": "Postes",
+    "free": "Libre",
+    "assign": "Assigner",
+    "ownerOnly": "Seul le propriétaire enregistre les changements du plan.",
+    "saved": "Enregistré",
+    "assigned": "Assigné"
+  },
+  "tasks": {
+    "title": "Tâches",
+    "subtitle": "Un tableau simple par espace. Il compte pour la note.",
+    "newPh": "Nouvelle tâche",
+    "create": "Créer",
+    "pending": "À faire",
+    "doing": "En cours",
+    "done": "Fait"
+  },
+  "day": {
+    "title": "Rapport de journée",
+    "needArea": "Assignez un espace pour saisir des indicateurs.",
+    "clocked": "Vous êtes entré à {time}",
+    "notClocked": "Vous n'avez pas pointé aujourd'hui",
+    "in": "Pointer l'entrée",
+    "out": "Pointer la sortie",
+    "demo": "Le rapport d'aujourd'hui est une démonstration. Si vous l'enregistrez, il devient le vôtre.",
+    "manual": "Les chiffres peuvent être saisis à la main ou par l'API d'intégration.",
+    "target": "objectif {n}",
+    "noKpis": "Votre profil n'a pas encore d'indicateurs.",
+    "note": "Note libre",
+    "save": "Enregistrer la journée",
+    "points": "Journée enregistrée. +{n} points",
+    "updated": "Journée mise à jour"
+  },
+  "chat": {
+    "title": "Discussion de l'équipe",
+    "subtitle": "Canaux de l'entreprise et messages directs. Un direct n'arrive qu'à un collègue de votre entreprise.",
+    "channels": "Canaux",
+    "directs": "Directs",
+    "channel": "Canal",
+    "general": "Général",
+    "placeholder": "Écrivez un message",
+    "send": "Envoyer",
+    "emptyChannel": "Il n'y a pas encore de messages dans ce canal.",
+    "emptyThread": "Vous ne vous êtes pas encore écrit. Le message reste enregistré.",
+    "noPeople": "Il n'y a personne d'autre dans l'entreprise.",
+    "coworker": "Collègue",
+    "with": "Direct avec {name}",
+    "pick": "Choisissez un collègue. Vous pouvez aussi cliquer son avatar au bureau.",
+    "offline": "La discussion en direct n'est pas connectée. Rechargez la page.",
+    "pickPeer": "Choisissez un collègue dans la liste Directs",
+    "sendFail": "Envoi impossible"
+  },
+  "badges": {
+    "title": "Points et badges",
+    "subtitle": "Ils se gagnent en rendant la journée, en atteignant les objectifs et en fermant les tâches.",
+    "heading": "Badges",
+    "none": "Pas encore de badges.",
+    "pts": "{n} pts"
+  },
+  "plan": {
+    "title": "Forfait et usage",
+    "people": "Personnes {used} / {max}",
+    "limit": "limite de cette entreprise : {n}",
+    "areas": "Espaces {used} / {max}",
+    "upTo": "Jusqu'à {people} personnes et {areas} espaces",
+    "companyLimit": "Limite de cette entreprise",
+    "current": "Forfait actuel",
+    "use": "Utiliser ce forfait",
+    "billing": "Le paiement par carte n'est pas branché. Changer de forfait ne crée pas de paiement."
+  },
+  "leads": {
+    "title": "Prospection",
+    "soon": "Bientôt",
+    "counts": "Prospects {leads} · Campagnes {campaigns} · Appels {calls}",
+    "prepared": "Espace prêt : {name}",
+    "enable": "Activer le modèle d'espace Appels",
+    "message": "La prospection et l'accueil des clients sont prêts, mais le composeur ne fonctionne pas encore.",
+    "ext": {
+      "provider": "Un fournisseur de téléphonie (Zadarma ou Twilio) derrière TelephonyProvider",
+      "routing": "Répartition des prospects à l’arrivée d’un appel ou d’un formulaire",
+      "models": "Les modèles Lead, Call et Campaign appartiennent déjà à l’entreprise (companyId)"
+    }
+  },
+  "office": {
+    "railOwner": "Tableau du dirigeant",
+    "railBusiness": "Mon activité",
+    "railPlan": "Forfait et usage",
+    "hidePanel": "Masquer le panneau",
+    "search": "Chercher des personnes",
+    "roomsTab": "Salles occupées",
+    "callsTab": "Appels et annonces",
+    "meetingsToday": "Rendez-vous aujourd'hui : {n}",
+    "followups": "Suivis en attente : {n}",
+    "see": "Voir",
+    "you": "(vous)",
+    "yourStatus": "Votre statut",
+    "statusToast": "Votre statut : {label}",
+    "callsSoon": "Appels et annonces : bientôt",
+    "people": "Personnes",
+    "peopleRooms": "Personnes et salles",
+    "manage": "Gestion",
+    "followupsShort": "{n} suivis",
+    "todaySales": "Aujourd'hui : {sales} ventes · {money}",
+    "car": "Voiture",
+    "carTitle": "Mode voiture (C) · klaxon avec H",
+    "meetingsPill": "{n} rendez-vous aujourd'hui",
+    "demoData": "données de démonstration",
+    "follow": "Vous suivez {name}",
+    "back": "Retour",
+    "pending": "Suivis en attente",
+    "avatar": "Votre avatar",
+    "mic": "Microphone",
+    "micOn": "Microphone activé",
+    "micOff": "Microphone coupé",
+    "cam": "Caméra",
+    "camOn": "Caméra activée",
+    "camOff": "Caméra coupée",
+    "react": "Réactions",
+    "screen": "Partager l'écran",
+    "screenSoon": "Le partage d'écran arrivera quand LiveKit sera configuré",
+    "callClient": "Appel client",
+    "callShort": "Appeler",
+    "hand": "Lever la main",
+    "audio": "Audio",
+    "audioSoon": "Réglages audio : bientôt",
+    "leave": "Sortir",
+    "help": "Aide",
+    "zoomIn": "Zoomer",
+    "zoomOut": "Dézoomer",
+    "center": "Centrer sur moi",
+    "hideMap": "Masquer la minicarte",
+    "showMap": "Afficher la minicarte",
+    "honk": "Klaxon (H)",
+    "helpTitle": "Comment se déplacer dans le bureau",
+    "walk": "Marcher",
+    "clickGo": "Clic / toucher sur le plan",
+    "clickGoHelp": "Y aller (cherche le chemin)",
+    "joy": "Joystick (mobile)",
+    "joyHelp": "Marcher avec le pouce",
+    "clickMate": "Clic sur un collègue",
+    "clickMateHelp": "Aller jusqu'à lui · dans la liste : centrer la caméra",
+    "carHelp": "Mode voiture (plus rapide)",
+    "honkHelp": "Klaxonner (en mode voiture)",
+    "door": "Ouvrir ou fermer le bureau privé",
+    "zoomHelp": "Zoom",
+    "escHelp": "Vous suivre de nouveau",
+    "keys": "W A S D / flèches",
+    "wheel": "Molette / pincer / + −",
+    "helpNote": "Bêta HIVEX · le bureau est multijoueur · les mesures de la démo sont marquées comme démonstration.",
+    "gotIt": "Compris",
+    "demoNoMessage": "Ce personnage de démonstration ne reçoit pas de messages",
+    "inRoom": "Vous êtes dans {name}",
+    "common": "Zone commune",
+    "nearTalk": "Conversation proche",
+    "demoAudio": "Collègues de démonstration, sans audio réel",
+    "focusHint": "Clic : centrer la caméra · Aller : marcher jusqu'à {name}",
+    "new": "Nouveau",
+    "message": "Message",
+    "go": "Aller",
+    "nearSub": "Audio de proximité (simulé)",
+    "nearYou": "Près de vous",
+    "inMeeting": "En réunion",
+    "inOffice": "Dans le bureau",
+    "rooms": "Salles",
+    "private": "Bureau privé",
+    "lockTitle": "Ouvrir / fermer",
+    "demoMates": "Collègues de démonstration",
+    "demoTitle": "Afficher ou masquer les PNJ",
+    "offline": "Hors ligne",
+    "aria": "Bureau"
+  },
+  "media": {
+    "livekit": "Audio et vidéo de proximité avec LiveKit.",
+    "p2p": "L'audio de proximité passe directement entre les navigateurs. Pour plusieurs personnes à la fois, configurez LIVEKIT_URL, LIVEKIT_API_KEY et LIVEKIT_API_SECRET sur le serveur.",
+    "p2pClient": "L'audio de proximité passe directement entre les navigateurs. Pour plusieurs personnes à la fois, configurez LIVEKIT_URL, LIVEKIT_API_KEY et LIVEKIT_API_SECRET.",
+    "micOff": "Le micro est coupé. Activez-le pour parler aux personnes proches.",
+    "micFail": "Le micro n'a pas pu s'ouvrir. L'audio de proximité est désactivé dans ce navigateur.",
+    "camGroup": "La vidéo de groupe fonctionne mieux avec LiveKit. En mode direct, seul l'audio est partagé.",
+    "p2pShort": "L'audio de proximité passe directement entre les navigateurs. Pour plusieurs personnes à la fois, configurez LiveKit.",
+    "simulated": "Audio simulé : il n'est pas envoyé aux autres."
+  },
+  "map": {
+    "plaque": {
+      "atlas": "ÉQUIPE ATLAS",
+      "vega": "ÉQUIPE VEGA",
+      "meeting": "SALLE DE RÉUNION",
+      "cafe": "CAFÉ",
+      "direction": "DIRECTION",
+      "open": "ZONE OUVERTE"
+    },
+    "name": {
+      "atlas": "Équipe Atlas",
+      "vega": "Équipe Vega",
+      "meeting": "Salle de réunion",
+      "cafe": "Café / cuisine",
+      "private": "Bureau privé",
+      "open": "Zone ouverte",
+      "lounge": "Espace détente"
+    },
+    "tv": {
+      "calls": "APPELS {n}",
+      "meetings": "RENDEZ-VOUS {n}"
+    },
+    "rank": {
+      "today": "CLASSEMENT DU JOUR",
+      "amount": "Montant",
+      "meetings": "CLASSEMENT RENDEZ-VOUS",
+      "meetingsSub": "Rendez-vous"
+    }
+  },
+  "mail": {
+    "invite": {
+      "subject": "Invitation à {company} sur HIVEX",
+      "text": "Vous êtes invité au bureau de {company}. Nous n'envoyons pas ce message : partagez-le à la main.\nLien : {link}"
+    },
+    "activation": {
+      "subject": "Activez votre compte chez {company}",
+      "text": "{name}, votre entreprise {company} a créé votre compte. Nous n'envoyons pas ce message : le lien se partage à la main.\nLien : {link}"
+    },
+    "chat": {
+      "joined": "{name} a rejoint {company}."
+    }
+  },
+  "alerts": {
+    "missed": "{name} n'a pas rendu le rapport de {count} journées",
+    "noshow": "{pct} % des rendez-vous pris par {name} ne se présentent pas ({missed} sur {total})",
+    "below": "{name} est sous l'objectif de {kpi} : {sum} sur {target} sur les {days} derniers jours avec rapport",
+    "above": "{name} est au-dessus de l'objectif de {kpi} : moyenne {avg} (objectif {target})"
+  },
+  "plans": {
+    "starter": {
+      "name": "Starter",
+      "description": "Pour une petite équipe qui commence à ranger son bureau."
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Plusieurs espaces, le tableau du dirigeant et plus de personnes au bureau."
+    },
+    "empresa": {
+      "name": "Entreprise",
+      "description": "Une activité large : beaucoup d'espaces et d'équipes sur le même plan."
+    },
+    "grupo": {
+      "name": "Groupe",
+      "description": "Au-dessus de 100 personnes. La limite de cette entreprise peut être convenue à part."
+    }
+  },
+  "errors": {
+    "access": {
+      "denied": "Accès restreint"
+    },
+    "notFound": "Introuvable",
+    "internal": "Erreur interne du serveur",
+    "validation": "Les données ne sont pas valables",
+    "auth": {
+      "required": "Connectez-vous pour continuer",
+      "expired": "La session a expiré. Reconnectez-vous",
+      "unknown": "Nous ne trouvons votre utilisateur dans aucune entreprise",
+      "temp": "Changez le mot de passe temporaire avant de continuer.",
+      "bad": "E-mail ou mot de passe incorrect",
+      "current": "Le mot de passe actuel ne correspond pas",
+      "exists": "Cet e-mail a déjà un compte. Connectez-vous ou demandez une invitation.",
+      "passwordShort": "Le mot de passe doit avoir au moins 8 caractères",
+      "name": "Écrivez votre nom",
+      "company": "Écrivez le nom de l'entreprise",
+      "password": "Écrivez le mot de passe",
+      "passwordCurrent": "Écrivez le mot de passe actuel"
+    },
+    "activation": {
+      "expired": "Le lien d'activation n'est pas valable ou a expiré",
+      "missing": "Le code manque"
+    },
+    "code": {
+      "invalid": "Ce code d'accès n'est pas valable ou est désactivé",
+      "write": "Écrivez le code",
+      "password": "Le mot de passe ne correspond pas à ce compte",
+      "disabled": "Votre accès à cette entreprise est désactivé",
+      "see": "Seule la direction peut voir le code d'accès",
+      "change": "Seule la direction peut changer le code d'accès",
+      "regen": "Seule la direction peut régénérer le code"
+    },
+    "email": {
+      "otherCompany": "Cet e-mail appartient déjà à une autre entreprise",
+      "samePassword": "Cet e-mail existe déjà. Utilisez le même mot de passe pour rejoindre.",
+      "oneCompany": "Cet e-mail appartient déjà à une entreprise"
+    },
+    "invite": {
+      "expired": "L'invitation n'est pas valable ou a expiré",
+      "forbidden": "Seule la direction peut inviter",
+      "staffOnly": "Un responsable ne peut inviter que les employés de son espace",
+      "ownArea": "Vous ne pouvez inviter que dans votre espace",
+      "hidden": "Vous ne pouvez pas voir les invitations"
+    },
+    "area": {
+      "missingReload": "Espace introuvable. Rechargez la page : cet espace n'existe plus.",
+      "create": "Seul le propriétaire peut créer des espaces",
+      "duplicate": "Un espace porte déjà ce nom",
+      "edit": "Vous ne pouvez pas modifier les espaces",
+      "own": "Vous ne pouvez modifier que votre espace",
+      "rename": "Seul le propriétaire peut renommer les espaces",
+      "delete": "Seul le propriétaire peut supprimer des espaces",
+      "missing": "Espace introuvable",
+      "name": "Écrivez le nom de l'espace"
+    },
+    "job": {
+      "missingReload": "Poste introuvable. Rechargez la page : ce poste n'existe plus.",
+      "create": "Seul le propriétaire peut créer des postes",
+      "duplicate": "Ce poste existe déjà",
+      "rename": "Seul le propriétaire peut renommer les postes",
+      "missing": "Poste introuvable",
+      "delete": "Seul le propriétaire peut supprimer des postes",
+      "write": "Écrivez le poste"
+    },
+    "company": {
+      "ownerOnly": "Seul le propriétaire peut modifier l'entreprise",
+      "missing": "Entreprise introuvable"
+    },
+    "kpi": {
+      "forbidden": "Vous ne pouvez pas définir d'indicateurs",
+      "own": "Vous ne pouvez définir des indicateurs que pour votre espace",
+      "label": "L'étiquette manque",
+      "duplicate": "La clé « {key} » est répétée"
+    },
+    "profile": {
+      "edit": "Vous ne pouvez pas modifier ce profil"
+    },
+    "date": {
+      "start": "La date de début doit être AAAA-MM-JJ",
+      "iso": "La date doit être AAAA-MM-JJ",
+      "invalid": "Date non valable"
+    },
+    "photo": {
+      "forbidden": "Vous ne pouvez pas changer cette photo",
+      "missing": "Joignez une image",
+      "read": "Nous n'avons pas pu lire l'image. Utilisez JPG, PNG ou WebP."
+    },
+    "person": {
+      "create": "La personne n'a pas pu être créée",
+      "file": "Joignez un CSV ou un Excel",
+      "hire": "Vous ne pouvez pas créer de personnes",
+      "name": "Écrivez le nom",
+      "missingCompany": "Nous ne trouvons pas cette personne dans l'entreprise",
+      "missing": "Employé introuvable",
+      "notInArea": "La personne n'est pas dans cet espace"
+    },
+    "report": {
+      "forbidden": "Vous ne pouvez pas voir les rapports de cette personne"
+    },
+    "clock": {
+      "none": "Vous n'avez pas d'entrée ouverte"
+    },
+    "task": {
+      "ask": "Demandez à votre responsable de créer la tâche",
+      "ownArea": "Vous ne pouvez créer des tâches que dans votre espace",
+      "missing": "Tâche introuvable",
+      "moveOwn": "Vous ne pouvez déplacer que vos tâches",
+      "otherArea": "Tâche d'un autre espace",
+      "delete": "Vous ne pouvez pas supprimer de tâches",
+      "title": "Écrivez le titre"
+    },
+    "map": {
+      "edit": "Seul le propriétaire peut modifier le plan",
+      "room": "Salle inconnue",
+      "assign": "Seul le propriétaire peut assigner les postes",
+      "seat": "Ce siège n'est pas sur le plan",
+      "roomName": "Écrivez le nom de la salle"
+    },
+    "integration": {
+      "see": "Seul le propriétaire voit la clé d'intégration",
+      "rotate": "Seul le propriétaire peut renouveler la clé",
+      "header": "L'en-tête X-API-Key manque",
+      "bad": "Clé d'intégration incorrecte"
+    },
+    "chat": {
+      "other": "Vous ne pouvez pas entrer dans la discussion d'un autre espace",
+      "message": "Écrivez un message",
+      "length": "Écrivez un message de 1000 caractères au plus",
+      "pick": "Choisissez un collègue de votre entreprise",
+      "missing": "Cette personne n'est pas dans votre entreprise",
+      "send": "Le message n'a pas pu être envoyé"
+    },
+    "plan": {
+      "missing": "Ce forfait n'existe pas",
+      "workers": "Votre forfait {plan} permet jusqu'à {max} personnes et vous êtes déjà à la limite. Ouvrez Forfait et usage pour le voir. Le paiement en ligne n'est pas encore branché.",
+      "areas": "Votre forfait {plan} permet jusqu'à {max} espaces et vous êtes déjà à la limite. Ouvrez Forfait et usage pour le voir. Le paiement en ligne n'est pas encore branché.",
+      "limit": "La limite propre commence au-dessus de 100"
+    },
+    "owner": {
+      "panel": "Le tableau du dirigeant est pour le propriétaire et les responsables",
+      "audit": "Vous ne pouvez pas voir le journal",
+      "reassign": "Vous ne pouvez pas réassigner les tâches",
+      "otherTask": "Cette tâche est d'un autre espace",
+      "person": "Personne introuvable",
+      "assign": "Vous ne pouvez assigner que dans votre espace",
+      "move": "Seul le propriétaire déplace les personnes d'espace",
+      "ownerStay": "Le propriétaire ne change pas d'espace depuis ici",
+      "plan": "Seul le propriétaire change de forfait",
+      "module": "Seul le propriétaire active le module"
+    },
+    "rate": "Trop de tentatives. Attendez quelques minutes et réessayez.",
+    "zone": {
+      "full": "Il ne reste plus de zones libres sur le plan. Dans cette bêta, le plan a un nombre fixe d'espaces."
+    },
+    "metrics": {
+      "area": "Cette personne n'a pas d'espace. Assignez un espace avant d'enregistrer des mesures.",
+      "unknown": "« {key} » n'est pas une mesure de {area}. Clés valables : {keys}"
+    },
+    "import": {
+      "repeat": "Cet e-mail est répété dans le fichier",
+      "here": "Cet e-mail est déjà dans votre entreprise",
+      "area": "L'espace « {area} » n'existe pas. Cochez l'option pour le créer.",
+      "areaOwner": "Seul le propriétaire peut créer des espaces à l'import",
+      "job": "Le poste « {job} » n'existe pas. Cochez l'option pour le créer.",
+      "email": "L'e-mail n'est pas valable",
+      "role": "Le rôle doit être employé ou administrateur",
+      "lead": "Un responsable ne peut créer que des employés",
+      "ownArea": "Vous ne pouvez créer que des personnes de votre espace"
+    },
+    "brand": {
+      "edit": "Seule la direction peut changer la marque",
+      "contrast": "Cette couleur ne se lit pas sur le fond sombre. Choisissez-en une plus claire.",
+      "logo": "Joignez un logo",
+      "size": "Le logo est trop lourd. Le maximum est 1,5 Mo.",
+      "svg": "Ce SVG ne peut pas être utilisé",
+      "type": "Utilisez un logo PNG, JPG ou SVG.",
+      "company": "Écrivez le nom de l'entreprise",
+      "space": "Écrivez le nom de l'espace",
+      "hex": "La couleur doit être hexadécimale"
+    },
+    "locale": "La langue doit être es, en, fr ou de"
+  }
+}
