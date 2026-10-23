@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { assignLods, drawBudget, DRAW_FULL, DRAW_MID } from '../../web/src/game/crowd/rules';
 import { govern, startingProfile } from '../../web/src/game/crowd/quality';
+import { expressionFor, photoSpot } from '../../web/src/game/crowd/look';
 
 describe('presupuesto de la oficina 3D', () => {
   it('cien avatares caben en menos de 300 llamadas de dibujo', () => {
@@ -20,10 +21,22 @@ describe('presupuesto de la oficina 3D', () => {
       if (slot.shadow) shadows += 1;
     }
     expect(full).toBeLessThanOrEqual(12);
-    expect(mid).toBeLessThanOrEqual(20);
+    expect(mid).toBeLessThanOrEqual(16);
     expect(shadows).toBeLessThanOrEqual(12);
     expect(46 + full * DRAW_FULL + mid * DRAW_MID + shadows).toBeLessThan(300);
     expect([...slots.values()].filter((slot) => slot.tier === 'ghost').length).toBeGreaterThan(0);
+  });
+
+  it('la foto cae en la cara salvo el gafete, y el gesto elige la expresión', () => {
+    expect(photoSpot(undefined)).toBe('cara');
+    expect(photoSpot('otro')).toBe('cara');
+    expect(photoSpot('gafete')).toBe('gafete');
+    expect(expressionFor(null)).toBe('neutral');
+    expect(expressionFor('👋')).toBe('happy');
+    expect(expressionFor('clap')).toBe('happy');
+    expect(expressionFor('🎉')).toBe('surprised');
+    expect(expressionFor('😉')).toBe('wink');
+    expect(expressionFor('zzz')).toBe('neutral');
   });
 
   it('esconde a los ausentes que quedan lejos y no les pone sombra', () => {

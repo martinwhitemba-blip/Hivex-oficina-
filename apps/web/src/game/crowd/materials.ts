@@ -73,11 +73,61 @@ export function sharedGeo(key: string, build: () => THREE.BufferGeometry) {
   return geometry;
 }
 
+let gradient: THREE.DataTexture | null = null;
+
+export function toonGradient() {
+  if (gradient) return gradient;
+  const data = new Uint8Array([
+    42, 42, 52, 255,
+    128, 128, 140, 255,
+    214, 214, 224, 255,
+    255, 255, 255, 255,
+  ]);
+  gradient = new THREE.DataTexture(data, 4, 1);
+  gradient.magFilter = THREE.NearestFilter;
+  gradient.minFilter = THREE.NearestFilter;
+  gradient.wrapS = THREE.ClampToEdgeWrapping;
+  gradient.colorSpace = THREE.NoColorSpace;
+  gradient.needsUpdate = true;
+  gradient.userData.shared = true;
+  return gradient;
+}
+
+export function sharedToon(color: string, opacity = 1) {
+  const key = `toon|${color}|${opacity}`;
+  const cached = materials.get(key);
+  if (cached) return cached as THREE.MeshToonMaterial;
+  const material = new THREE.MeshToonMaterial({
+    color,
+    gradientMap: toonGradient(),
+    transparent: opacity < 1,
+    opacity,
+    depthWrite: opacity >= 1,
+  });
+  material.userData.shared = true;
+  material.userData.key = key;
+  materials.set(key, material);
+  return material;
+}
+
+let outline: THREE.MeshBasicMaterial | null = null;
+
+export function outlineMaterial() {
+  if (outline) return outline;
+  outline = new THREE.MeshBasicMaterial({ color: '#24182c', side: THREE.BackSide });
+  outline.userData.shared = true;
+  outline.userData.key = 'outline';
+  materials.set('outline', outline);
+  return outline;
+}
+
 export function fadedMaterial(material: THREE.Material, opacity: number) {
   const basic = material as THREE.MeshBasicMaterial;
   if (basic.isMeshBasicMaterial) {
     return sharedBasic(String(basic.userData.key || basic.uuid), `#${basic.color.getHexString()}`, basic.map, opacity);
   }
+  const toon = material as THREE.MeshToonMaterial;
+  if (toon.isMeshToonMaterial) return sharedToon(`#${toon.color.getHexString()}`, opacity);
   const standard = material as THREE.MeshStandardMaterial;
   return sharedStandard(
     `#${standard.color.getHexString()}`,
@@ -95,13 +145,24 @@ export function shadeColor(hex: string, amount: number) {
 }
 
 export function clearSharedResources() {
+  const seen = new Set<THREE.Texture>();
   for (const material of materials.values()) {
     const mapped = material as THREE.MeshStandardMaterial;
-    mapped.map?.dispose();
+    if (mapped.map && !seen.has(mapped.map)) {
+      seen.add(mapped.map);
+      mapped.map.dispose();
+    }
+    const toon = material as THREE.MeshToonMaterial;
+    if (toon.gradientMap && !seen.has(toon.gradientMap)) {
+      seen.add(toon.gradientMap);
+      toon.gradientMap.dispose();
+    }
     material.dispose();
   }
   materials.clear();
   shadowMaterial = null;
+  outline = null;
+  gradient = null;
   for (const geometry of geometries.values()) geometry.dispose();
   geometries.clear();
 }

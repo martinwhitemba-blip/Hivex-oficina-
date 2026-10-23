@@ -6,6 +6,7 @@ import { applyRooms, cloneOfficeMap } from './data/zones';
 import { Game } from './game/game';
 import { bootLocale, getLocale, pinLocale, t, type Locale } from './i18n';
 import type { AvatarLook, StatusId } from './game/types';
+import { photoSpot } from './game/crowd/look';
 import { LiveKitMediaProvider } from './media/livekitMedia';
 import { P2PMediaProvider } from './media/p2pMedia';
 import type { ProximityMediaProvider } from './media/proximityMedia';
@@ -104,7 +105,11 @@ function loadImage(src: string) {
 
 function asLook(look: Session['membership']['look']): AvatarLook {
   const hairStyle = (look.hairStyle === 1 || look.hairStyle === 2 || look.hairStyle === 3 ? look.hairStyle : 0) as 0 | 1 | 2 | 3;
-  return { skin: look.skin, hair: look.hair, hairStyle, shirt: look.shirt, pants: look.pants, glasses: look.glasses, usePhoto: look.usePhoto === true, photoUrl: look.photoUrl };
+  const raw = look as { photoPlacement?: unknown };
+  return {
+    skin: look.skin, hair: look.hair, hairStyle, shirt: look.shirt, pants: look.pants, glasses: look.glasses,
+    usePhoto: look.usePhoto === true, photoUrl: look.photoUrl, photoPlacement: photoSpot(raw.photoPlacement),
+  };
 }
 
 function revealAuth() {

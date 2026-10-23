@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { toonGradient } from './materials';
 
 export interface BillboardSpot { x: number; y: number; color: string; dim: boolean; sitting: boolean }
 export interface GhostSpot { x: number; y: number; skin: string; shirt: string; pants: string }
@@ -26,7 +27,9 @@ export class CrowdExtras {
     this.billboards = makeInstances(boardGeo, boardMat, max);
     this.billboards.renderOrder = 3;
 
-    const ghostMat = (opacity: number) => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.7, transparent: true, opacity, depthWrite: false });
+    const ghostMat = (opacity: number) => new THREE.MeshToonMaterial({
+      color: '#ffffff', gradientMap: toonGradient(), transparent: true, opacity, depthWrite: false,
+    });
     this.ghostHead = makeInstances(seatedHead(), ghostMat(0.45), max);
     this.ghostBody = makeInstances(seatedBody(), ghostMat(0.42), max);
     this.ghostLegs = makeInstances(seatedLegs(), ghostMat(0.4), max);
@@ -99,9 +102,9 @@ export class CrowdExtras {
     for (const mesh of [this.billboards, this.ghostHead, this.ghostBody, this.ghostLegs, this.blobs]) {
       mesh.removeFromParent();
       mesh.geometry.dispose();
-      const material = mesh.material as THREE.MeshBasicMaterial;
-      material.map?.dispose();
-      material.dispose();
+      const material = mesh.material as THREE.MeshBasicMaterial & { gradientMap?: THREE.Texture | null };
+      if (material.map && !material.map.userData.shared) material.map.dispose();
+      if (!material.userData.shared) material.dispose();
     }
   }
 }
@@ -122,14 +125,14 @@ function personTexture() {
   ctx.clearRect(0, 0, 128, 256);
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(64, 46, 28, 0, Math.PI * 2);
+  ctx.arc(64, 58, 40, 0, Math.PI * 2);
   ctx.fill();
-  round(ctx, 34, 82, 60, 74, 20);
+  round(ctx, 40, 104, 48, 58, 18);
   ctx.fill();
   ctx.fillStyle = '#595959';
-  round(ctx, 40, 158, 18, 72, 8);
+  round(ctx, 42, 164, 16, 64, 8);
   ctx.fill();
-  round(ctx, 70, 158, 18, 72, 8);
+  round(ctx, 70, 164, 16, 64, 8);
   ctx.fill();
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -148,8 +151,8 @@ function round(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h
 }
 
 function seatedHead() {
-  const geo = new THREE.SphereGeometry(8, 8, 6);
-  geo.translate(0, 50, 0);
+  const geo = new THREE.SphereGeometry(11, 8, 6);
+  geo.translate(0, 48, 0);
   return geo;
 }
 

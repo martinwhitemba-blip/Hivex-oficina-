@@ -86,4 +86,6 @@ export interface AvatarLook {
   /** Si es true y hay foto, la cara del personaje es esa foto. Por defecto, personaje de juego. */
   usePhoto?: boolean;
   photoUrl?: string | null;
+  /** `cara` pega la foto en la cara. `gafete` la lleva en el pecho. Si falta, cara. */
+  photoPlacement?: 'cara' | 'gafete';
 }

@@ -22,15 +22,15 @@ export interface LodSlot {
   shadow: boolean;
 }
 
-/** Mallas de color por avatar en el nivel alto (sin la sombra, que va aparte). */
-export const DRAW_FULL = 14;
+/** Mallas de color por avatar en el nivel alto: cuerpo chibi y un contorno (sin la sombra). */
+export const DRAW_FULL = 15;
 export const DRAW_MID = 3;
 /** Oficina horneada, etiquetas, manchas, impostores y fantasmas instanciados. */
 export const DRAW_FIXED = 46;
 
 export const DEFAULT_LIMITS: LodLimits = {
   fullCap: 12,
-  midCap: 20,
+  midCap: 16,
   near: 300,
   mid: 680,
   ghostHide: 1100,

@@ -18,7 +18,7 @@ export interface DeviceHint {
 }
 
 const FULL = [12, 8, 4, 2];
-const MID = [20, 14, 8, 4];
+const MID = [16, 12, 8, 4];
 const NEAR = [300, 220, 160, 110];
 const FAR = [680, 520, 380, 260];
 const GHOST = [1100, 800, 520, 360];

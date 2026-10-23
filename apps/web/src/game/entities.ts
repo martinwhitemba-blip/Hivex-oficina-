@@ -29,6 +29,8 @@ export class Avatar {
   ghost = false;
   /** Generado en local por el modo carga. No entra en el audio ni en la red. */
   crowd = false;
+  /** Gesto en curso (saludo, palmas, choca). `until` es performance.now(). */
+  emote: { id: string; until: number } | null = null;
   /** 0 parado, 1 a velocidad plena. Sube y baja con suavidad. */
   pace = 0;
 

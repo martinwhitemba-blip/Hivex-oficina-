@@ -17,9 +17,10 @@ import { CrowdExtras } from './crowd/impostors';
 import { clearSharedResources, sharedStandard, sharedTextured } from './crowd/materials';
 import { assignLods, type LodTier } from './crowd/rules';
 import { govern, startingProfile, type QualityProfile } from './crowd/quality';
-import { buildCar, buildFull, buildMid, clearFaceTextures, disposeRig, lookKey, poseRig, setDim, setShadow, type Rig } from './characters';
+import { expressionFor } from './crowd/look';
+import { buildCar, buildFull, buildMid, clearFaceTextures, disposeRig, lookKey, poseRig, setDim, setExpression, setShadow, type Rig } from './characters';
 
-const CHAR_H = 78;
+const CHAR_H = 68;
 const WALL_H = 54;
 const FOV = 40;
 const PITCH = Math.PI / 4;
@@ -253,6 +254,10 @@ export class Stage3D {
         rig.anchor.position.set(avatar.x, 0, avatar.y);
         rig.anchor.visible = true;
         poseRig(rig, avatar, t);
+        if (rig.kind === 'full') {
+          const emote = avatar.emote && avatar.emote.until > performance.now() ? avatar.emote.id : null;
+          setExpression(rig, expressionFor(emote));
+        }
         setDim(rig, avatar.status === 'ausente');
         setShadow(rig, Boolean(slot?.shadow) && this.profile.shadows);
         if (avatar.mode !== 'car' && gap < nearest) {
@@ -293,7 +298,7 @@ export class Stage3D {
       const first = avatar.name.split(' ')[0] || avatar.name;
       const text = avatar.id === extras.selfId ? `${first} ${extras.selfLabel || ''}`.trim() : first;
       const tone = avatar.ghost ? '#6B7280' : (STATUSES[avatar.status]?.color || '#22C55E');
-      this.labels.push({ text, tone, self: avatar.id === extras.selfId, x: avatar.x, y: avatar.sitting || avatar.ghost ? 62 : CHAR_H + 16, z: avatar.y });
+      this.labels.push({ text, tone, self: avatar.id === extras.selfId, x: avatar.x, y: avatar.sitting || avatar.ghost ? 56 : CHAR_H + 14, z: avatar.y });
     }
     for (const id of this.full.keys()) if (!seenFull.has(id)) this.drop(this.full, id);
     for (const id of this.mids.keys()) if (!seenMid.has(id)) this.drop(this.mids, id);
