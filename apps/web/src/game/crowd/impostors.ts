@@ -27,10 +27,10 @@ export class CrowdExtras {
     this.billboards = makeInstances(boardGeo, boardMat, max);
     this.billboards.renderOrder = 3;
 
-    const ghostMat = (opacity: number) => new THREE.MeshToonMaterial({
-      color: '#ffffff', gradientMap: toonGradient(), transparent: true, opacity, depthWrite: false,
+    const ghostMat = (opacity: number, vertexColors = false) => new THREE.MeshToonMaterial({
+      color: '#ffffff', gradientMap: toonGradient(), transparent: true, opacity, depthWrite: false, vertexColors,
     });
-    this.ghostHead = makeInstances(seatedHead(), ghostMat(0.45), max);
+    this.ghostHead = makeInstances(seatedHead(), ghostMat(0.45, true), max);
     this.ghostBody = makeInstances(seatedBody(), ghostMat(0.42), max);
     this.ghostLegs = makeInstances(seatedLegs(), ghostMat(0.4), max);
 
@@ -127,6 +127,22 @@ function personTexture() {
   ctx.beginPath();
   ctx.arc(64, 58, 40, 0, Math.PI * 2);
   ctx.fill();
+  ctx.fillStyle = '#1A120E';
+  ctx.beginPath();
+  ctx.arc(49, 52, 6.5, 0, Math.PI * 2);
+  ctx.arc(79, 52, 6.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  ctx.beginPath();
+  ctx.ellipse(64, 66, 4.5, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#1A120E';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(64, 74, 11, 0.12 * Math.PI, 0.88 * Math.PI);
+  ctx.stroke();
+  ctx.fillStyle = '#ffffff';
   round(ctx, 40, 104, 48, 58, 18);
   ctx.fill();
   ctx.fillStyle = '#595959';
@@ -151,8 +167,43 @@ function round(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h
 }
 
 function seatedHead() {
-  const geo = new THREE.SphereGeometry(11, 8, 6);
-  geo.translate(0, 48, 0);
+  const white = new THREE.Color('#ffffff');
+  const ink = new THREE.Color('#1A120E');
+  const head = new THREE.SphereGeometry(11, 8, 6);
+  head.translate(0, 48, 0);
+  paint(head, white);
+  const nose = new THREE.SphereGeometry(1.45, 7, 6);
+  nose.scale(0.78, 0.64, 1.12);
+  nose.translate(0, 46.5, 10.55);
+  paint(nose, white);
+  const parts: THREE.BufferGeometry[] = [head, nose];
+  for (const side of [-1, 1]) {
+    const eye = new THREE.SphereGeometry(1.2, 7, 5);
+    eye.scale(1, 1.08, 0.48);
+    eye.translate(side * 2.85, 49.4, 10.85);
+    paint(eye, ink);
+    parts.push(eye);
+  }
+  const mouth = new THREE.SphereGeometry(1.15, 7, 5);
+  mouth.scale(1.7, 0.42, 0.55);
+  mouth.translate(0, 44.9, 10.9);
+  paint(mouth, ink);
+  parts.push(mouth);
+  const merged = mergeGeometries(parts, false);
+  if (!merged) return head;
+  for (const part of parts) part.dispose();
+  return merged;
+}
+
+function paint(geo: THREE.BufferGeometry, color: THREE.Color) {
+  const count = geo.getAttribute('position').count;
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i += 1) {
+    colors[i * 3] = color.r;
+    colors[i * 3 + 1] = color.g;
+    colors[i * 3 + 2] = color.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   return geo;
 }
 

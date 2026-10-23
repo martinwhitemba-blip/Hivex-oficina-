@@ -93,13 +93,14 @@ export function toonGradient() {
   return gradient;
 }
 
-export function sharedToon(color: string, opacity = 1) {
-  const key = `toon|${color}|${opacity}`;
+export function sharedToon(color: string, opacity = 1, vertexColors = false) {
+  const key = `toon|${color}|${opacity}|${vertexColors ? 1 : 0}`;
   const cached = materials.get(key);
   if (cached) return cached as THREE.MeshToonMaterial;
   const material = new THREE.MeshToonMaterial({
     color,
     gradientMap: toonGradient(),
+    vertexColors,
     transparent: opacity < 1,
     opacity,
     depthWrite: opacity >= 1,
@@ -107,6 +108,27 @@ export function sharedToon(color: string, opacity = 1) {
   material.userData.shared = true;
   material.userData.key = key;
   materials.set(key, material);
+  return material;
+}
+
+/** Rasgos de la cara: el color va en los vértices y no cambia con el tono de piel. */
+export function sharedVertexBasic(opacity = 1) {
+  const id = `basic-vc|${opacity}`;
+  const cached = materials.get(id);
+  if (cached) return cached as THREE.MeshBasicMaterial;
+  const material = new THREE.MeshBasicMaterial({
+    vertexColors: true,
+    transparent: opacity < 1,
+    opacity,
+    depthWrite: opacity >= 1,
+    toneMapped: false,
+    polygonOffset: opacity >= 1,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  material.userData.shared = true;
+  material.userData.key = id;
+  materials.set(id, material);
   return material;
 }
 
@@ -124,10 +146,11 @@ export function outlineMaterial() {
 export function fadedMaterial(material: THREE.Material, opacity: number) {
   const basic = material as THREE.MeshBasicMaterial;
   if (basic.isMeshBasicMaterial) {
+    if (basic.vertexColors) return sharedVertexBasic(opacity);
     return sharedBasic(String(basic.userData.key || basic.uuid), `#${basic.color.getHexString()}`, basic.map, opacity);
   }
   const toon = material as THREE.MeshToonMaterial;
-  if (toon.isMeshToonMaterial) return sharedToon(`#${toon.color.getHexString()}`, opacity);
+  if (toon.isMeshToonMaterial) return sharedToon(`#${toon.color.getHexString()}`, opacity, Boolean(toon.vertexColors));
   const standard = material as THREE.MeshStandardMaterial;
   return sharedStandard(
     `#${standard.color.getHexString()}`,

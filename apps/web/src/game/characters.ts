@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { AvatarLook, Dir } from './types';
 import type { Expression } from './crowd/look';
 import { photoSpot } from './crowd/look';
-import { fadedMaterial, outlineMaterial, shadeColor, shadowProxyMaterial, sharedBasic, sharedGeo, sharedStandard, sharedToon } from './crowd/materials';
+import { fadedMaterial, outlineMaterial, shadeColor, shadowProxyMaterial, sharedGeo, sharedStandard, sharedToon, sharedVertexBasic } from './crowd/materials';
 
 const YAW: Record<Dir, number> = { down: Math.PI, up: 0, right: Math.PI / 2, left: -Math.PI / 2 };
 
@@ -42,8 +42,6 @@ export interface PoseInput {
   carAngle: number;
   emote?: { id: string; until: number } | null;
 }
-
-const faceTextures = new Map<string, THREE.CanvasTexture>();
 
 export function lookKey(mode: string, look: AvatarLook, photo: boolean) {
   const spot = photo ? photoSpot(look.photoPlacement) : '';
@@ -85,15 +83,17 @@ export function buildFull(look: AvatarLook, photo: HTMLImageElement | undefined,
   armsR.pivot.position.y = 14;
   hip.add(armsL.pivot, armsR.pivot);
 
-  const head = new THREE.Mesh(sharedGeo('chibi-head', () => new THREE.SphereGeometry(13, 14, 12)), skin);
-  head.position.y = 52;
+  const head = new THREE.Mesh(humanHeadGeometry(), skin);
+  head.name = 'head';
   head.receiveShadow = true;
   turn.add(head);
   const hair = new THREE.Mesh(hairGeometry(look.hairStyle), hairMat);
+  hair.name = 'hair';
   hair.position.y = 56;
   turn.add(hair);
 
   const shell = new THREE.Mesh(outlineGeometry(), outlineMaterial());
+  shell.name = 'outline';
   shell.raycast = () => {};
   turn.add(shell);
 
@@ -104,17 +104,22 @@ export function buildFull(look: AvatarLook, photo: HTMLImageElement | undefined,
   if (photo && photoFace) {
     const framed = framedPhoto(photo, 'circle');
     owned.push(framed);
-    face = new THREE.Mesh(sharedGeo('chibi-face', () => new THREE.CircleGeometry(8.2, 18)), new THREE.MeshBasicMaterial({ map: framed, toneMapped: false }));
+    const material = new THREE.MeshBasicMaterial({
+      map: framed,
+      transparent: true,
+      depthWrite: true,
+      alphaTest: 0.45,
+      toneMapped: false,
+    });
+    face = new THREE.Mesh(sharedGeo('chibi-photo', () => new THREE.CircleGeometry(9.6, 22)), material);
+    face.position.set(0, 51.5, 13.9);
     face.userData.photo = true;
   } else {
-    const tex = faceTexture(look.skin, Boolean(look.glasses), 'neutral');
-    face = new THREE.Mesh(
-      sharedGeo('chibi-face', () => new THREE.CircleGeometry(8.2, 18)),
-      sharedBasic(`face|${look.skin}|${look.glasses ? 1 : 0}|neutral`, '#ffffff', tex),
-    );
+    face = new THREE.Mesh(featureGeometry('neutral', Boolean(look.glasses)), sharedVertexBasic());
   }
-  face.position.set(0, 51, 12.2);
+  face.name = 'face';
   face.userData.avatarId = id;
+  face.renderOrder = 2;
   turn.add(face);
 
   if (photo && spot === 'gafete') {
@@ -157,11 +162,8 @@ export function buildMid(look: AvatarLook, id: string): Rig {
     geo.translate(0, 30, 0);
     return geo;
   }), sharedToon(look.shirt));
-  const head = new THREE.Mesh(sharedGeo('mid-head', () => {
-    const geo = new THREE.SphereGeometry(10, 8, 6);
-    geo.translate(0, 50, 0);
-    return geo;
-  }), sharedToon(look.skin));
+  const head = new THREE.Mesh(midHeadGeometry(), sharedToon(look.skin, 1, true));
+  head.name = 'mid-head';
   const legs = new THREE.Mesh(sharedGeo('mid-legs', () => {
     const geo = new THREE.CapsuleGeometry(6, 8, 1, 5);
     geo.translate(0, 14, 0);
@@ -210,10 +212,9 @@ export function buildCar(id: string): Rig {
 }
 
 export function setExpression(rig: Rig, expression: Expression) {
-  if (!rig.face || rig.photoFace || rig.expression === expression) return;
+  if (!rig.face || rig.photoFace || rig.kind !== 'full' || rig.expression === expression) return;
   rig.expression = expression;
-  const tex = faceTexture(rig.skin, rig.glasses, expression);
-  rig.face.material = sharedBasic(`face|${rig.skin}|${rig.glasses ? 1 : 0}|${expression}`, '#ffffff', tex);
+  rig.face.geometry = featureGeometry(expression, rig.glasses);
 }
 
 export function poseRig(rig: Rig, avatar: PoseInput, t: number) {
@@ -384,164 +385,169 @@ function limbArm(skin: THREE.Material, sleeve: THREE.Material, x: number) {
   return { pivot };
 }
 
+const SCLERA = new THREE.Color('#F7F4EF');
+const PUPIL = new THREE.Color('#1B140F');
+const BROW = new THREE.Color('#32261C');
+const LIP = new THREE.Color('#D46570');
+const MOUTH_IN = new THREE.Color('#6E1E2C');
+const GLINT = new THREE.Color('#FFFFFF');
+const FRAME = new THREE.Color('#17171B');
+const BLUSH = new THREE.Color('#E47B86');
+const EYE_X = 3.55;
+const EYE_Y = 54.45;
+const EYE_Z = 10.15;
+
+/** Cráneo, mentón y nariz del mismo tono. Una sola malla. */
+function humanHeadGeometry() {
+  return sharedGeo('chibi-head', () => mergeParts([
+    shaped(new THREE.SphereGeometry(11.15, 16, 13), 1.04, 1.16, 0.88, 0, 54.2, -0.2),
+    shaped(new THREE.SphereGeometry(7.4, 12, 10), 1.08, 0.74, 0.92, 0, 45.4, 3.8),
+    shaped(new THREE.SphereGeometry(1.72, 10, 8), 0.78, 0.66, 1.2, 0, 50.15, 10.15),
+    shaped(new THREE.SphereGeometry(1.2, 8, 6), 0.55, 1.15, 0.8, 0, 51.7, 9.55),
+  ]));
+}
+
+function midHeadGeometry() {
+  return sharedGeo('mid-head', () => {
+    const skin = new THREE.Color('#ffffff');
+    const head = new THREE.SphereGeometry(10, 10, 8);
+    head.translate(0, 50, 0);
+    const parts = [tint(head, skin)];
+    parts.push(tint(shaped(new THREE.SphereGeometry(1.7, 8, 6), 0.85, 0.7, 1.25, 0, 49.15, 10.15), skin));
+    for (const side of [-1, 1]) {
+      parts.push(tint(shaped(new THREE.SphereGeometry(1.45, 8, 6), 1, 1.12, 0.55, side * 2.75, 51.15, 10.35), PUPIL));
+    }
+    parts.push(tint(shaped(new THREE.SphereGeometry(1.2, 8, 6), 1.9, 0.85, 0.58, 0, 47.2, 10.65), PUPIL));
+    return mergeParts(parts);
+  });
+}
+
+/** Ojos, cejas y boca en relieve, por delante de la piel. El gesto solo cambia la geometría. */
+function featureGeometry(expression: Expression, glasses: boolean) {
+  return sharedGeo(`feat|${expression}|${glasses ? 1 : 0}`, () => {
+    const parts: THREE.BufferGeometry[] = [];
+    const surprised = expression === 'surprised';
+    const happy = expression === 'happy';
+    const wink = expression === 'wink';
+    const eyeScale = surprised ? 1.24 : 1;
+    if (happy) {
+      closedEye(parts, -EYE_X, EYE_Y, EYE_Z);
+      closedEye(parts, EYE_X, EYE_Y, EYE_Z);
+    } else if (wink) {
+      openEye(parts, -EYE_X, EYE_Y, EYE_Z, 1);
+      closedEye(parts, EYE_X, EYE_Y, EYE_Z);
+    } else {
+      openEye(parts, -EYE_X, EYE_Y, EYE_Z, eyeScale);
+      openEye(parts, EYE_X, EYE_Y, EYE_Z, eyeScale);
+    }
+    const browY = surprised ? EYE_Y + 1.95 : EYE_Y + 1.5;
+    const tilt = surprised ? 0.42 : happy ? -0.16 : 0.1;
+    browBar(parts, -EYE_X, browY, 11.35, -tilt);
+    browBar(parts, EYE_X, browY, 11.35, tilt);
+    if (surprised) openMouth(parts);
+    else smile(parts, happy || wink ? 2.35 : 2.0, happy || wink ? 0.5 : 0.44, happy || wink);
+    if (happy || wink) {
+      parts.push(tint(shaped(new THREE.SphereGeometry(1.15, 8, 6), 1.2, 0.72, 0.38, -6.15, 50.5, 9.85), BLUSH));
+      parts.push(tint(shaped(new THREE.SphereGeometry(1.15, 8, 6), 1.2, 0.72, 0.38, 6.15, 50.5, 9.85), BLUSH));
+    }
+    nostril(parts, -0.4);
+    nostril(parts, 0.4);
+    if (glasses) addGlasses(parts, surprised ? 1.18 : 1);
+    return mergeParts(parts);
+  });
+}
+
+function openEye(parts: THREE.BufferGeometry[], x: number, y: number, z: number, scale: number) {
+  parts.push(tint(shaped(new THREE.SphereGeometry(1.95 * scale, 12, 10), 1.04, 1.16, 0.54, x, y, z), SCLERA));
+  parts.push(tint(shaped(new THREE.SphereGeometry(0.82 * scale, 10, 8), 1, 1.08, 0.62, x, y - 0.05 * scale, z + 0.92 * scale), PUPIL));
+  parts.push(tint(shaped(new THREE.SphereGeometry(0.28 * scale, 6, 5), 1, 1, 0.7, x + 0.42 * scale, y + 0.42 * scale, z + 1.28 * scale), GLINT));
+}
+
+function closedEye(parts: THREE.BufferGeometry[], x: number, y: number, z: number) {
+  const arc = new THREE.TorusGeometry(1.35, 0.58, 6, 14, Math.PI);
+  arc.translate(x, y - 0.05, z + 1.15);
+  parts.push(tint(arc, BROW));
+}
+
+function browBar(parts: THREE.BufferGeometry[], x: number, y: number, z: number, tilt: number) {
+  const geo = new THREE.SphereGeometry(0.82, 8, 6);
+  geo.scale(2.15, 0.4, 0.5);
+  geo.rotateZ(tilt);
+  geo.translate(x, y, z);
+  parts.push(tint(geo, BROW));
+}
+
+function smile(parts: THREE.BufferGeometry[], radius: number, tube: number, wide: boolean) {
+  if (wide) parts.push(tint(shaped(new THREE.SphereGeometry(1.25, 8, 6), 1.65, 0.55, 0.48, 0, 47.7, 10.85), MOUTH_IN));
+  const lip = new THREE.TorusGeometry(radius, tube, 6, 16, Math.PI);
+  lip.rotateZ(Math.PI);
+  lip.translate(0, 48.15, 11.3);
+  parts.push(tint(lip, LIP));
+}
+
+function openMouth(parts: THREE.BufferGeometry[]) {
+  parts.push(tint(shaped(new THREE.SphereGeometry(1.05, 10, 8), 1.05, 1.2, 0.5, 0, 47.7, 10.7), MOUTH_IN));
+  const lip = new THREE.TorusGeometry(1.2, 0.42, 6, 16);
+  lip.translate(0, 47.7, 11.35);
+  parts.push(tint(lip, LIP));
+}
+
+function nostril(parts: THREE.BufferGeometry[], x: number) {
+  parts.push(tint(shaped(new THREE.SphereGeometry(0.24, 6, 4), 1, 0.7, 0.6, x, 49.75, 12.15), PUPIL));
+}
+
+function addGlasses(parts: THREE.BufferGeometry[], scale: number) {
+  for (const side of [-1, 1]) {
+    const ring = new THREE.TorusGeometry(2.15 * scale, 0.16, 5, 16);
+    ring.translate(side * EYE_X, EYE_Y, 11.85);
+    parts.push(tint(ring, FRAME));
+  }
+  parts.push(tint(shaped(new THREE.SphereGeometry(0.55, 6, 4), 1.7, 0.32, 0.4, 0, EYE_Y, 11.8), FRAME));
+}
+
+function shaped(geo: THREE.BufferGeometry, sx: number, sy: number, sz: number, x: number, y: number, z: number) {
+  geo.scale(sx, sy, sz);
+  geo.translate(x, y, z);
+  return geo;
+}
+
+function tint(geo: THREE.BufferGeometry, color: THREE.Color) {
+  const count = geo.getAttribute('position').count;
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i += 1) {
+    colors[i * 3] = color.r;
+    colors[i * 3 + 1] = color.g;
+    colors[i * 3 + 2] = color.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geo;
+}
+
+function mergeParts(parts: THREE.BufferGeometry[]) {
+  const merged = mergeGeometries(parts, false);
+  if (!merged) return parts[0];
+  for (const part of parts) part.dispose();
+  return merged;
+}
+
 function hairGeometry(style: AvatarLook['hairStyle']) {
   return sharedGeo(`chibi-hair-${style}`, () => {
-    const cap = new THREE.SphereGeometry(13.5, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.46);
-    cap.translate(0, 2.2, 0);
-    if (style === 3) cap.scale(1, 0.42, 1);
-    else if (style === 2) cap.scale(1.02, 1.16, 1.02);
-    else if (style === 1) cap.scale(1.08, 1.2, 1.04);
+    const cap = new THREE.SphereGeometry(11.6, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    cap.translate(0, 2.0, -2.3);
+    if (style === 3) cap.scale(1.02, 0.4, 1);
+    else if (style === 2) cap.scale(1.03, 1.12, 1.03);
+    else if (style === 1) cap.scale(1.06, 1.18, 1.04);
     return cap;
   });
 }
 
 function outlineGeometry() {
-  return sharedGeo('chibi-outline', () => {
-    const head = new THREE.SphereGeometry(13 * 1.075, 12, 10);
-    head.translate(0, 52, 0);
-    const torso = new THREE.SphereGeometry(1, 10, 8);
-    torso.scale(14 * 1.09, 11 * 1.09, 12 * 1.09);
-    torso.translate(0, 32, 0);
-    const merged = mergeGeometries([head, torso], false);
-    if (!merged) {
-      torso.dispose();
-      return head;
-    }
-    head.dispose();
-    torso.dispose();
-    return merged;
-  });
-}
-
-function faceTexture(skin: string, glasses: boolean, expression: Expression) {
-  const key = `${skin}|${glasses ? 1 : 0}|${expression}`;
-  const cached = faceTextures.get(key);
-  if (cached) return cached;
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, 256, 256);
-  ctx.fillStyle = skin;
-  ctx.beginPath();
-  ctx.arc(128, 128, 120, 0, Math.PI * 2);
-  ctx.fill();
-  paintFace(ctx, expression);
-  if (glasses) paintGlasses(ctx);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.needsUpdate = true;
-  texture.userData.shared = true;
-  faceTextures.set(key, texture);
-  return texture;
-}
-
-function paintFace(ctx: CanvasRenderingContext2D, expression: Expression) {
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  const blush = expression === 'happy' || expression === 'wink';
-  if (blush) {
-    ctx.fillStyle = 'rgba(232, 112, 122, 0.55)';
-    ctx.beginPath();
-    ctx.ellipse(68, 168, 22, 12, 0, 0, Math.PI * 2);
-    ctx.ellipse(188, 168, 22, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.strokeStyle = '#3A2418';
-  ctx.fillStyle = '#3A2418';
-  ctx.lineWidth = 7;
-  if (expression === 'surprised') {
-    brow(ctx, 78, 78, 108, 64);
-    brow(ctx, 178, 64, 148, 78);
-  } else if (expression === 'happy' || expression === 'wink') {
-    brow(ctx, 72, 86, 112, 72);
-    brow(ctx, 184, 72, 144, 86);
-  } else {
-    brow(ctx, 70, 84, 112, 78);
-    brow(ctx, 186, 78, 144, 84);
-  }
-  if (expression === 'happy') {
-    eyeArc(ctx, 86, 118, 22, true);
-    eyeArc(ctx, 170, 118, 22, true);
-  } else if (expression === 'wink') {
-    eyeOpen(ctx, 86, 118);
-    eyeArc(ctx, 170, 120, 20, true);
-  } else if (expression === 'surprised') {
-    eyeOpen(ctx, 86, 116, 16);
-    eyeOpen(ctx, 170, 116, 16);
-  } else {
-    eyeOpen(ctx, 86, 118, 13);
-    eyeOpen(ctx, 170, 118, 13);
-  }
-  ctx.strokeStyle = '#C46A6A';
-  ctx.fillStyle = '#E88984';
-  ctx.lineWidth = 6;
-  if (expression === 'surprised') {
-    ctx.beginPath();
-    ctx.ellipse(128, 176, 12, 16, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  } else if (expression === 'happy' || expression === 'wink') {
-    ctx.beginPath();
-    ctx.arc(128, 158, 28, 0.12 * Math.PI, 0.88 * Math.PI);
-    ctx.stroke();
-    ctx.fillStyle = '#E88984';
-    ctx.beginPath();
-    ctx.ellipse(128, 182, 14, 8, 0, 0, Math.PI);
-    ctx.fill();
-  } else {
-    ctx.beginPath();
-    ctx.arc(128, 168, 18, 0.18 * Math.PI, 0.82 * Math.PI);
-    ctx.stroke();
-  }
-}
-
-function brow(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number) {
-  ctx.beginPath();
-  ctx.moveTo(x0, y0);
-  ctx.quadraticCurveTo((x0 + x1) / 2, Math.min(y0, y1) - 10, x1, y1);
-  ctx.stroke();
-}
-
-function eyeOpen(ctx: CanvasRenderingContext2D, x: number, y: number, r = 13) {
-  ctx.fillStyle = '#F7F1EA';
-  ctx.beginPath();
-  ctx.ellipse(x, y, r + 4, r + 6, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#2A1A12';
-  ctx.beginPath();
-  ctx.arc(x + 1, y + 1, r * 0.55, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#FFFFFF';
-  ctx.beginPath();
-  ctx.arc(x + 4, y - 3, 3.2, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function eyeArc(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, smile: boolean) {
-  ctx.strokeStyle = '#3A2418';
-  ctx.lineWidth = 7;
-  ctx.beginPath();
-  if (smile) ctx.arc(x, y + 6, r, 1.15 * Math.PI, 1.85 * Math.PI);
-  else ctx.arc(x, y, r, 0.15 * Math.PI, 0.85 * Math.PI);
-  ctx.stroke();
-}
-
-function paintGlasses(ctx: CanvasRenderingContext2D) {
-  ctx.strokeStyle = '#16161A';
-  ctx.lineWidth = 7;
-  ctx.beginPath();
-  ctx.roundRect(52, 96, 64, 46, 16);
-  ctx.roundRect(140, 96, 64, 46, 16);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(116, 118);
-  ctx.lineTo(140, 118);
-  ctx.moveTo(52, 114);
-  ctx.lineTo(36, 108);
-  ctx.moveTo(204, 114);
-  ctx.lineTo(220, 108);
-  ctx.stroke();
+  return sharedGeo('chibi-outline', () => mergeParts([
+    shaped(new THREE.SphereGeometry(11.15 * 1.07, 12, 10), 1.04, 1.16, 0.88, 0, 54.2, -0.2),
+    shaped(new THREE.SphereGeometry(7.4 * 1.07, 10, 8), 1.08, 0.74, 0.92, 0, 45.4, 3.8),
+    shaped(new THREE.SphereGeometry(1.72 * 1.14, 8, 6), 0.78, 0.66, 1.2, 0, 50.15, 10.15),
+    shaped(new THREE.SphereGeometry(1, 10, 8), 14 * 1.09, 11 * 1.09, 12 * 1.09, 0, 32, 0),
+  ]));
 }
 
 function framedPhoto(image: CanvasImageSource, shape: 'circle' | 'card') {
@@ -598,8 +604,4 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
-}
-
-export function clearFaceTextures() {
-  faceTextures.clear();
 }

@@ -23,7 +23,7 @@ import { clearSharedResources, sharedStandard, sharedTextured, sharedToon } from
 import { assignLods, type LodTier } from './crowd/rules';
 import { govern, startingProfile, type QualityProfile } from './crowd/quality';
 import { expressionFor } from './crowd/look';
-import { buildCar, buildFull, buildMid, clearFaceTextures, disposeRig, lookKey, poseRig, setDim, setExpression, setShadow, type Rig } from './characters';
+import { buildCar, buildFull, buildMid, disposeRig, lookKey, poseRig, setDim, setExpression, setShadow, type Rig } from './characters';
 
 const CHAR_H = 68;
 const WALL_H = 54;
@@ -415,7 +415,6 @@ export class Stage3D {
         item.dispose();
       }
     });
-    clearFaceTextures();
     clearSharedResources();
     this.renderer?.dispose();
     this.renderer?.domElement.remove();
