@@ -102,7 +102,7 @@ export class Stage3D {
 
   static async mount(gameCanvas: HTMLCanvasElement, world: World): Promise<Stage3D> {
     const stage = new Stage3D(world);
-    const ready = await probeWebGL(2000);
+    const ready = await probeWebGL(6000);
     if (!ready) return stage;
     try {
       stage.mobile = isCoarseMobile();

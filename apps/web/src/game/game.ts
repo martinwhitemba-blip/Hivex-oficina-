@@ -178,7 +178,19 @@ export class Game {
 
   /** Para comprobar en capturas que se está usando la escena 3D y no el plano 2D. */
   debugView() {
-    return { mode: this.stage?.ok ? '3d' as const : '2d' as const, characterPx: this.stage?.characterPx ?? 0, zoom: this.camera.zoom };
+    const stats = this.stage?.stats();
+    return {
+      mode: this.stage?.ok ? '3d' as const : '2d' as const,
+      characterPx: this.stage?.characterPx ?? 0,
+      zoom: this.camera.zoom,
+      calls: stats?.calls ?? 0,
+      triangles: stats?.triangles ?? 0,
+      full: stats?.full ?? 0,
+      mid: stats?.mid ?? 0,
+      ghosts: stats?.ghosts ?? 0,
+      billboards: stats?.billboards ?? 0,
+      shadows: Boolean(stats?.shadows),
+    };
   }
 
   allAvatars(): Avatar[] {

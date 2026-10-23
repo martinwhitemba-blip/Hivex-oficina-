@@ -317,6 +317,12 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null, run 
   socket.on('goal:progress', (payload: { goalId?: string; areaId?: string | null; pct?: number }) => {
     if (payload?.goalId) game?.applyGoal({ ...payload, goalId: payload.goalId });
   });
+  try {
+    await withTimeout(game.mount3d(), 8000, 'webgl');
+  } catch (error) {
+    console.error(error);
+  }
+  if (enterStale(run)) return;
   game.start();
   const crowdCount = Number(new URLSearchParams(location.search).get('carga') || new URLSearchParams(location.search).get('load') || 0);
   if (Number.isFinite(crowdCount) && crowdCount > 0) game.spawnCrowd(crowdCount);
@@ -337,12 +343,6 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null, run 
   }
   route();
   await nextFrame();
-  if (enterStale(run)) return;
-  try {
-    await withTimeout(game.mount3d(), 4000, 'webgl');
-  } catch (error) {
-    console.error(error);
-  }
   if (enterStale(run)) return;
   if (marca?.logoUrl && emblem?.naturalWidth) game?.setPlazaLogo(emblem);
   pingTimer = window.setInterval(() => socket?.emit('presence:ping'), 20000);
