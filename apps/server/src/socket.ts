@@ -20,6 +20,16 @@ export function emitCompany(companyId: string, event: string, payload: unknown) 
   ioRef?.to(companyRoom(companyId)).emit(event, payload);
 }
 
+/** Avisos de una persona: llegan a todas sus pestañas y a nadie más. */
+export function emitToMember(companyId: string, membershipId: string, event: string, payload: unknown) {
+  if (!ioRef) return;
+  for (const peer of ioRef.sockets.sockets.values()) {
+    if (peer.data.companyId !== companyId) continue;
+    if (String(peer.data.membershipId) !== membershipId) continue;
+    peer.emit(event, payload);
+  }
+}
+
 export interface TaskUpdateEvent {
   taskId: string;
   companyId: string;

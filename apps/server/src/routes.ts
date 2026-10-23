@@ -33,6 +33,8 @@ import { activationCsv, importPeople, rowsFromRecords } from './peopleImport';
 import { registerBrandRoutes } from './branding';
 import { companyScope, pageArgs } from './tenant';
 import { registerTaskRoutes } from './taskRoutes';
+import { registerNotifyRoutes } from './notifyRoutes';
+import { notifyAchievement, remindDue, unreadCount } from './notify';
 import { taskWhere } from './taskBoard';
 
 const emailSchema = z.string().trim().email('El correo no es válido').transform((v) => v.toLowerCase());
@@ -729,7 +731,7 @@ export function registerRoutes(app: FastifyInstance) {
     }), req.body);
     const date = parseIsoDate(body.date);
     if (!date) throw new HttpError(400, 'La fecha debe ser AAAA-MM-DD');
-    return upsertReport({
+    const saved = await upsertReport({
       companyId: actor.company.id,
       membershipId: actor.membership.id,
       date,
@@ -737,6 +739,8 @@ export function registerRoutes(app: FastifyInstance) {
       metrics: body.metrics,
       source: 'manual',
     });
+    await celebrate(actor.company.id, actor.membership.id, saved.badges);
+    return saved;
   });
 
   app.get('/api/informes/mio', async (req) => {
@@ -785,7 +789,9 @@ export function registerRoutes(app: FastifyInstance) {
     const open = await prisma.clockEntry.findFirst({ where: { membershipId: actor.membership.id, clockOut: null } });
     if (open) return { id: open.id, clockIn: open.clockIn, yaEstabas: true };
     const entry = await prisma.clockEntry.create({ data: { membershipId: actor.membership.id, clockIn: new Date() } });
-    await awardBadge(actor.membership.id, 'fichaje', 'Puntual', 2);
+    if (await awardBadge(actor.membership.id, 'fichaje', 'Puntual', 2)) {
+      await notifyAchievement(actor.company.id, actor.membership.id, { code: 'fichaje', label: 'Puntual', points: 2 });
+    }
     return { id: entry.id, clockIn: entry.clockIn, yaEstabas: false };
   });
 
@@ -816,6 +822,7 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   registerTaskRoutes(app);
+  registerNotifyRoutes(app);
 
   app.get('/api/oficina', async (req) => {
     const actor = await auth(req);
@@ -950,6 +957,7 @@ export function registerRoutes(app: FastifyInstance) {
       })),
       alertCount: filteredAlerts.length,
       directUnread: await directUnreadTotal(actor.company.id, actor.membership.id),
+      notifyUnread: await (async () => { await remindDue(actor); return unreadCount(actor.company.id, actor.membership.id); })(),
       media: mediaInfo(actor.locale),
     };
   });
@@ -1094,6 +1102,7 @@ export function registerRoutes(app: FastifyInstance) {
       metrics: body.metrics,
       source: 'api',
     });
+    await celebrate(company.id, member.id, saved.badges);
     return { ok: true, ...saved };
   });
 }
@@ -1300,6 +1309,12 @@ async function buildPanel(actor: Actor, query: { from?: string; to?: string }) {
     demo: report.isDemo,
   })));
   return { from, to, isDemo: actor.company.isDemo, alerts, areas: areaBlocks, employees, exportRows };
+}
+
+async function celebrate(companyId: string, membershipId: string, badges: { code: string; label: string }[]) {
+  for (const badge of badges) {
+    await notifyAchievement(companyId, membershipId, badge);
+  }
 }
 
 function csvEscape(value: string) {

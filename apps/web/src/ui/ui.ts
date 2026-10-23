@@ -5,6 +5,7 @@
 import { BRAND_NAME, BRAND_TAGLINE, OFFICE_NAME } from '../config';
 import { STATUSES, STATUS_ORDER } from '../data/statuses';
 import { knownPhrase, langSelect, moneyOf, roleName, statusText, t } from '../i18n';
+import { mountNotifyBadge } from '../platform/notifyUnread';
 import { portraitDataUrl } from '../game/avatarRenderer';
 import type { Avatar } from '../game/entities';
 import type { Game } from '../game/game';
@@ -54,6 +55,7 @@ export class UI {
   private toastTimer = 0;
   private filter = '';
   private directUnread = 0;
+  private unmountNotify: (() => void) | null = null;
   private listenersBound = false;
   private honkBtn!: HTMLElement;
   private marca: { nombre: string; oficina: string; logoUrl: string | null } | null = null;
@@ -89,6 +91,8 @@ export class UI {
 
   // ───────────────────────────── Construcción ─────────────────────────────
   private build() {
+    this.unmountNotify?.();
+    this.unmountNotify = null;
     const r = this.root;
     // Rail
     const rail = h('nav', 'rail');
@@ -164,6 +168,12 @@ export class UI {
     menuBtn.title = t('office.peopleRooms');
     menuBtn.onclick = () => this.toggleSidebar();
     top.append(menuBtn);
+    const notify = h('span', 'pill btn', '');
+    notify.id = 'hivex-notify-mount';
+    notify.dataset.hivexNotify = '0';
+    notify.title = t('inbox.bell');
+    top.append(notify);
+    this.unmountNotify = mountNotifyBadge(notify);
     top.insertAdjacentHTML('beforeend', `
       <span class="pill btn nav-open show-sm">${ICONS.list}<span class="lbl">${t('office.manage')}</span></span>
       <span class="pill btn office-pill"><span class="dotg"></span><span class="office-label">${this.hooks.officeName || OFFICE_NAME}</span> ${ICONS.chevron}</span>

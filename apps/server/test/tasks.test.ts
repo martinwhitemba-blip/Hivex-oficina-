@@ -196,6 +196,27 @@ describe('tareas de la empresa', () => {
     expect(blob).toMatch(/companyId.*assigneeId.*status/);
     expect(blob).toMatch(/companyId.*dueDate/);
 
+    const inbox = await json('GET', '/api/notificaciones', tokenEva);
+    expect(inbox.status).toBe(200);
+    const kinds = inbox.body.items.map((item: { kind: string }) => item.kind);
+    expect(kinds).toContain('assignment');
+    expect(kinds).toContain('mention');
+    expect(kinds).toContain('overdue');
+    expect(inbox.body.unread).toBeGreaterThan(0);
+    expect(inbox.body.items.every((item: { payload: { title?: string } }) => item.payload && typeof item.payload === 'object')).toBe(true);
+    const foreign = await json('GET', '/api/notificaciones', tokenB);
+    expect(foreign.body.items.some((item: { payload: { title?: string } }) => item.payload.title === 'Llamar al cliente oro')).toBe(false);
+    const stolen = await json('POST', '/api/notificaciones/leidas', tokenB, { ids: inbox.body.items.map((item: { id: string }) => item.id) });
+    expect(stolen.body.ids).toEqual([]);
+    expect((await json('GET', '/api/notificaciones/contador', tokenEva)).body.unread).toBe(inbox.body.unread);
+    const read = await json('POST', '/api/notificaciones/leidas', tokenEva, {});
+    expect(read.body.unread).toBe(0);
+    expect((await json('GET', '/api/notificaciones', tokenEva)).body.unread).toBe(0);
+    const noticeIndexes = await prisma.$queryRaw<Array<{ sql: string | null }>>`SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'Notification'`;
+    const noticeBlob = noticeIndexes.map((index) => index.sql || '').join('\n');
+    expect(noticeBlob).toMatch(/companyId/);
+    expect(noticeBlob).toMatch(/recipientId/);
+
     expect((await json('DELETE', `/api/tareas/${taskId}`, tokenEva)).status).toBe(403);
     expect((await json('DELETE', `/api/tareas/${taskId}`, tokenA)).status).toBe(200);
     expect((await json('GET', `/api/tareas/${step.body.id}`, tokenA)).status).toBe(404);

@@ -91,6 +91,7 @@
     "areas": "Espaces",
     "map": "Plan",
     "tasks": "Tâches",
+    "inbox": "Signaux",
     "day": "Journée",
     "chat": "Discussion",
     "badges": "Succès",
@@ -320,6 +321,20 @@
     "send": "Envoyer",
     "mentionHint": "Utilise @ et le nom d'un collègue de ton entreprise.",
     "noComments": "Personne n'a encore parlé de cette mission."
+  },
+  "inbox": {
+    "title": "Signaux",
+    "subtitle": "La cloche du bureau. Ce qui te concerne, sans perdre le rythme.",
+    "empty": "Aucun signal. Le silence compte aussi.",
+    "mark": "Lu",
+    "markAll": "Tout faire taire",
+    "assignment": "On t'a passé «{title}»",
+    "handoff": "{name} t'a lâché «{title}»",
+    "mention": "{name} t'a nommé dans «{title}»",
+    "achievement": "Nouvel insigne : {title}",
+    "dueSoon": "«{title}» arrive à échéance le {date}",
+    "overdue": "«{title}» est resté en arrière ({date})",
+    "bell": "Signaux"
   },
   "day": {
     "title": "Rapport de journée",

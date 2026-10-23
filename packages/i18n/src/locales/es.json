@@ -91,6 +91,7 @@
     "areas": "Áreas",
     "map": "Mapa",
     "tasks": "Tareas",
+    "inbox": "Avisos",
     "day": "Jornada",
     "chat": "Chat",
     "badges": "Logros",
@@ -320,6 +321,20 @@
     "send": "Enviar",
     "mentionHint": "Usa @ y el nombre de un compañero de tu empresa.",
     "noComments": "Nadie ha hablado de esta misión todavía."
+  },
+  "inbox": {
+    "title": "Avisos",
+    "subtitle": "La campana de la oficina. Lo que te toca, sin perder el ritmo.",
+    "empty": "Sin avisos. El silencio también suma.",
+    "mark": "Leído",
+    "markAll": "Silenciar todo",
+    "assignment": "Te han pasado «{title}»",
+    "handoff": "{name} soltó «{title}»",
+    "mention": "{name} te nombró en «{title}»",
+    "achievement": "Insignia nueva: {title}",
+    "dueSoon": "«{title}» vence el {date}",
+    "overdue": "«{title}» se quedó atrás ({date})",
+    "bell": "Avisos"
   },
   "day": {
     "title": "Informe de jornada",

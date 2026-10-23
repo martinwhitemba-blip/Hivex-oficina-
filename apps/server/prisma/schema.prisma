@@ -42,7 +42,8 @@ model Company {
   rooms       OfficeRoom[]
   desks       DeskAssignment[]
   tasks        Task[]
-  taskComments TaskComment[]
+  taskComments  TaskComment[]
+  notifications Notification[]
   messages       ChatMessage[]
   directMessages DirectMessage[]
   reports        DailyReport[]
@@ -103,6 +104,7 @@ model Membership {
   tasks         Task[]         @relation("assignee")
   createdTasks  Task[]         @relation("taskCreator")
   taskComments  TaskComment[]
+  notifications Notification[]
   badges        Badge[]
   messages        ChatMessage[]
   sentDirects     DirectMessage[] @relation("DmSender")
@@ -254,6 +256,21 @@ model TaskComment {
 
   @@index([companyId])
   @@index([companyId, taskId, createdAt])
+}
+
+model Notification {
+  id          String     @id @default(cuid())
+  companyId   String
+  recipientId String
+  kind        String
+  payload     String     @default("{}")
+  readAt      DateTime?
+  createdAt   DateTime   @default(now())
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  recipient   Membership @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, recipientId, readAt])
 }
 
 model Invite {

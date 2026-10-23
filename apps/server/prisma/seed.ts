@@ -145,6 +145,7 @@ async function main() {
     }
     await refreshSmallPhotos(existing.id);
     await ensureBoardExtras(existing.id);
+    await ensureDemoNotices(existing.id);
     console.log('La empresa de demostración ya existe. No se toca: invitaciones, personas y mensajes siguen ahí.');
     return;
   }
@@ -322,10 +323,28 @@ async function main() {
   });
 
   await ensureBoardExtras(company.id);
+  await ensureDemoNotices(company.id);
 
   console.log('Empresa demo lista.');
   console.log('Entra con martin@hivex.demo / hivex-demo');
   console.log('También: hugo@, lucia@, carmen@, martin.soto@, luis@, naomi@, maite@ hivex.demo (misma contraseña).');
+}
+
+/** Un aviso de bienvenida si el dueño todavía no tiene ninguno. */
+async function ensureDemoNotices(companyId: string) {
+  const owner = await prisma.membership.findFirst({ where: { companyId, role: 'propietario', active: true } });
+  if (!owner) return;
+  const count = await prisma.notification.count({ where: { companyId, recipientId: owner.id } });
+  if (count > 0) return;
+  const task = await prisma.task.findFirst({ where: { companyId, title: 'Cerrar el tablero de la semana' } });
+  await prisma.notification.create({
+    data: {
+      companyId,
+      recipientId: owner.id,
+      kind: 'assignment',
+      payload: JSON.stringify({ taskId: task?.id || '', title: task?.title || 'La oficina abre el juego' }),
+    },
+  });
 }
 
 /** Añade misiones de ejemplo si todavía no están. No reescribe tareas ya creadas. */

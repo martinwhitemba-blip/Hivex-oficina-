@@ -154,3 +154,8 @@ table.data tr:hover td { background: rgba(255,255,255,.03); }
 .quest-log article { display: flex; gap: 8px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
 .quest textarea { min-height: 72px; }
 .drop-hint { opacity: .7; }
+.pn .cnt, #hivex-notify-mount .cnt { margin-left: 6px; background: var(--gold); color: #0B0B0C; border-radius: 999px; padding: 0 6px; font-size: 11px; }
+.note-list { display: grid; gap: 8px; }
+.note-list article { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.note-list article.unread { border-color: rgba(245,197,24,.65); box-shadow: 0 0 0 1px rgba(245,197,24,.25); }
+.note-list .btn { width: auto; margin: 0; }

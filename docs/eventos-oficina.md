@@ -99,6 +99,37 @@ Servidor → sala:
 
 El texto se recorta a 140 caracteres.
 
+## `notify:new` y `notify:read`
+
+La campana no va a toda la sala: llega solo a los sockets de esa persona dentro de la empresa, para que varias pestañas coincidan. El resto de la oficina no ve el aviso.
+
+`notify:new`:
+
+```json
+{
+  "id": "clx…",
+  "kind": "assignment | due_soon | overdue | mention | achievement | handoff",
+  "payload": { "taskId": "clx…", "title": "Llamar al cliente oro" },
+  "createdAt": "2026-10-23T12:00:00.000Z",
+  "unread": 3
+}
+```
+
+`payload` es un objeto. Según el `kind` puede traer `title`, `fromName`, `dueDate`, `excerpt`, `code` o `points`. `unread` es el total sin leer de esa persona.
+
+`notify:read`:
+
+```json
+{ "ids": ["clx…"], "unread": 2 }
+```
+
+El cliente puede montar el contador sin tocar el escenario 3D:
+
+- `mountNotifyBadge(elemento)` en `apps/web/src/platform/notifyUnread.ts`
+- `window.__hivexNotify.total()`, `.refresh()` y `.mount(elemento)`
+- el evento de ventana `hivex-notify` con `detail` igual al número
+- un nodo `[data-hivex-notify]` o `#hivex-notify-mount` en la barra de la oficina
+
 ## Límite
 
 `office:emote` y `office:bubble` aceptan **como mucho uno por segundo y por persona**, cada uno por su lado. El que llega antes de tiempo se tira sin aviso y sin guardarlo. El resto de eventos de esta página no tiene ese límite: salen de una acción guardada (tarea o misión).

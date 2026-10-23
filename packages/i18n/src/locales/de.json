@@ -91,6 +91,7 @@
     "areas": "Bereiche",
     "map": "Karte",
     "tasks": "Aufgaben",
+    "inbox": "Rufe",
     "day": "Arbeitstag",
     "chat": "Chat",
     "badges": "Erfolge",
@@ -320,6 +321,20 @@
     "send": "Senden",
     "mentionHint": "Nutze @ und den Namen einer Person aus deinem Unternehmen.",
     "noComments": "Über diese Mission hat noch niemand gesprochen."
+  },
+  "inbox": {
+    "title": "Rufe",
+    "subtitle": "Die Büroglocke. Was dich betrifft, ohne den Takt zu verlieren.",
+    "empty": "Keine Rufe. Stille zählt auch.",
+    "mark": "Gelesen",
+    "markAll": "Alles leise",
+    "assignment": "«{title}» liegt jetzt bei dir",
+    "handoff": "{name} hat dir «{title}» gegeben",
+    "mention": "{name} hat dich in «{title}» genannt",
+    "achievement": "Neues Abzeichen: {title}",
+    "dueSoon": "«{title}» ist fällig am {date}",
+    "overdue": "«{title}» ist liegen geblieben ({date})",
+    "bell": "Rufe"
   },
   "day": {
     "title": "Tagesbericht",

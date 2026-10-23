@@ -5,6 +5,8 @@ import { authMode } from '../routing';
 import { clearDirect, directConversationOpen, directUnreadOf, directUnreadTotal, onDirectArrival, seedDirectUnread, watchDirect } from './directUnread';
 import { api, clock, esc, getToken, money, num } from './api';
 import { renderTasks } from './tasksPage';
+import { renderInbox } from './inboxPage';
+import { paintNotifyNav } from './notifyUnread';
 import { applyMarca, readableOnInk, type Marca } from './brand';
 import logoUrl from '../assets/hivex-logo.png';
 
@@ -30,12 +32,12 @@ export function setProfileLocale(value: string | null | undefined) {
 
 const NAV: [string, MessageKey][] = [
   ['oficina', 'nav.office'], ['dueno', 'nav.owner'], ['negocio', 'nav.business'], ['equipo', 'nav.team'],
-  ['areas', 'nav.areas'], ['mapa', 'nav.map'], ['tareas', 'nav.tasks'], ['jornada', 'nav.day'],
+  ['areas', 'nav.areas'], ['mapa', 'nav.map'], ['tareas', 'nav.tasks'], ['avisos', 'nav.inbox'], ['jornada', 'nav.day'],
   ['chat', 'nav.chat'], ['logros', 'nav.badges'], ['plan', 'nav.plan'], ['captacion', 'nav.leads'],
 ];
 
 export function shell(view: string, title: string, subtitle: string, body: string) {
-  const nav = NAV.map(([id, label]) => `<a class="${view === id ? 'on' : ''}" href="#/${id}">${t(label)}</a>`).join('');
+  const nav = NAV.map(([id, label]) => `<a class="${view === id ? 'on' : ''}" href="#/${id}">${t(label)}${id === 'avisos' ? '<span data-hivex-notify-count class="cnt" hidden></span>' : ''}</a>`).join('');
   return `<div class="page"><nav class="pn">${nav}</nav><header class="ph"><div><h1>${title}</h1><p>${subtitle}</p><p class="powered">${t('brand.powered')}</p></div>${langSelect()}</header>${body}</div>`;
 }
 
@@ -216,14 +218,17 @@ export async function renderView(root: HTMLElement, view: string, session: Sessi
     else if (view === 'areas') await renderAreas(root, session);
     else if (view === 'mapa') await renderMapEditor(root, session);
     else if (view === 'tareas') await renderTasks(root, session);
+    else if (view === 'avisos') await renderInbox(root);
     else if (view === 'jornada') await renderDay(root, session);
     else if (view === 'chat') await renderChat(root, session, socket);
     else if (view === 'logros') await renderBadges(root);
     else if (view === 'plan') await renderPlan(root, session);
     else if (view === 'captacion') await renderLeads(root, session);
     else root.innerHTML = shell('oficina', t('nav.office'), '', '');
+    paintNotifyNav(root);
   } catch (error) {
     root.innerHTML = shell(view, t('common.loadFail'), '', `<div class="err">${esc(error instanceof Error ? error.message : t('common.error'))}</div>`);
+    paintNotifyNav(root);
   }
 }
 

@@ -6,6 +6,7 @@ import { audit } from './billing';
 import { awardBadge } from './services';
 import { broadcastPanel, publishTaskHandoff, publishTaskUpdate, type TaskUpdateEvent } from './socket';
 import { resolveMentions } from './mentions';
+import { notifyAchievement, notifyMember } from './notify';
 
 export const TASK_STATUSES = ['pendiente', 'en_curso', 'hecho'] as const;
 export const TASK_PRIORITIES = ['baja', 'media', 'alta'] as const;
@@ -157,6 +158,13 @@ export async function createTask(actor: Actor, input: {
   publishTaskUpdate(actor.company.id, taskEvent(actor.company.id, task));
   if (task.assigneeId) {
     publishTaskHandoff(actor.company.id, { fromMembershipId: null, toMembershipId: task.assigneeId, taskId: task.id });
+    await notifyMember({
+      companyId: actor.company.id,
+      recipientId: task.assigneeId,
+      kind: 'assignment',
+      actorId: actor.membership.id,
+      payload: { taskId: task.id, title: task.title },
+    });
   }
   await broadcastPanel(actor.company.id);
   return taskDto(task, true);
@@ -195,6 +203,13 @@ export async function createSubtask(actor: Actor, parentId: string, input: {
   publishTaskUpdate(actor.company.id, taskEvent(actor.company.id, task));
   if (task.assigneeId) {
     publishTaskHandoff(actor.company.id, { fromMembershipId: null, toMembershipId: task.assigneeId, taskId: task.id });
+    await notifyMember({
+      companyId: actor.company.id,
+      recipientId: task.assigneeId,
+      kind: 'assignment',
+      actorId: actor.membership.id,
+      payload: { taskId: task.id, title: task.title },
+    });
   }
   await broadcastPanel(actor.company.id);
   return taskDto(task, false);
@@ -243,10 +258,26 @@ export async function updateTask(actor: Actor, id: string, input: {
   }
   const reassigned = input.assigneeId !== undefined && input.assigneeId !== task.assigneeId;
   if (reassigned) {
-    if (task.assigneeId) await clearFocus(actor.company.id, task.assigneeId, task.id);
+    if (task.assigneeId) {
+      await clearFocus(actor.company.id, task.assigneeId, task.id);
+      await notifyMember({
+        companyId: actor.company.id,
+        recipientId: task.assigneeId,
+        kind: 'handoff',
+        actorId: actor.membership.id,
+        payload: { taskId: updated.id, title: updated.title, fromName: actor.membership.name },
+      });
+    }
     if (input.assigneeId) {
       await focusTask(actor.company.id, input.assigneeId, updated.id, updated.title);
       await audit(actor.company.id, actor.membership.id, 'reasignar_tarea', `${actor.membership.name} reasignó «${updated.title}»`, { taskId: id, assigneeId: input.assigneeId });
+      await notifyMember({
+        companyId: actor.company.id,
+        recipientId: input.assigneeId,
+        kind: 'assignment',
+        actorId: actor.membership.id,
+        payload: { taskId: updated.id, title: updated.title },
+      });
     }
   } else if (updated.assigneeId && updated.status === 'en_curso' && task.status !== 'en_curso') {
     await focusTask(actor.company.id, updated.assigneeId, updated.id, updated.title);
@@ -312,6 +343,15 @@ export async function addComment(actor: Actor, taskId: string, body: string, exp
     },
     include: { author: { select: { id: true, name: true } } },
   });
+  for (const recipientId of mentions) {
+    await notifyMember({
+      companyId: actor.company.id,
+      recipientId,
+      kind: 'mention',
+      actorId: actor.membership.id,
+      payload: { taskId: task.id, title: task.title, fromName: actor.membership.name, excerpt: text.slice(0, 140) },
+    });
+  }
   return { comment: commentDto(row, members), mentions, taskTitle: task.title };
 }
 
@@ -402,7 +442,9 @@ async function completeTaskPoints(companyId: string, membershipId: string) {
   if (!member) return;
   await prisma.membership.update({ where: { id: membershipId }, data: { points: { increment: 8 } } });
   const done = await prisma.task.count({ where: { ...companyScope(companyId), assigneeId: membershipId, status: 'hecho' } });
-  if (done >= 1) await awardBadge(membershipId, 'tarea_hecha', 'Manos a la obra');
+  if (done >= 1 && await awardBadge(membershipId, 'tarea_hecha', 'Manos a la obra')) {
+    await notifyAchievement(companyId, membershipId, { code: 'tarea_hecha', label: 'Manos a la obra', points: 8 });
+  }
 }
 
 async function focusTask(companyId: string, membershipId: string, taskId: string, title: string) {

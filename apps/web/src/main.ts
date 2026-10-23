@@ -14,6 +14,7 @@ import { ApiError, api, clearToken, getToken } from './platform/api';
 import { applyMarca, type Marca } from './platform/brand';
 import { paintSessionNotice, renderAuth, renderPasswordGate, renderView, setProfileLocale, type Session } from './platform/pages';
 import { hintDirectUnread, receiveDirect, resetDirectUnread, watchDirect } from './platform/directUnread';
+import { applyNotifyNew, applyNotifyRead, refreshNotifyUnread, resetNotifyUnread } from './platform/notifyUnread';
 import { isAuthScreen, isPublicJoin, viewForSession } from './routing';
 import { UI } from './ui/ui';
 import markUrl from './assets/hivex-mark.png';
@@ -286,7 +287,10 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null, run 
   game.start();
   resetDirectUnread();
   hintDirectUnread(hud.directUnread ?? 0);
+  void refreshNotifyUnread().catch(() => {});
   ui.applyMarca({ nombre: marca?.nombre || current.membership.company.name, oficina: marca?.oficina || hud.officeName, logoUrl: marca?.logoUrl || null });
+  socket.on('notify:new', (payload: { unread?: number }) => applyNotifyNew(payload));
+  socket.on('notify:read', (payload: { unread?: number }) => applyNotifyRead(payload));
   socket.on('dm:message', (message: { id?: string; senderId?: string; recipientId?: string }) => {
     if (!message?.id || !message.senderId || !message.recipientId) return;
     receiveDirect({ id: message.id, senderId: message.senderId, recipientId: message.recipientId }, current.membership.id);
@@ -338,6 +342,7 @@ function logout(opts?: { keepHash?: boolean }) {
   clearToken();
   teardownOffice();
   resetDirectUnread();
+  resetNotifyUnread();
   session = null;
   setProfileLocale(null);
   officeMedia = null;

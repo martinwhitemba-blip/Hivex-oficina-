@@ -91,6 +91,7 @@
     "areas": "Areas",
     "map": "Map",
     "tasks": "Tasks",
+    "inbox": "Pings",
     "day": "Workday",
     "chat": "Chat",
     "badges": "Achievements",
@@ -320,6 +321,20 @@
     "send": "Send",
     "mentionHint": "Use @ and a teammate's name from your company.",
     "noComments": "Nobody has talked about this mission yet."
+  },
+  "inbox": {
+    "title": "Pings",
+    "subtitle": "The office bell. What is yours to play, without losing the beat.",
+    "empty": "No pings. Quiet counts too.",
+    "mark": "Read",
+    "markAll": "Silence all",
+    "assignment": "«{title}» landed on your desk",
+    "handoff": "{name} passed you «{title}»",
+    "mention": "{name} called you in «{title}»",
+    "achievement": "New badge: {title}",
+    "dueSoon": "«{title}» is due {date}",
+    "overdue": "«{title}» fell behind ({date})",
+    "bell": "Pings"
   },
   "day": {
     "title": "Workday report",

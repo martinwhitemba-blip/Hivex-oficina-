@@ -97,14 +97,11 @@ export async function upsertReport(input: {
   });
   await prisma.dailyReport.update({ where: { id: report.id }, data: { pointsAwarded: award.points } });
   await prisma.membership.update({ where: { id: member.id }, data: { points: { increment: award.points } } });
+  const fresh: { code: string; label: string }[] = [];
   for (const badge of award.badges) {
-    await prisma.badge.upsert({
-      where: { membershipId_code: { membershipId: member.id, code: badge.code } },
-      create: { membershipId: member.id, code: badge.code, label: badge.label },
-      update: {},
-    });
+    if (await awardBadge(member.id, badge.code, badge.label)) fresh.push(badge);
   }
-  return { reportId: report.id, pointsAwarded: award.points, badges: award.badges };
+  return { reportId: report.id, pointsAwarded: award.points, badges: fresh };
 }
 
 export async function awardBadge(membershipId: string, code: string, label: string, points = 0) {
