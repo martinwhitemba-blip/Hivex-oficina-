@@ -159,3 +159,15 @@ table.data tr:hover td { background: rgba(255,255,255,.03); }
 .note-list article { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .note-list article.unread { border-color: rgba(245,197,24,.65); box-shadow: 0 0 0 1px rgba(245,197,24,.25); }
 .note-list .btn { width: auto; margin: 0; }
+.mission-grid { display: grid; gap: 12px; margin: 12px 0; }
+.mission { padding: 14px 16px; border: 1px solid rgba(245,197,24,.28); border-radius: 14px; background: rgba(255,255,255,.03); }
+.mission header { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.mission .muted { opacity: .75; margin: 4px 0; }
+.mission-bar { height: 14px; border-radius: 999px; background: #1c1c1f; overflow: hidden; margin: 8px 0; }
+.mission-bar > span { display: block; height: 100%; background: linear-gradient(90deg, #F5C518, #fff1a8); }
+.mission-pop { animation: mission-pop .7s ease; box-shadow: 0 0 24px rgba(245,197,24,.35); }
+@keyframes mission-pop { 0% { transform: scale(.98); } 40% { transform: scale(1.03); } 100% { transform: scale(1); } }
+.streak-pill { display: inline-block; background: #F5C518; color: #0B0B0C; font-weight: 800; border-radius: 999px; padding: 4px 10px; }
+.mission-celebrate { background: rgba(245,197,24,.16); border: 1px solid rgba(245,197,24,.5); border-radius: 12px; padding: 10px 14px; font-weight: 700; }
+.mission form.manual, .mission-new { display: grid; gap: 6px; margin-top: 8px; }
+.mission .btn { width: auto; }

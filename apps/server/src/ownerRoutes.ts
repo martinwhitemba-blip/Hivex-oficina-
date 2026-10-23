@@ -6,6 +6,7 @@ import { canManageCompany } from './domain';
 import { actorFromRequest, HttpError, parseBody } from './http';
 import { collectOnline, broadcastPanel, filterOwner, publishTaskHandoff, publishTaskUpdate } from './socket';
 import { dueIso } from './taskBoard';
+import { refreshTaskGoals } from './missions';
 import { ownerSnapshot } from './ownerSnapshot';
 import { payments } from './payments';
 import { prisma } from './prisma';
@@ -80,6 +81,15 @@ export function registerOwnerRoutes(app: FastifyInstance) {
     });
     if (task.assigneeId !== next.id) {
       publishTaskHandoff(actor.company.id, { fromMembershipId: task.assigneeId, toMembershipId: next.id, taskId: task.id });
+    }
+    if (task.status === 'hecho') {
+      await refreshTaskGoals({
+        companyId: actor.company.id,
+        areaIds: [task.areaId],
+        assigneeIds: [task.assigneeId, next.id],
+        goalIds: [task.weeklyGoalId],
+        doneAts: [task.doneAt],
+      });
     }
     await broadcastPanel(actor.company.id);
     return { ok: true, summary };

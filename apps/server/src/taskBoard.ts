@@ -7,6 +7,7 @@ import { awardBadge } from './services';
 import { broadcastPanel, publishTaskHandoff, publishTaskUpdate, type TaskUpdateEvent } from './socket';
 import { resolveMentions } from './mentions';
 import { notifyAchievement, notifyMember } from './notify';
+import { noteActivity, refreshTaskGoals } from './missions';
 
 export const TASK_STATUSES = ['pendiente', 'en_curso', 'hecho'] as const;
 export const TASK_PRIORITIES = ['baja', 'media', 'alta'] as const;
@@ -134,6 +135,7 @@ export async function createTask(actor: Actor, input: {
     throw new HttpError(403, 'Solo puedes crear tareas de tu área');
   }
   if (input.assigneeId) await assertAssignee(actor, input.assigneeId, area.id);
+  if (input.weeklyGoalId) await assertGoal(actor, input.weeklyGoalId);
   const due = parseDue(input.dueDate);
   const status = input.status || 'pendiente';
   const task = await prisma.task.create({
@@ -153,7 +155,19 @@ export async function createTask(actor: Actor, input: {
     },
     include: boardInclude(actor.company.id),
   });
-  if (status === 'hecho' && task.assigneeId) await completeTaskPoints(actor.company.id, task.assigneeId);
+  if (status === 'hecho' && task.assigneeId) {
+    await completeTaskPoints(actor.company.id, task.assigneeId);
+    if (task.doneAt) await noteActivity(actor.company.id, task.assigneeId, task.doneAt.toISOString().slice(0, 10));
+  }
+  if (status === 'hecho') {
+    await refreshTaskGoals({
+      companyId: actor.company.id,
+      areaIds: [task.areaId],
+      assigneeIds: [task.assigneeId],
+      goalIds: [task.weeklyGoalId],
+      doneAts: [task.doneAt],
+    });
+  }
   if (task.assigneeId && status === 'en_curso') await focusTask(actor.company.id, task.assigneeId, task.id, task.title);
   publishTaskUpdate(actor.company.id, taskEvent(actor.company.id, task));
   if (task.assigneeId) {
@@ -235,6 +249,7 @@ export async function updateTask(actor: Actor, id: string, input: {
     throw new HttpError(403, 'Solo puedes mover tus tareas');
   }
   if (input.assigneeId) await assertAssignee(actor, input.assigneeId, task.areaId);
+  if (input.weeklyGoalId) await assertGoal(actor, input.weeklyGoalId);
   const due = parseDue(input.dueDate);
   const wasDone = task.status === 'hecho';
   const updated = await prisma.task.update({
@@ -255,6 +270,16 @@ export async function updateTask(actor: Actor, id: string, input: {
   if (!wasDone && updated.status === 'hecho' && updated.assigneeId) {
     await completeTaskPoints(actor.company.id, updated.assigneeId);
     await clearFocus(actor.company.id, updated.assigneeId, updated.id);
+    if (updated.doneAt) await noteActivity(actor.company.id, updated.assigneeId, updated.doneAt.toISOString().slice(0, 10));
+  }
+  if (wasDone || updated.status === 'hecho') {
+    await refreshTaskGoals({
+      companyId: actor.company.id,
+      areaIds: [task.areaId, updated.areaId],
+      assigneeIds: [task.assigneeId, updated.assigneeId],
+      goalIds: [task.weeklyGoalId, updated.weeklyGoalId],
+      doneAts: [task.doneAt, updated.doneAt],
+    });
   }
   const reassigned = input.assigneeId !== undefined && input.assigneeId !== task.assigneeId;
   if (reassigned) {
@@ -419,6 +444,12 @@ async function ownArea(actor: Actor, id: string) {
   const area = await prisma.area.findFirst({ where: { id, ...companyScope(actor.company.id) } });
   if (!area) throw new HttpError(404, 'Área no encontrada');
   return area;
+}
+
+async function assertGoal(actor: Actor, goalId: string) {
+  const goal = await prisma.weeklyGoal.findFirst({ where: { id: goalId, ...companyScope(actor.company.id) } });
+  if (!goal) throw new HttpError(404, 'Misión no encontrada');
+  return goal;
 }
 
 async function assertAssignee(actor: Actor, membershipId: string, areaId: string) {

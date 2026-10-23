@@ -92,6 +92,7 @@
     "map": "Map",
     "tasks": "Tasks",
     "inbox": "Pings",
+    "missions": "Missions",
     "day": "Workday",
     "chat": "Chat",
     "badges": "Achievements",
@@ -335,6 +336,32 @@
     "dueSoon": "«{title}» is due {date}",
     "overdue": "«{title}» fell behind ({date})",
     "bell": "Pings"
+  },
+  "missions": {
+    "title": "Missions of the week",
+    "subtitle": "One bar, one prize, and a streak you will not want to break.",
+    "streak": "{days}-day streak",
+    "streakZero": "Your streak starts with the next card or the next report.",
+    "empty": "This week has no mission yet. Invent one and ring the bell.",
+    "progress": "{current} of {target}",
+    "reward": "+{points} points when you cross the line",
+    "done": "Mission complete!",
+    "celebrate": "The bar hit the end. Points and a badge, exactly once.",
+    "metricTasks": "Cards done",
+    "metricKpi": "Indicator",
+    "metricManual": "By hand",
+    "area": "Area",
+    "person": "Personal",
+    "new": "New mission",
+    "titlePh": "Mission name",
+    "target": "Target",
+    "points": "Prize points",
+    "create": "Launch mission",
+    "manualSet": "Mark progress",
+    "save": "Save progress",
+    "delete": "Pull it",
+    "week": "Week of {date}",
+    "kpiKey": "Indicator key"
   },
   "day": {
     "title": "Workday report",
@@ -692,6 +719,15 @@
       "nest": "A subtask cannot have subtasks",
       "comment": "Write a comment",
       "commentDelete": "You cannot delete this comment"
+    },
+    "mission": {
+      "name": "Enter the mission name",
+      "scope": "Pick an area or a person",
+      "missing": "Mission not found",
+      "kpi": "That mission needs an area indicator",
+      "notYours": "That mission is not yours",
+      "target": "The target has to be greater than zero",
+      "auto": "This mission's progress counts itself"
     },
     "map": {
       "edit": "Only the owner can edit the map",

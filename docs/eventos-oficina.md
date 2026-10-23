@@ -44,7 +44,7 @@ Se emite cuando cambia la persona asignada (al crear con alguien, al reasignar d
 
 ## `goal:progress`
 
-Se emite cuando el avance de una misión semanal cambia (al cerrar tareas, al guardar un indicador o al ajustar una misión manual). El modelo de misiones llega con esa pantalla; el evento ya tiene esta forma.
+Se emite cuando el avance de una `WeeklyGoal` cambia: al cerrar una carta de primer nivel, al guardar un indicador o al ajustar una misión manual. Solo a la sala de esa empresa.
 
 ```json
 {

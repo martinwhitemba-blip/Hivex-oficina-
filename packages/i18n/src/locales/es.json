@@ -92,6 +92,7 @@
     "map": "Mapa",
     "tasks": "Tareas",
     "inbox": "Avisos",
+    "missions": "Misiones",
     "day": "Jornada",
     "chat": "Chat",
     "badges": "Logros",
@@ -335,6 +336,32 @@
     "dueSoon": "«{title}» vence el {date}",
     "overdue": "«{title}» se quedó atrás ({date})",
     "bell": "Avisos"
+  },
+  "missions": {
+    "title": "Misiones de la semana",
+    "subtitle": "Una barra, un premio, y la racha que no quieres romper.",
+    "streak": "Racha de {days} días",
+    "streakZero": "Tu racha empieza con la próxima carta o el próximo parte.",
+    "empty": "Esta semana aún no tiene misión. Inventa una y que suene la campana.",
+    "progress": "{current} de {target}",
+    "reward": "+{points} puntos al cruzar la meta",
+    "done": "¡Misión cumplida!",
+    "celebrate": "La barra llegó al final. Puntos e insignia, una sola vez.",
+    "metricTasks": "Cartas hechas",
+    "metricKpi": "Indicador",
+    "metricManual": "A pulso",
+    "area": "Del área",
+    "person": "Personal",
+    "new": "Nueva misión",
+    "titlePh": "Nombre de la misión",
+    "target": "Meta",
+    "points": "Puntos de premio",
+    "create": "Lanzar misión",
+    "manualSet": "Marcar avance",
+    "save": "Guardar avance",
+    "delete": "Retirar",
+    "week": "Semana del {date}",
+    "kpiKey": "Clave del indicador"
   },
   "day": {
     "title": "Informe de jornada",
@@ -692,6 +719,15 @@
       "nest": "Una subtarea no puede tener subtareas",
       "comment": "Escribe un comentario",
       "commentDelete": "No puedes borrar este comentario"
+    },
+    "mission": {
+      "name": "Escribe el nombre de la misión",
+      "scope": "Elige un área o una persona",
+      "missing": "Misión no encontrada",
+      "kpi": "Esa misión necesita un indicador del área",
+      "notYours": "Esa misión no es tuya",
+      "target": "La meta tiene que ser mayor que cero",
+      "auto": "El avance de esta misión se calcula solo"
     },
     "map": {
       "edit": "Solo el propietario puede editar el mapa",

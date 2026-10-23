@@ -237,6 +237,42 @@ export function streakEnding(dates: string[], end: string) {
   return count;
 }
 
+/** Lunes UTC de la semana que contiene `iso` (AAAA-MM-DD). */
+export function weekStartOf(iso: string) {
+  const day = iso.slice(0, 10);
+  const date = new Date(`${day}T12:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return day;
+  const weekday = date.getUTCDay();
+  const diff = weekday === 0 ? -6 : 1 - weekday;
+  date.setUTCDate(date.getUTCDate() + diff);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Racha de días de calendario seguidos. El fin de semana también cuenta: si no hay actividad, se rompe. */
+export function bumpStreak(current: { streakDays: number; streakLastDate: string | null }, activityDate: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(activityDate)) return current;
+  if (current.streakLastDate === activityDate) return current;
+  if (current.streakLastDate && current.streakLastDate > activityDate) return current;
+  if (current.streakLastDate === addDays(activityDate, -1)) {
+    return { streakDays: current.streakDays + 1, streakLastDate: activityDate };
+  }
+  return { streakDays: 1, streakLastDate: activityDate };
+}
+
+/** Días seguidos hasta hoy, o hasta ayer si hoy todavía no hay actividad. */
+export function streakAsOf(dates: string[], today: string) {
+  const set = new Set(dates.map((date) => date.slice(0, 10)));
+  const end = set.has(today) ? today : addDays(today, -1);
+  if (!set.has(end)) return { streakDays: 0, streakLastDate: null as string | null };
+  let count = 0;
+  let cursor = end;
+  while (set.has(cursor) && count < 400) {
+    count += 1;
+    cursor = addDays(cursor, -1);
+  }
+  return { streakDays: count, streakLastDate: end };
+}
+
 export function slugify(name: string) {
   const base = name
     .normalize('NFD')

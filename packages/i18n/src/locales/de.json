@@ -92,6 +92,7 @@
     "map": "Karte",
     "tasks": "Aufgaben",
     "inbox": "Rufe",
+    "missions": "Missionen",
     "day": "Arbeitstag",
     "chat": "Chat",
     "badges": "Erfolge",
@@ -335,6 +336,32 @@
     "dueSoon": "«{title}» ist fällig am {date}",
     "overdue": "«{title}» ist liegen geblieben ({date})",
     "bell": "Rufe"
+  },
+  "missions": {
+    "title": "Missionen der Woche",
+    "subtitle": "Ein Balken, ein Preis, und eine Serie, die du nicht reißen willst.",
+    "streak": "Serie von {days} Tagen",
+    "streakZero": "Deine Serie beginnt mit der nächsten Karte oder dem nächsten Bericht.",
+    "empty": "Diese Woche hat noch keine Mission. Erfinde eine und lass die Glocke klingen.",
+    "progress": "{current} von {target}",
+    "reward": "+{points} Punkte beim Überqueren der Linie",
+    "done": "Mission geschafft!",
+    "celebrate": "Der Balken ist am Ende. Punkte und Abzeichen, genau einmal.",
+    "metricTasks": "Karten erledigt",
+    "metricKpi": "Kennzahl",
+    "metricManual": "Von Hand",
+    "area": "Bereich",
+    "person": "Persönlich",
+    "new": "Neue Mission",
+    "titlePh": "Name der Mission",
+    "target": "Ziel",
+    "points": "Preispunkte",
+    "create": "Mission starten",
+    "manualSet": "Fortschritt setzen",
+    "save": "Fortschritt speichern",
+    "delete": "Zurückziehen",
+    "week": "Woche vom {date}",
+    "kpiKey": "Schlüssel der Kennzahl"
   },
   "day": {
     "title": "Tagesbericht",
@@ -692,6 +719,15 @@
       "nest": "Eine Teilaufgabe kann keine Teilaufgaben haben",
       "comment": "Schreiben Sie einen Kommentar",
       "commentDelete": "Sie können diesen Kommentar nicht löschen"
+    },
+    "mission": {
+      "name": "Geben Sie den Namen der Mission ein",
+      "scope": "Wählen Sie einen Bereich oder eine Person",
+      "missing": "Mission nicht gefunden",
+      "kpi": "Diese Mission braucht eine Kennzahl des Bereichs",
+      "notYours": "Diese Mission gehört Ihnen nicht",
+      "target": "Das Ziel muss größer als null sein",
+      "auto": "Der Fortschritt dieser Mission zählt sich selbst"
     },
     "map": {
       "edit": "Nur der Inhaber kann die Karte bearbeiten",

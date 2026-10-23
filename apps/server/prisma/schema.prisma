@@ -44,6 +44,7 @@ model Company {
   tasks        Task[]
   taskComments  TaskComment[]
   notifications Notification[]
+  weeklyGoals   WeeklyGoal[]
   messages       ChatMessage[]
   directMessages DirectMessage[]
   reports        DailyReport[]
@@ -94,6 +95,8 @@ model Membership {
   currentTaskTitle String        @default("")
   currentTaskSince DateTime?
   currentTaskId    String?
+  streakDays       Int            @default(0)
+  streakLastDate   String?
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   jobTitle      JobTitle?      @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)
@@ -105,6 +108,7 @@ model Membership {
   createdTasks  Task[]         @relation("taskCreator")
   taskComments  TaskComment[]
   notifications Notification[]
+  weeklyGoals   WeeklyGoal[]
   badges        Badge[]
   messages        ChatMessage[]
   sentDirects     DirectMessage[] @relation("DmSender")
@@ -125,7 +129,8 @@ model Area {
   company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   members   Membership[]
   kpis      KpiDefinition[]
-  tasks     Task[]
+  tasks       Task[]
+  weeklyGoals WeeklyGoal[]
   invites   Invite[]
   rooms     OfficeRoom[]
   messages  ChatMessage[]
@@ -234,6 +239,7 @@ model Task {
   parent       Task?         @relation("TaskChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children     Task[]        @relation("TaskChildren")
   comments     TaskComment[]
+  weeklyGoal   WeeklyGoal?   @relation(fields: [weeklyGoalId], references: [id], onDelete: SetNull)
 
   @@index([companyId])
   @@index([companyId, areaId, status])
@@ -271,6 +277,31 @@ model Notification {
 
   @@index([companyId])
   @@index([companyId, recipientId, readAt])
+}
+
+model WeeklyGoal {
+  id           String    @id @default(cuid())
+  companyId    String
+  areaId       String?
+  membershipId String?
+  weekStart    String
+  metric       String
+  kpiKey       String?
+  title        String
+  target       Float
+  current      Float     @default(0)
+  rewardPoints Int       @default(25)
+  awardedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  area         Area?      @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  membership   Membership? @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  tasks        Task[]
+
+  @@index([companyId])
+  @@index([companyId, weekStart])
+  @@index([companyId, areaId])
+  @@index([companyId, membershipId])
 }
 
 model Invite {

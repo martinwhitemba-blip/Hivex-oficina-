@@ -34,6 +34,8 @@ import { registerBrandRoutes } from './branding';
 import { companyScope, pageArgs } from './tenant';
 import { registerTaskRoutes } from './taskRoutes';
 import { registerNotifyRoutes } from './notifyRoutes';
+import { registerMissionRoutes } from './missionRoutes';
+import { refreshGoalsForReport } from './missions';
 import { notifyAchievement, remindDue, unreadCount } from './notify';
 import { taskWhere } from './taskBoard';
 
@@ -740,6 +742,7 @@ export function registerRoutes(app: FastifyInstance) {
       source: 'manual',
     });
     await celebrate(actor.company.id, actor.membership.id, saved.badges);
+    await refreshGoalsForReport(actor.company.id, actor.membership.id, date);
     return saved;
   });
 
@@ -823,6 +826,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   registerTaskRoutes(app);
   registerNotifyRoutes(app);
+  registerMissionRoutes(app);
 
   app.get('/api/oficina', async (req) => {
     const actor = await auth(req);
@@ -1103,6 +1107,7 @@ export function registerRoutes(app: FastifyInstance) {
       source: 'api',
     });
     await celebrate(company.id, member.id, saved.badges);
+    await refreshGoalsForReport(company.id, member.id, date);
     return { ok: true, ...saved };
   });
 }

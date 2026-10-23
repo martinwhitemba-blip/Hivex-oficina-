@@ -6,6 +6,7 @@ import { clearDirect, directConversationOpen, directUnreadOf, directUnreadTotal,
 import { api, clock, esc, getToken, money, num } from './api';
 import { renderTasks } from './tasksPage';
 import { renderInbox } from './inboxPage';
+import { renderMissions } from './missionsPage';
 import { paintNotifyNav } from './notifyUnread';
 import { applyMarca, readableOnInk, type Marca } from './brand';
 import logoUrl from '../assets/hivex-logo.png';
@@ -32,7 +33,7 @@ export function setProfileLocale(value: string | null | undefined) {
 
 const NAV: [string, MessageKey][] = [
   ['oficina', 'nav.office'], ['dueno', 'nav.owner'], ['negocio', 'nav.business'], ['equipo', 'nav.team'],
-  ['areas', 'nav.areas'], ['mapa', 'nav.map'], ['tareas', 'nav.tasks'], ['avisos', 'nav.inbox'], ['jornada', 'nav.day'],
+  ['areas', 'nav.areas'], ['mapa', 'nav.map'], ['tareas', 'nav.tasks'], ['misiones', 'nav.missions'], ['avisos', 'nav.inbox'], ['jornada', 'nav.day'],
   ['chat', 'nav.chat'], ['logros', 'nav.badges'], ['plan', 'nav.plan'], ['captacion', 'nav.leads'],
 ];
 
@@ -218,6 +219,7 @@ export async function renderView(root: HTMLElement, view: string, session: Sessi
     else if (view === 'areas') await renderAreas(root, session);
     else if (view === 'mapa') await renderMapEditor(root, session);
     else if (view === 'tareas') await renderTasks(root, session);
+    else if (view === 'misiones') await renderMissions(root, session);
     else if (view === 'avisos') await renderInbox(root);
     else if (view === 'jornada') await renderDay(root, session);
     else if (view === 'chat') await renderChat(root, session, socket);

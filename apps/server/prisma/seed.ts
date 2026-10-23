@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 import { attachPlan, ensurePlans } from '../src/billing';
-import { isoDate, lastWorkdays } from '../src/domain';
+import { isoDate, lastWorkdays, streakAsOf, weekStartOf } from '../src/domain';
 import { env } from '../src/env';
 import { hashPassword } from '../src/password';
 import { prisma } from '../src/prisma';
@@ -146,6 +146,8 @@ async function main() {
     await refreshSmallPhotos(existing.id);
     await ensureBoardExtras(existing.id);
     await ensureDemoNotices(existing.id);
+    await ensureDemoMission(existing.id);
+    await ensureDemoStreaks(existing.id);
     console.log('La empresa de demostración ya existe. No se toca: invitaciones, personas y mensajes siguen ahí.');
     return;
   }
@@ -324,10 +326,62 @@ async function main() {
 
   await ensureBoardExtras(company.id);
   await ensureDemoNotices(company.id);
+  await ensureDemoMission(company.id);
+  await ensureDemoStreaks(company.id);
 
   console.log('Empresa demo lista.');
   console.log('Entra con martin@hivex.demo / hivex-demo');
   console.log('También: hugo@, lucia@, carmen@, martin.soto@, luis@, naomi@, maite@ hivex.demo (misma contraseña).');
+}
+
+/** Una misión de área para la semana en curso, si todavía no está. */
+async function ensureDemoMission(companyId: string) {
+  const title = 'Misión de la semana: cerrar cartas';
+  const exists = await prisma.weeklyGoal.findFirst({ where: { companyId, title } });
+  if (exists) return;
+  const area = await prisma.area.findFirst({ where: { companyId, name: 'Ventas' } });
+  if (!area) return;
+  await prisma.weeklyGoal.create({
+    data: {
+      companyId,
+      areaId: area.id,
+      weekStart: weekStartOf(isoDate()),
+      metric: 'tareas',
+      title,
+      target: 5,
+      current: 0,
+      rewardPoints: 25,
+    },
+  });
+}
+
+/** Rellena la racha solo si esa persona nunca la tuvo. No pisa una racha ya guardada. */
+async function ensureDemoStreaks(companyId: string) {
+  const people = await prisma.membership.findMany({
+    where: { companyId, active: true, streakDays: 0, streakLastDate: null },
+    select: { id: true },
+  });
+  const today = isoDate();
+  for (const person of people) {
+    const [reports, tasks] = await Promise.all([
+      prisma.dailyReport.findMany({ where: { companyId, membershipId: person.id }, select: { date: true } }),
+      prisma.task.findMany({
+        where: { companyId, assigneeId: person.id, status: 'hecho', doneAt: { not: null } },
+        select: { doneAt: true },
+      }),
+    ]);
+    const dates = [
+      ...reports.map((report) => report.date),
+      ...tasks.map((task) => task.doneAt!.toISOString().slice(0, 10)),
+    ];
+    if (!dates.length) continue;
+    const streak = streakAsOf(dates, today);
+    const last = streak.streakLastDate || [...dates].sort().at(-1) || null;
+    await prisma.membership.update({
+      where: { id: person.id },
+      data: { streakDays: streak.streakDays, streakLastDate: last },
+    });
+  }
 }
 
 /** Un aviso de bienvenida si el dueño todavía no tiene ninguno. */

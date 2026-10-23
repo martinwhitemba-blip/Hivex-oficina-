@@ -92,6 +92,7 @@
     "map": "Plan",
     "tasks": "Tâches",
     "inbox": "Signaux",
+    "missions": "Missions",
     "day": "Journée",
     "chat": "Discussion",
     "badges": "Succès",
@@ -335,6 +336,32 @@
     "dueSoon": "«{title}» arrive à échéance le {date}",
     "overdue": "«{title}» est resté en arrière ({date})",
     "bell": "Signaux"
+  },
+  "missions": {
+    "title": "Missions de la semaine",
+    "subtitle": "Une barre, un prix, et une série que tu ne veux pas casser.",
+    "streak": "Série de {days} jours",
+    "streakZero": "Ta série commence avec la prochaine carte ou le prochain rapport.",
+    "empty": "Cette semaine n'a pas encore de mission. Inventes-en une et fais sonner la cloche.",
+    "progress": "{current} sur {target}",
+    "reward": "+{points} points en franchissant la ligne",
+    "done": "Mission réussie !",
+    "celebrate": "La barre est au bout. Points et insigne, une seule fois.",
+    "metricTasks": "Cartes faites",
+    "metricKpi": "Indicateur",
+    "metricManual": "À la main",
+    "area": "De l'espace",
+    "person": "Personnelle",
+    "new": "Nouvelle mission",
+    "titlePh": "Nom de la mission",
+    "target": "Objectif",
+    "points": "Points de récompense",
+    "create": "Lancer la mission",
+    "manualSet": "Marquer l'avance",
+    "save": "Enregistrer",
+    "delete": "Retirer",
+    "week": "Semaine du {date}",
+    "kpiKey": "Clé de l'indicateur"
   },
   "day": {
     "title": "Rapport de journée",
@@ -692,6 +719,15 @@
       "nest": "Une sous-tâche ne peut pas avoir de sous-tâches",
       "comment": "Écrivez un commentaire",
       "commentDelete": "Vous ne pouvez pas supprimer ce commentaire"
+    },
+    "mission": {
+      "name": "Écrivez le nom de la mission",
+      "scope": "Choisissez un espace ou une personne",
+      "missing": "Mission introuvable",
+      "kpi": "Cette mission a besoin d'un indicateur de l'espace",
+      "notYours": "Cette mission n'est pas la vôtre",
+      "target": "L'objectif doit être supérieur à zéro",
+      "auto": "L'avance de cette mission se calcule toute seule"
     },
     "map": {
       "edit": "Seul le propriétaire peut modifier le plan",
