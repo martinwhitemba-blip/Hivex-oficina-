@@ -8,6 +8,7 @@ import { broadcastPanel, publishTaskHandoff, publishTaskUpdate, type TaskUpdateE
 import { resolveMentions } from './mentions';
 import { notifyAchievement, notifyMember } from './notify';
 import { noteActivity, refreshTaskGoals } from './missions';
+import { assertCanFinish, runRules } from './planning';
 
 export const TASK_STATUSES = ['pendiente', 'en_curso', 'hecho'] as const;
 export const TASK_PRIORITIES = ['baja', 'media', 'alta'] as const;
@@ -126,6 +127,8 @@ export async function createTask(actor: Actor, input: {
   status?: TaskStatus;
   priority?: TaskPriority;
   dueDate?: string | null;
+  startDate?: string | null;
+  estimateMinutes?: number;
   sort?: number;
   weeklyGoalId?: string | null;
 }) {
@@ -149,6 +152,8 @@ export async function createTask(actor: Actor, input: {
       status,
       priority: input.priority || 'media',
       dueDate: due === undefined ? null : due,
+      startDate: parseDue(input.startDate) ?? null,
+      estimateMinutes: input.estimateMinutes ?? 60,
       sort: input.sort ?? 0,
       weeklyGoalId: input.weeklyGoalId || null,
       doneAt: status === 'hecho' ? new Date() : null,
@@ -181,6 +186,15 @@ export async function createTask(actor: Actor, input: {
     });
   }
   await broadcastPanel(actor.company.id);
+  await runRules(actor.company.id, {
+    kind: 'tarea_creada',
+    taskId: task.id,
+    areaId: task.areaId,
+    title: task.title,
+    assigneeId: task.assigneeId,
+    priority: task.priority,
+    actorId: actor.membership.id,
+  });
   return taskDto(task, true);
 }
 
@@ -236,6 +250,8 @@ export async function updateTask(actor: Actor, id: string, input: {
   assigneeId?: string | null;
   priority?: TaskPriority;
   dueDate?: string | null;
+  startDate?: string | null;
+  estimateMinutes?: number;
   sort?: number;
   weeklyGoalId?: string | null;
 }) {
@@ -250,7 +266,9 @@ export async function updateTask(actor: Actor, id: string, input: {
   }
   if (input.assigneeId) await assertAssignee(actor, input.assigneeId, task.areaId);
   if (input.weeklyGoalId) await assertGoal(actor, input.weeklyGoalId);
+  if (input.status === 'hecho' && task.status !== 'hecho') await assertCanFinish(actor.company.id, task.id);
   const due = parseDue(input.dueDate);
+  const start = parseDue(input.startDate);
   const wasDone = task.status === 'hecho';
   const updated = await prisma.task.update({
     where: { id },
@@ -263,6 +281,8 @@ export async function updateTask(actor: Actor, id: string, input: {
       sort: input.sort,
       weeklyGoalId: input.weeklyGoalId,
       dueDate: due,
+      startDate: start,
+      estimateMinutes: input.estimateMinutes,
       doneAt: input.status === 'hecho' ? task.doneAt ?? new Date() : input.status ? null : undefined,
     },
     include: boardInclude(actor.company.id),
@@ -316,6 +336,27 @@ export async function updateTask(actor: Actor, id: string, input: {
     });
   }
   await broadcastPanel(actor.company.id);
+  if (!wasDone && updated.status === 'hecho') {
+    await runRules(actor.company.id, {
+      kind: 'tarea_hecha',
+      taskId: updated.id,
+      areaId: updated.areaId,
+      title: updated.title,
+      assigneeId: updated.assigneeId,
+      priority: updated.priority,
+      actorId: actor.membership.id,
+    });
+  } else if (input.priority === 'alta' && task.priority !== 'alta') {
+    await runRules(actor.company.id, {
+      kind: 'prioridad_alta',
+      taskId: updated.id,
+      areaId: updated.areaId,
+      title: updated.title,
+      assigneeId: updated.assigneeId,
+      priority: updated.priority,
+      actorId: actor.membership.id,
+    });
+  }
   return {
     task: taskDto(updated, true),
     handoff: reassigned
@@ -399,9 +440,13 @@ function employeeEditsFields(input: {
   assigneeId?: string | null;
   priority?: string;
   dueDate?: string | null;
+  startDate?: string | null;
+  estimateMinutes?: number;
   weeklyGoalId?: string | null;
 }) {
   return input.title !== undefined
+    || input.startDate !== undefined
+    || input.estimateMinutes !== undefined
     || input.description !== undefined
     || input.assigneeId !== undefined
     || input.priority !== undefined

@@ -22,7 +22,7 @@ import { withSpot } from './crowd/look';
 import { TaskState, type GoalNote, type TaskNote } from './crowd/taskState';
 import { localCrowd } from './crowd/load';
 import { Stage3D } from './stage3d';
-import { World } from './world';
+import { World, type Seat } from './world';
 
 export interface GameEvents {
   proximity: { peers: PeerAudio[] };
@@ -365,6 +365,7 @@ export class Game {
     this.input.on('h', () => this.honk());
     this.input.on('c', () => this.toggleCar());
     this.input.on('e', () => this.tryToggleDoor());
+    this.input.on('f', () => this.sitTogether());
     this.input.on('escape', () => this.stopFollow());
     this.input.on('+', () => this.zoomBy(1.15));
     this.input.on('-', () => this.zoomBy(1 / 1.15));
@@ -642,6 +643,37 @@ export class Game {
       p.glide(dt, false);
       p.moving = false;
     }
+  }
+
+  /** Siéntate en una silla libre de la sala de reuniones. El audio ya se queda dentro. */
+  private sitTogether() {
+    const room = this.world.roomAt(this.player.x, this.player.y);
+    if (!room || room.kind !== 'meeting') {
+      this.emit('toast', { text: t('planning.sitNeedRoom') });
+      return;
+    }
+    if (this.player.sitting) {
+      this.player.sitting = false;
+      this.player.status = 'en_linea';
+      this.emit('toast', { text: t('planning.stoodUp') });
+      return;
+    }
+    let best: Seat | null = null;
+    let bestD = Infinity;
+    for (const seat of this.world.seats.values()) {
+      if (this.world.roomAt(seat.x, seat.y)?.id !== room.id) continue;
+      const taken = this.allAvatars().some((avatar) => avatar !== this.player && avatar.sitting && Math.hypot(avatar.x - seat.x, avatar.y - seat.y) < 28);
+      if (taken) continue;
+      const distance = Math.hypot(seat.x - this.player.x, seat.y - this.player.y);
+      if (distance < bestD) { bestD = distance; best = seat; }
+    }
+    if (!best) {
+      this.emit('toast', { text: t('planning.sitFull') });
+      return;
+    }
+    this.player.sitAt(best);
+    this.player.status = 'en_reunion';
+    this.emit('toast', { text: t('planning.satDown') });
   }
 
   private updateProximity() {

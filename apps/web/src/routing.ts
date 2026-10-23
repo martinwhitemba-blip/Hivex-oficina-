@@ -20,6 +20,10 @@ export function isPublicJoin(hash: string) {
   return PUBLIC_JOIN.has(hashPath(hash));
 }
 
+export function isPublicForm(hash: string) {
+  return hashPath(hash) === 'formulario';
+}
+
 /** Pantallas de entrada que no hay que reescribir a #/entrar. */
 export function isAuthScreen(hash: string) {
   return AUTH_SCREENS.has(hashPath(hash));

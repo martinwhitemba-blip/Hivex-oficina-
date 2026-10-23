@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authMode, isPublicJoin, viewForSession } from '../../web/src/routing';
+import { authMode, isPublicForm, isPublicJoin, viewForSession } from '../../web/src/routing';
 
 describe('rutas públicas de alta', () => {
   it('unirse, codigo y activar no saltan al panel del dueño', () => {
@@ -7,6 +7,8 @@ describe('rutas públicas de alta', () => {
     expect(isPublicJoin('#/unirse?code=ABC')).toBe(true);
     expect(isPublicJoin('#/activar?code=XYZ')).toBe(true);
     expect(isPublicJoin('#/dueno')).toBe(false);
+    expect(isPublicForm('#/formulario?c=contacto-ventas-demo')).toBe(true);
+    expect(isPublicForm('#/planificacion')).toBe(false);
     expect(viewForSession('#/codigo?c=HIVEX2026', 'propietario')).toBe('codigo');
     expect(viewForSession('#/unirse?code=ABC', 'propietario')).toBe('unirse');
     expect(viewForSession('#/activar?code=XYZ', 'administrador')).toBe('activar');

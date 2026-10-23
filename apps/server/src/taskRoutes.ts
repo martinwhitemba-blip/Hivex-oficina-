@@ -65,6 +65,8 @@ export function registerTaskRoutes(app: FastifyInstance) {
       status: status.default('pendiente'),
       priority: priority.default('media'),
       dueDate: z.string().nullable().optional(),
+      startDate: z.string().nullable().optional(),
+      estimateMinutes: z.number().int().min(0).max(4800).optional(),
       sort: z.number().int().min(0).max(9999).optional(),
       weeklyGoalId: z.string().nullable().optional(),
     }), req.body);
@@ -85,6 +87,8 @@ export function registerTaskRoutes(app: FastifyInstance) {
       assigneeId: z.string().nullable().optional(),
       priority: priority.optional(),
       dueDate: z.string().nullable().optional(),
+      startDate: z.string().nullable().optional(),
+      estimateMinutes: z.number().int().min(0).max(4800).optional(),
       sort: z.number().int().min(0).max(9999).optional(),
       weeklyGoalId: z.string().nullable().optional(),
     }), req.body);

@@ -14,10 +14,11 @@ import type { ProximityMediaProvider } from './media/proximityMedia';
 import { SocketIoTransport } from './net/socketTransport';
 import { ApiError, api, clearToken, getToken } from './platform/api';
 import { applyMarca, type Marca } from './platform/brand';
+import { renderPublicForm } from './platform/planningPage';
 import { paintSessionNotice, renderAuth, renderPasswordGate, renderView, setProfileLocale, type Session } from './platform/pages';
 import { hintDirectUnread, receiveDirect, resetDirectUnread, watchDirect } from './platform/directUnread';
 import { applyNotifyNew, applyNotifyRead, refreshNotifyUnread, resetNotifyUnread } from './platform/notifyUnread';
-import { isAuthScreen, isPublicJoin, viewForSession } from './routing';
+import { isAuthScreen, isPublicForm, isPublicJoin, viewForSession } from './routing';
 import { UI } from './ui/ui';
 import markUrl from './assets/hivex-mark.png';
 import wordmarkUrl from './assets/hivex-wordmark.png';
@@ -406,7 +407,20 @@ function currentView() {
   return viewForSession(location.hash, session?.membership.role);
 }
 
+function showPublicForm() {
+  watchDirect(null);
+  appEl.hidden = true;
+  authEl.hidden = true;
+  pagesEl.hidden = false;
+  pagesEl.classList.remove('hidden');
+  void renderPublicForm(pagesEl);
+}
+
 function route() {
+  if (isPublicForm(location.hash)) {
+    showPublicForm();
+    return;
+  }
   if (isPublicJoin(location.hash)) {
     watchDirect(null);
     openPublicJoin();
@@ -455,6 +469,10 @@ window.addEventListener('hivex-auth-rerender', () => {
 
 async function refreshAfterLocale() {
   paintTitle();
+  if (isPublicForm(location.hash)) {
+    showPublicForm();
+    return;
+  }
   if (session?.debeCambiarContrasena && !isPublicJoin(location.hash)) {
     showPasswordGate();
     return;
@@ -482,6 +500,10 @@ window.addEventListener('hivex-unread', (event) => {
 });
 
 window.addEventListener('hashchange', () => {
+  if (isPublicForm(location.hash)) {
+    showPublicForm();
+    return;
+  }
   if (isPublicJoin(location.hash)) {
     openPublicJoin();
     return;
@@ -490,6 +512,7 @@ window.addEventListener('hashchange', () => {
   else route();
 });
 
-if (isPublicJoin(location.hash)) openPublicJoin();
+if (isPublicForm(location.hash)) showPublicForm();
+else if (isPublicJoin(location.hash)) openPublicJoin();
 else if (getToken()) void enter();
 else showAuth();

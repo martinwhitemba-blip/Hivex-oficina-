@@ -145,6 +145,7 @@ async function main() {
     }
     await refreshSmallPhotos(existing.id);
     await ensureBoardExtras(existing.id);
+    await ensurePlanningDemo(existing.id);
     await ensureDemoNotices(existing.id);
     await ensureDemoMission(existing.id);
     await ensureDemoStreaks(existing.id);
@@ -325,6 +326,7 @@ async function main() {
   });
 
   await ensureBoardExtras(company.id);
+  await ensurePlanningDemo(company.id);
   await ensureDemoNotices(company.id);
   await ensureDemoMission(company.id);
   await ensureDemoStreaks(company.id);
@@ -467,6 +469,60 @@ async function ensureBoardExtras(companyId: string) {
         body: `@${someone.name} esto es una misión, no un trámite.`,
         mentions: JSON.stringify([someone.id]),
       },
+    });
+  }
+}
+
+/** Calendario, regla y formulario de ejemplo. No pisa lo que la empresa ya creó. */
+async function ensurePlanningDemo(companyId: string) {
+  const marker = 'Preparar la sala de reuniones';
+  const area = await prisma.area.findFirst({ where: { companyId, name: 'Ventas' } })
+    || await prisma.area.findFirst({ where: { companyId }, orderBy: { name: 'asc' } });
+  if (!area) return;
+  const hasTask = await prisma.task.findFirst({ where: { companyId, title: marker } });
+  if (!hasTask) {
+    const soon = new Date();
+    soon.setUTCDate(soon.getUTCDate() + 3);
+    const start = new Date();
+    await prisma.task.create({
+      data: {
+        companyId,
+        areaId: area.id,
+        title: marker,
+        description: 'Ejemplo de cronograma: empieza hoy y vence en tres días.',
+        status: 'pendiente',
+        priority: 'media',
+        startDate: new Date(`${start.toISOString().slice(0, 10)}T12:00:00.000Z`),
+        dueDate: new Date(`${soon.toISOString().slice(0, 10)}T12:00:00.000Z`),
+        estimateMinutes: 180,
+      },
+    });
+  }
+  const ruleName = 'Avisar si la prioridad es alta';
+  const hasRule = await prisma.automationRule.findFirst({ where: { companyId, name: ruleName } });
+  if (!hasRule) {
+    await prisma.automationRule.create({
+      data: { companyId, areaId: area.id, name: ruleName, whenKind: 'prioridad_alta', thenKind: 'avisar' },
+    });
+  }
+  const hasForm = await prisma.intakeForm.findFirst({ where: { companyId, title: 'Contacto de Ventas' } });
+  if (!hasForm) {
+    await prisma.intakeForm.create({
+      data: {
+        companyId,
+        areaId: area.id,
+        slug: 'contacto-ventas-demo',
+        title: 'Contacto de Ventas',
+        intro: 'Déjanos tu nombre y te preparamos el seguimiento.',
+        taskTitle: 'Llamar al contacto',
+        active: true,
+      },
+    });
+  }
+  const hasField = await prisma.customField.findFirst({ where: { companyId, areaId: area.id, label: 'Cliente' } });
+  if (!hasField) {
+    await prisma.customField.create({
+      data: { companyId, areaId: area.id, label: 'Cliente', kind: 'texto' },
     });
   }
 }

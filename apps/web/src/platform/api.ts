@@ -1,5 +1,5 @@
 import { getLocale, moneyOf, numOf, t } from '../i18n';
-import { isPublicJoin } from '../routing';
+import { isPublicForm, isPublicJoin } from '../routing';
 
 const TOKEN_KEY = 'hivex_token';
 
@@ -21,11 +21,11 @@ export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const response = await fetch(path, { ...opts, headers });
   const type = response.headers.get('content-type') || '';
   const body = type.includes('application/json') ? await response.json() : await response.text();
-  const keepsSession = path.includes('/api/auth/') || path.includes('/api/invitaciones/') || path.includes('/api/acceso-codigo') || path.includes('/api/activar');
+  const keepsSession = path.includes('/api/auth/') || path.includes('/api/invitaciones/') || path.includes('/api/acceso-codigo') || path.includes('/api/activar') || path.includes('/api/publico/');
   if (response.status === 401 && !keepsSession) {
     clearToken();
-    // Un 401 en una petición auxiliar no puede sacar de #/unirse ni de #/codigo.
-    if (!isPublicJoin(location.hash)) location.hash = '#/entrar';
+    // Un 401 en una petición auxiliar no puede sacar de #/unirse, #/codigo ni del formulario público.
+    if (!isPublicJoin(location.hash) && !isPublicForm(location.hash)) location.hash = '#/entrar';
     const message = body && typeof body === 'object' && body.error ? String(body.error) : t('errors.auth.required');
     throw new ApiError(401, message);
   }
