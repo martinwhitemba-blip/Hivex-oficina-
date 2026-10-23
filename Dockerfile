@@ -13,6 +13,9 @@ COPY apps/web/package.json apps/web/package.json
 RUN npm ci --ignore-scripts
 COPY apps/server apps/server
 COPY apps/web apps/web
+# El cliente y el servidor importan packages/i18n por ruta. Sin esta copia
+# tsc y esbuild salen con status 1 (no encuentran el módulo).
+COPY packages packages
 RUN npm run build -w @hivex/web && npm run build -w @hivex/server
 
 FROM node:22-bookworm-slim
@@ -37,6 +40,8 @@ COPY --from=build /app/apps/server/prisma apps/server/prisma
 COPY --from=build /app/apps/server/scripts apps/server/scripts
 COPY --from=build /app/apps/server/src apps/server/src
 COPY --from=build /app/apps/web/dist apps/web/dist
+# La semilla arranca con tsx sobre el fuente, y domain.ts importa i18n.
+COPY --from=build /app/packages packages
 COPY docker/entrypoint.sh /app/docker/entrypoint.sh
 RUN chmod +x /app/docker/entrypoint.sh && mkdir -p /tmp/hivex-uploads
 EXPOSE 8787
