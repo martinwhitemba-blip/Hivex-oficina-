@@ -17,6 +17,7 @@ import { MapRenderer } from './mapRenderer';
 import { Npc, SeatPool } from './npc';
 import type { AvatarLook, AvatarState, MapDefinition, RoomDef, StatusId } from './types';
 import { SAMPLE_RANKINGS } from '../data/sampleData';
+import { emoteMs, highFivePartner, isHighFive } from './crowd/emotes';
 import { localCrowd } from './crowd/load';
 import { Stage3D } from './stage3d';
 import { World } from './world';
@@ -29,6 +30,8 @@ export interface GameEvents {
   follow: { id: string | null; name?: string };
   toast: { text: string };
   dm: { id: string; name: string };
+  emote: { emote: string };
+  bubble: { text: string };
 }
 type Listener<K extends keyof GameEvents> = (e: GameEvents[K]) => void;
 
@@ -66,6 +69,7 @@ export class Game {
   private currentRoomId: string | null | undefined = undefined;
   private peersKey = '';
   private sendAcc = 0;
+  private relayAt = { emote: 0, bubble: 0 };
   private running = true;
   private faces = new Map<string, HTMLImageElement>();
   private stage: Stage3D | null = null;
@@ -251,7 +255,55 @@ export class Game {
     else this.emit('toast', { text: t('office.cantReach') });
   }
 
-  react(emoji: string) { this.player.say(emoji, 2500); }
+  react(emoji: string) { this.gesture(emoji); }
+
+  /** Gesto local y, si el servidor acepta el ritmo, relé a la sala. */
+  gesture(emote: string) {
+    if (isHighFive(emote)) {
+      this.highFive();
+      return;
+    }
+    this.spark(this.player, emote);
+    this.sendRelay('emote', emote);
+  }
+
+  highFive() {
+    const partner = highFivePartner(this.player, this.allAvatars());
+    if (!partner) {
+      this.emit('toast', { text: t('office.highFiveNone') });
+      return;
+    }
+    this.spark(this.player, '🙌');
+    this.spark(partner, '🙌');
+    this.sendRelay('emote', '🙌');
+  }
+
+  /** Un compañero (u otra pestaña) lanzó el gesto. El eco propio se ignora. */
+  receiveEmote(membershipId: string, emote: string) {
+    if (!membershipId || membershipId === this.player.id || !emote) return;
+    const actor = this.allAvatars().find((avatar) => avatar.id === membershipId);
+    if (!actor) return;
+    this.spark(actor, emote);
+    if (!isHighFive(emote)) return;
+    const partner = highFivePartner(actor, this.allAvatars());
+    if (partner) this.spark(partner, emote);
+  }
+
+  /** Bocadillo de charla de área o de `office:bubble`, unos 4 segundos. */
+  receiveBubble(membershipId: string, text: string) {
+    const actor = this.allAvatars().find((avatar) => avatar.id === membershipId);
+    if (!actor) return;
+    const clean = text.replace(/\s+/g, ' ').trim().slice(0, 140);
+    if (!clean) return;
+    actor.say(clean, 4000);
+  }
+
+  sayLine(text: string) {
+    const clean = text.replace(/\s+/g, ' ').trim().slice(0, 140);
+    if (!clean) return;
+    this.player.say(clean, 4000);
+    this.sendRelay('bubble', clean);
+  }
 
   zoomBy(f: number) { this.camera.setZoom(this.camera.zoom * f); }
 
@@ -429,11 +481,33 @@ export class Game {
     const lookX = target.dir === 'left' ? -ahead : target.dir === 'right' ? ahead : 0;
     const lookY = target.dir === 'up' ? -ahead : target.dir === 'down' ? ahead * 0.4 : 0;
     this.camera.follow(target.x + lookX, target.y - 12 + lookY, dt);
+    this.expireCues(now);
     this.updateProximity();
     this.updateRoom();
     // red: ~10 Hz
     this.sendAcc += dt;
     if (this.sendAcc > 0.1) { this.sendAcc = 0; this.opts.transport.sendState(this.player.toState()); }
+  }
+
+  private expireCues(now: number) {
+    for (const avatar of this.allAvatars()) {
+      if (avatar.bubble && now > avatar.bubble.until) avatar.bubble = null;
+      if (avatar.emote && now > avatar.emote.until) avatar.emote = null;
+    }
+  }
+
+  private spark(avatar: Avatar, emote: string) {
+    const ms = emoteMs(emote);
+    avatar.emote = { id: emote, until: performance.now() + ms };
+    if (!this.stage?.ok) avatar.say(emote, ms);
+  }
+
+  private sendRelay(kind: 'emote' | 'bubble', value: string) {
+    const now = performance.now();
+    if (now - this.relayAt[kind] < 1000) return;
+    this.relayAt[kind] = now;
+    if (kind === 'emote') this.emit('emote', { emote: value });
+    else this.emit('bubble', { text: value });
   }
 
   private updatePlayer(dt: number) {

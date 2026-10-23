@@ -13,6 +13,8 @@ import { Cell, type World } from './world';
 import { bakeStatic, releaseChunk } from './crowd/bake';
 import { NameBatch } from './crowd/atlas';
 import { isCoarseMobile } from './crowd/device';
+import { OfficeFx } from './crowd/fx';
+import { emoteMs } from './crowd/emotes';
 import { CrowdExtras } from './crowd/impostors';
 import { clearSharedResources, sharedStandard, sharedTextured } from './crowd/materials';
 import { assignLods, type LodTier } from './crowd/rules';
@@ -45,6 +47,7 @@ export class Stage3D {
   private mids = new Map<string, Rig>();
   private names: NameBatch;
   private crowd: CrowdExtras;
+  private fx: OfficeFx;
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
   private viewW = 0;
@@ -76,6 +79,7 @@ export class Stage3D {
   private constructor() {
     this.names = new NameBatch();
     this.crowd = new CrowdExtras();
+    this.fx = new OfficeFx();
   }
 
   static async mount(gameCanvas: HTMLCanvasElement, world: World): Promise<Stage3D> {
@@ -109,7 +113,10 @@ export class Stage3D {
       gameCanvas.insertAdjacentElement('afterend', canvas);
       stage.renderer = renderer;
       stage.buildOffice(world, Math.min(8, renderer.capabilities.getMaxAnisotropy()));
-      stage.scene.add(stage.actors, stage.names.mesh, stage.crowd.billboards, stage.crowd.ghostHead, stage.crowd.ghostBody, stage.crowd.ghostLegs, stage.crowd.blobs);
+      stage.scene.add(
+        stage.actors, stage.names.mesh, stage.fx.bubbles, stage.fx.hearts, stage.fx.confetti,
+        stage.crowd.billboards, stage.crowd.ghostHead, stage.crowd.ghostBody, stage.crowd.ghostLegs, stage.crowd.blobs,
+      );
       stage.pathGeo.setAttribute('position', stage.pathAttr);
       const dots = new THREE.Points(stage.pathGeo, new THREE.PointsMaterial({ color: 0xe0a800, size: 12, sizeAttenuation: true }));
       dots.frustumCulled = false;
@@ -167,6 +174,7 @@ export class Stage3D {
     for (const hit of hits) {
       if (hit.object instanceof THREE.Sprite || hit.object instanceof THREE.Points) continue;
       if (hit.object === this.names.mesh || hit.object === this.crowd.blobs) continue;
+      if (hit.object === this.fx.bubbles || hit.object === this.fx.hearts || hit.object === this.fx.confetti) continue;
       const instanced = this.instanceId(hit.object, hit.instanceId);
       if (instanced) return { x: hit.point.x, y: hit.point.z, avatarId: instanced };
       let node: THREE.Object3D | null = hit.object;
@@ -305,6 +313,7 @@ export class Stage3D {
 
     this.crowd.sync({ billboards: this.boards, ghosts: this.ghosts, blobs: this.blobs, camera: this.camera });
     this.names.sync(this.labels, this.camera, cam.viewW, cam.viewH, FOV);
+    this.syncFx(avatars);
     if (this.plazaLogo) {
       const dx = this.camera.position.x - this.plazaLogo.position.x;
       const dz = this.camera.position.z - this.plazaLogo.position.z;
@@ -358,6 +367,7 @@ export class Stage3D {
     this.full.clear();
     this.mids.clear();
     this.names.dispose();
+    this.fx.dispose();
     this.crowd.dispose();
     this.scene.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
@@ -377,6 +387,33 @@ export class Stage3D {
     this.renderer?.domElement.remove();
     this.renderer = null;
     this.ok = false;
+  }
+
+  private syncFx(avatars: Avatar[]) {
+    const now = performance.now();
+    const hearts: { id: string; x: number; y: number; z: number; life: number }[] = [];
+    const confetti: { id: string; x: number; y: number; z: number; life: number }[] = [];
+    const bubbles: { text: string; x: number; y: number; z: number }[] = [];
+    for (const avatar of avatars) {
+      const emote = avatar.emote;
+      if (emote && emote.until > now) {
+        const span = emoteMs(emote.id);
+        const life = 1 - (emote.until - now) / span;
+        const spot = { id: avatar.id, x: avatar.x, y: avatar.sitting ? 72 : 90, z: avatar.y, life: Math.min(1, Math.max(0, life)) };
+        const name = emote.id.toLowerCase();
+        if (name.includes('❤') || name.includes('heart')) hearts.push(spot);
+        if (name.includes('🎉') || name.includes('confetti')) confetti.push(spot);
+      }
+      if (avatar.bubble && avatar.bubble.until > now) {
+        bubbles.push({
+          text: avatar.bubble.text,
+          x: avatar.x,
+          y: avatar.sitting || avatar.ghost ? 78 : CHAR_H + 36,
+          z: avatar.y,
+        });
+      }
+    }
+    this.fx.sync({ hearts, confetti, bubbles, camera: this.camera, viewH: this.viewH, fovDeg: FOV });
   }
 
   private noteFrame() {

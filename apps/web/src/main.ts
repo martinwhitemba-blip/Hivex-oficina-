@@ -279,6 +279,20 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null, run 
     if (applyingLock) return;
     socket?.emit('office:lock', { locked });
   });
+  game.on('emote', ({ emote }) => socket?.emit('office:emote', { emote }));
+  game.on('bubble', ({ text }) => socket?.emit('office:bubble', { text }));
+  socket.on('office:emote', (payload: { membershipId?: string; emote?: string }) => {
+    if (!payload?.membershipId || !payload.emote) return;
+    game?.receiveEmote(payload.membershipId, payload.emote);
+  });
+  socket.on('office:bubble', (payload: { membershipId?: string; text?: string }) => {
+    if (!payload?.membershipId || !payload.text) return;
+    game?.receiveBubble(payload.membershipId, payload.text);
+  });
+  socket.on('chat:message', (message: { authorId?: string; body?: string }) => {
+    if (!message?.authorId || !message.body) return;
+    game?.receiveBubble(message.authorId, message.body);
+  });
   socket.on('office:lock', (payload: { locked?: boolean }) => {
     if (!game) return;
     applyingLock = true;

@@ -563,7 +563,13 @@
     "demoTitle": "Afficher ou masquer les PNJ",
     "offline": "Hors ligne",
     "aria": "Bureau",
-    "loadCrowd": "Salle comble ! {n} collègues d'essai entrent dans le bureau"
+    "loadCrowd": "Salle comble ! {n} collègues d'essai entrent dans le bureau",
+    "emoteWave": "Saluer",
+    "emoteClap": "Applaudir",
+    "emoteHeart": "Cœur",
+    "emoteConfetti": "Confettis",
+    "emoteHighFive": "Tope là",
+    "highFiveNone": "Rapproche-toi ! Le tope là porte à 2 dalles"
   },
   "media": {
     "livekit": "Audio et vidéo de proximité avec LiveKit.",

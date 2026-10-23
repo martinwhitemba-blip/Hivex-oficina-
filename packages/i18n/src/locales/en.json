@@ -563,7 +563,13 @@
     "demoTitle": "Show or hide NPCs",
     "offline": "Offline",
     "aria": "Office",
-    "loadCrowd": "Full house! {n} practice teammates just walked in"
+    "loadCrowd": "Full house! {n} practice teammates just walked in",
+    "emoteWave": "Wave",
+    "emoteClap": "Clap",
+    "emoteHeart": "Heart",
+    "emoteConfetti": "Confetti",
+    "emoteHighFive": "High five",
+    "highFiveNone": "Step closer! A high five only reaches 2 tiles"
   },
   "media": {
     "livekit": "Proximity audio and video with LiveKit.",

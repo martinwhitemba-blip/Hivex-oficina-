@@ -563,7 +563,13 @@
     "demoTitle": "NPCs zeigen oder ausblenden",
     "offline": "Offline",
     "aria": "Büro",
-    "loadCrowd": "Volles Haus! {n} Übungskollegen kommen ins Büro"
+    "loadCrowd": "Volles Haus! {n} Übungskollegen kommen ins Büro",
+    "emoteWave": "Winken",
+    "emoteClap": "Klatschen",
+    "emoteHeart": "Herz",
+    "emoteConfetti": "Konfetti",
+    "emoteHighFive": "Abklatschen",
+    "highFiveNone": "Komm näher! Das Abklatschen reicht nur 2 Fliesen"
   },
   "media": {
     "livekit": "Nähe-Audio und -Video mit LiveKit.",

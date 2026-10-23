@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { assignLods, drawBudget, DRAW_FULL, DRAW_MID } from '../../web/src/game/crowd/rules';
 import { govern, startingProfile } from '../../web/src/game/crowd/quality';
 import { expressionFor, photoSpot } from '../../web/src/game/crowd/look';
+import { HIGH_FIVE_RANGE, highFivePartner } from '../../web/src/game/crowd/emotes';
 
 describe('presupuesto de la oficina 3D', () => {
   it('cien avatares caben en menos de 300 llamadas de dibujo', () => {
@@ -37,6 +38,16 @@ describe('presupuesto de la oficina 3D', () => {
     expect(expressionFor('🎉')).toBe('surprised');
     expect(expressionFor('😉')).toBe('wink');
     expect(expressionFor('zzz')).toBe('neutral');
+  });
+
+  it('el choque de cinco solo encuentra a quien está a dos baldosas', () => {
+    const self = { id: 'yo', x: 0, y: 0 };
+    const close = { id: 'cerca', x: HIGH_FIVE_RANGE, y: 0 };
+    const far = { id: 'lejos', x: HIGH_FIVE_RANGE + 1, y: 0 };
+    const ghost = { id: 'silla', x: 10, y: 0, ghost: true };
+    expect(highFivePartner(self, [far, ghost, self])).toBeNull();
+    expect(highFivePartner(self, [far, close, ghost])?.id).toBe('cerca');
+    expect(highFivePartner(self, [close, { id: 'mas', x: 8, y: 0 }])?.id).toBe('mas');
   });
 
   it('esconde a los ausentes que quedan lejos y no les pone sombra', () => {

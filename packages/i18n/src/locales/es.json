@@ -563,7 +563,13 @@
     "demoTitle": "Mostrar u ocultar NPC",
     "offline": "Desconectados",
     "aria": "Oficina",
-    "loadCrowd": "¡Sala llena! {n} compañeros de prueba entran en la oficina"
+    "loadCrowd": "¡Sala llena! {n} compañeros de prueba entran en la oficina",
+    "emoteWave": "Saludar",
+    "emoteClap": "Aplaudir",
+    "emoteHeart": "Corazón",
+    "emoteConfetti": "Confeti",
+    "emoteHighFive": "Chocar los cinco",
+    "highFiveNone": "¡Acércate! El choque de cinco llega a 2 baldosas"
   },
   "media": {
     "livekit": "Audio y vídeo de proximidad con LiveKit.",

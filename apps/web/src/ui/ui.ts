@@ -219,8 +219,18 @@ export class UI {
       this.toast(this.media.cam ? t('office.camOn') : t('office.camOff'));
     });
     const emojiPop = h('div', 'emoji-pop');
-    ['👋', '👍', '😂', '🎉', '❤️', '🔥', '☕'].forEach((e) => {
-      const b = h('button', '', e); b.onclick = () => { this.game.react(e); emojiPop.classList.remove('show'); }; emojiPop.append(b);
+    ([
+      ['👋', t('office.emoteWave')],
+      ['👏', t('office.emoteClap')],
+      ['❤️', t('office.emoteHeart')],
+      ['🎉', t('office.emoteConfetti')],
+      ['🙌', t('office.emoteHighFive')],
+    ] as const).forEach(([icon, label]) => {
+      const b = h('button', '', icon);
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.onclick = () => { this.game.react(icon); emojiPop.classList.remove('show'); };
+      emojiPop.append(b);
     });
     bar.append(emojiPop);
     mk('', ICONS.smile, t('office.react'), () => emojiPop.classList.toggle('show'));
@@ -228,7 +238,7 @@ export class UI {
     bar.append(h('span', 'sep hide-sm'));
     mk('primary', ICONS.phone + `<span class="lbl long">${t('office.callClient')}</span><span class="lbl short">${t('office.callShort')}</span>`, t('office.callClient'), () => this.hooks.onNavigate('captacion'));
     bar.append(h('span', 'sep hide-sm'));
-    mk('hide-sm', ICONS.hand, t('office.hand'), () => this.game.react('✋'));
+    mk('hide-sm', ICONS.hand, t('office.emoteHighFive'), () => this.game.highFive());
     mk('hide-sm', ICONS.headphones, t('office.audio'), () => this.toast(t('office.audioSoon')));
     mk('hide-sm danger', ICONS.logout, t('office.leave'), () => this.hooks.onLogout());
     mk('help', ICONS.help + `<span class="lbl">${t('office.help')}</span>`, t('office.help'), () => this.showHelp(true));
