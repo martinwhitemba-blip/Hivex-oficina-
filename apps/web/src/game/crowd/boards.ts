@@ -105,13 +105,13 @@ function placeBoard(room: RoomDef, objects: MapObject[]) {
     return {
       x: (found.x + (found.w ?? 1) / 2) * TILE,
       z: (found.y + 1.25) * TILE,
-      rot: 0,
+      rot: Math.PI,
     };
   }
   return {
     x: (room.rect.x + room.rect.w / 2) * TILE,
     z: (room.rect.y + 1.35) * TILE,
-    rot: 0,
+    rot: Math.PI,
   };
 }
 

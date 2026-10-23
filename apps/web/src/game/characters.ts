@@ -5,7 +5,7 @@ import type { Expression } from './crowd/look';
 import { photoSpot } from './crowd/look';
 import { fadedMaterial, outlineMaterial, shadeColor, shadowProxyMaterial, sharedBasic, sharedGeo, sharedStandard, sharedToon } from './crowd/materials';
 
-const YAW: Record<Dir, number> = { down: 0, up: Math.PI, right: -Math.PI / 2, left: Math.PI / 2 };
+const YAW: Record<Dir, number> = { down: Math.PI, up: 0, right: Math.PI / 2, left: -Math.PI / 2 };
 
 export interface Rig {
   anchor: THREE.Group;

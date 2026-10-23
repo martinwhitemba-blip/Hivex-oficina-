@@ -40,8 +40,9 @@ async function main() {
     });
   }
   arrange(pose, avatars, photo);
-  const lookAt = pose === 'pizarra' ? { x: (15 + 1.5) * TILE, y: (5 + 1.25) * TILE } : { x: focus.x, y: focus.y };
-  camera.setZoom(pose && pose !== 'multitud' ? 2 : 0.6);
+  const lookAt = pose === 'pizarra' ? { x: (15 + 1.5) * TILE, y: (5 + 2.2) * TILE } : { x: focus.x, y: focus.y };
+  if (pose && pose !== 'multitud') camera.zoom = pose === 'pizarra' ? 2.2 : 4.2;
+  else camera.zoom = 0.6;
   camera.follow(lookAt.x, lookAt.y, 0, true);
   const stage = await Stage3D.mount(canvas, world);
   if (pose === 'pizarra') stage.setAreas([{ roomId: 'atlas', areaId: 'atlas' }]);
