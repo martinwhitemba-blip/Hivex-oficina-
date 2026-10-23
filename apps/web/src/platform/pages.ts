@@ -4,6 +4,7 @@ import { bootLocale, formatClock, formatWhen, getLocale, knownPhrase, LANG_NAMES
 import { authMode } from '../routing';
 import { clearDirect, directConversationOpen, directUnreadOf, directUnreadTotal, onDirectArrival, seedDirectUnread, watchDirect } from './directUnread';
 import { api, clock, esc, getToken, money, num } from './api';
+import { renderTasks } from './tasksPage';
 import { applyMarca, readableOnInk, type Marca } from './brand';
 import logoUrl from '../assets/hivex-logo.png';
 
@@ -882,35 +883,6 @@ async function renderMapEditor(root: HTMLElement, session: Session) {
   });
 }
 
-async function renderTasks(root: HTMLElement, session: Session) {
-  const [tasks, areas, people] = await Promise.all([
-    api<TaskItem[]>('/api/tareas'),
-    api<{ id: string; name: string }[]>('/api/areas'),
-    api<Person[]>('/api/empleados'),
-  ]);
-  const cols = ['pendiente', 'en_curso', 'hecho'];
-  const titles: Record<string, string> = { pendiente: t('tasks.pending'), en_curso: t('tasks.doing'), hecho: t('tasks.done') };
-  root.innerHTML = shell('tareas', t('tasks.title'), t('tasks.subtitle'), `
-    ${session.membership.role === 'empleado' ? '' : `<form id="task" class="toolbar"><input name="title" placeholder="${t('tasks.newPh')}" required><select name="areaId">${areas.map((area) => `<option value="${area.id}">${esc(area.name)}</option>`).join('')}</select><select name="assigneeId"><option value="">${t('owner.unassigned')}</option>${people.map((person) => `<option value="${person.id}">${esc(person.name)}</option>`).join('')}</select><button class="btn primary" type="submit">${t('tasks.create')}</button></form>`}
-    <div class="kanban">${cols.map((col) => `<div class="kcol"><b>${titles[col]}</b>${tasks.filter((task) => task.status === col).map((task) => `<article class="kcard"><b>${esc(task.title)}</b><div class="muted">${esc(task.area || '')} · ${esc(task.assignee || t('owner.unassigned'))}</div>
-      ${cols.filter((next) => next !== col).map((next) => `<button class="btn" data-move="${task.id}" data-status="${next}" type="button">${titles[next]}</button>`).join(' ')}</article>`).join('')}</div>`).join('')}</div>
-  `);
-  root.querySelector('#task')?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    try {
-      const data = Object.fromEntries(new FormData(event.target as HTMLFormElement).entries());
-      await api('/api/tareas', { method: 'POST', body: JSON.stringify({ ...data, assigneeId: data.assigneeId || null }) });
-      location.reload();
-    } catch (error) { noteError(null, error); }
-  });
-  root.querySelectorAll<HTMLButtonElement>('[data-move]').forEach((button) => button.onclick = async () => {
-    try {
-      await api(`/api/tareas/${button.dataset.move}`, { method: 'PATCH', body: JSON.stringify({ status: button.dataset.status }) });
-      location.reload();
-    } catch (error) { noteError(null, error); }
-  });
-}
-
 async function renderDay(root: HTMLElement, session: Session) {
   const today = new Date().toISOString().slice(0, 10);
   const [report, fichaje, areas] = await Promise.all([
@@ -1248,6 +1220,5 @@ interface DirectPerson { id: string; name: string; puesto: string; unread: numbe
 interface DirectLine { id: string; body: string; createdAt: string; senderId: string; recipientId: string; senderName: string }
 interface AreaFull { id: string; name: string; color: string; teamName: string; members: number; rooms: { name: string }[]; kpis: { key: string; label: string; unit?: string; targetDaily: number | null }[] }
 interface OfficeLayout { canEdit: boolean; rooms: { mapRoomId: string; name: string; label: string; areaId: string | null }[]; desks: { seatId: string; membershipId: string | null }[]; areas: { id: string; name: string }[]; people: { id: string; name: string }[] }
-interface TaskItem { id: string; title: string; status: string; area: string | null; assignee: string | null }
 interface PlanView { uso: { personas: number; areas: number; maxPersonas: number; maxAreas: number }; actual: { code: string; name: string; status: string; description: string; limite?: number | null }; planes: { code: string; name: string; maxWorkers: number; maxAreas: number; description: string }[]; pago: { mensaje: string } }
 interface LeadView { mensaje: string; activo: boolean; area: { name: string } | null; contadores: { leads: number; campaigns: number; calls: number }; extensiones: string[] }

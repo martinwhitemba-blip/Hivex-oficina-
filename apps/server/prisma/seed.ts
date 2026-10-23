@@ -144,6 +144,7 @@ async function main() {
       console.log('Código de acceso de la demo: HIVEX2026.');
     }
     await refreshSmallPhotos(existing.id);
+    await ensureBoardExtras(existing.id);
     console.log('La empresa de demostración ya existe. No se toca: invitaciones, personas y mensajes siguen ahí.');
     return;
   }
@@ -320,9 +321,81 @@ async function main() {
     },
   });
 
+  await ensureBoardExtras(company.id);
+
   console.log('Empresa demo lista.');
   console.log('Entra con martin@hivex.demo / hivex-demo');
   console.log('También: hugo@, lucia@, carmen@, martin.soto@, luis@, naomi@, maite@ hivex.demo (misma contraseña).');
+}
+
+/** Añade misiones de ejemplo si todavía no están. No reescribe tareas ya creadas. */
+async function ensureBoardExtras(companyId: string) {
+  const marker = 'Cerrar el tablero de la semana';
+  const exists = await prisma.task.findFirst({ where: { companyId, title: marker } });
+  if (exists) return;
+  const area = await prisma.area.findFirst({ where: { companyId, name: 'Operaciones' } })
+    || await prisma.area.findFirst({ where: { companyId }, orderBy: { name: 'asc' } });
+  if (!area) return;
+  const owner = await prisma.membership.findFirst({ where: { companyId, role: 'propietario', active: true } });
+  const someone = await prisma.membership.findFirst({ where: { companyId, areaId: area.id, active: true } })
+    || await prisma.membership.findFirst({ where: { companyId, active: true, role: 'empleado' } });
+  const today = new Date();
+  const late = new Date(today);
+  late.setUTCDate(late.getUTCDate() - 2);
+  const soon = new Date(today);
+  soon.setUTCDate(soon.getUTCDate() + 1);
+  const noon = (date: Date) => new Date(`${date.toISOString().slice(0, 10)}T12:00:00.000Z`);
+  const parent = await prisma.task.create({
+    data: {
+      companyId,
+      areaId: area.id,
+      assigneeId: someone?.id ?? null,
+      createdById: owner?.id ?? null,
+      title: marker,
+      description: 'Misión de demostración con fecha, prioridad y lista de pasos.',
+      status: 'en_curso',
+      priority: 'alta',
+      dueDate: noon(soon),
+      sort: 1,
+    },
+  });
+  await prisma.task.create({
+    data: {
+      companyId,
+      areaId: area.id,
+      parentId: parent.id,
+      assigneeId: someone?.id ?? null,
+      createdById: owner?.id ?? null,
+      title: 'Revisar lo que se quedó atrás',
+      status: 'pendiente',
+      priority: 'media',
+      sort: 0,
+    },
+  });
+  await prisma.task.create({
+    data: {
+      companyId,
+      areaId: area.id,
+      assigneeId: someone?.id ?? null,
+      createdById: owner?.id ?? null,
+      title: 'Pedido que ya venció',
+      description: 'Para ver el filtro de atrasadas.',
+      status: 'pendiente',
+      priority: 'alta',
+      dueDate: noon(late),
+    },
+  });
+  if (owner && someone && owner.id !== someone.id) {
+    await prisma.taskComment.create({
+      data: {
+        companyId,
+        taskId: parent.id,
+        authorId: owner.id,
+        body: `@${someone.name} esto es una misión, no un trámite.`,
+        mentions: JSON.stringify([someone.id]),
+      },
+    });
+  }
 }
 
 function addDaysSafe(iso: string, days: number) {

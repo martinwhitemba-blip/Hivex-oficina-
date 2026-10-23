@@ -32,6 +32,8 @@ import { assertJoinRate, clientIp } from './rateLimit';
 import { activationCsv, importPeople, rowsFromRecords } from './peopleImport';
 import { registerBrandRoutes } from './branding';
 import { companyScope, pageArgs } from './tenant';
+import { registerTaskRoutes } from './taskRoutes';
+import { taskWhere } from './taskBoard';
 
 const emailSchema = z.string().trim().email('El correo no es válido').transform((v) => v.toLowerCase());
 const passwordSchema = z.string().min(8, 'La contraseña debe tener al menos 8 caracteres');
@@ -813,94 +815,7 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.header('content-type', 'text/csv; charset=utf-8').send(`\uFEFF${lines.join('\n')}\n`);
   });
 
-  app.get('/api/tareas', async (req) => {
-    const actor = await auth(req);
-    const tasks = await prisma.task.findMany({
-      where: taskWhere(actor),
-      include: { assignee: true, area: true },
-      orderBy: { createdAt: 'desc' },
-    });
-    return tasks.map(taskDto);
-  });
-
-  app.post('/api/tareas', async (req) => {
-    const actor = await auth(req);
-    if (actor.membership.role === 'empleado') throw new HttpError(403, 'Pide a tu director que cree la tarea');
-    const body = parseBody(z.object({
-      title: z.string().trim().min(2, 'Escribe el título'),
-      description: z.string().default(''),
-      areaId: z.string(),
-      assigneeId: z.string().nullable().optional(),
-      status: z.enum(['pendiente', 'en_curso', 'hecho']).default('pendiente'),
-    }), req.body);
-    const area = await ownArea(actor, body.areaId);
-    if (actor.membership.role === 'administrador' && area.id !== actor.membership.areaId) throw new HttpError(403, 'Solo puedes crear tareas de tu área');
-    if (body.assigneeId) await assertAssignee(actor, body.assigneeId, area.id);
-    const task = await prisma.task.create({
-      data: {
-        companyId: actor.company.id,
-        areaId: area.id,
-        assigneeId: body.assigneeId || null,
-        title: body.title,
-        description: body.description,
-        status: body.status,
-        doneAt: body.status === 'hecho' ? new Date() : null,
-      },
-      include: { assignee: true, area: true },
-    });
-    if (body.status === 'hecho' && body.assigneeId) await completeTaskPoints(body.assigneeId);
-    return taskDto(task);
-  });
-
-  app.patch('/api/tareas/:id', async (req) => {
-    const actor = await auth(req);
-    const id = (req.params as { id: string }).id;
-    const task = await prisma.task.findFirst({ where: { id, companyId: actor.company.id } });
-    if (!task) throw new HttpError(404, 'Tarea no encontrada');
-    const body = parseBody(z.object({
-      title: z.string().trim().min(2).optional(),
-      description: z.string().optional(),
-      status: z.enum(['pendiente', 'en_curso', 'hecho']).optional(),
-      assigneeId: z.string().nullable().optional(),
-    }), req.body);
-    const isAssignee = task.assigneeId === actor.membership.id;
-    if (actor.membership.role === 'empleado' && !isAssignee) throw new HttpError(403, 'Solo puedes mover tus tareas');
-    if (actor.membership.role === 'administrador' && task.areaId !== actor.membership.areaId) throw new HttpError(403, 'Tarea de otra área');
-    if (body.assigneeId) await assertAssignee(actor, body.assigneeId, task.areaId);
-    const wasDone = task.status === 'hecho';
-    const updated = await prisma.task.update({
-      where: { id },
-      data: {
-        title: body.title,
-        description: body.description,
-        status: body.status,
-        assigneeId: body.assigneeId,
-        doneAt: body.status === 'hecho' ? task.doneAt ?? new Date() : body.status ? null : undefined,
-      },
-      include: { assignee: true, area: true },
-    });
-    if (!wasDone && updated.status === 'hecho' && updated.assigneeId) await completeTaskPoints(updated.assigneeId);
-    if (body.assigneeId && body.assigneeId !== task.assigneeId) {
-      await prisma.membership.update({
-        where: { id: body.assigneeId },
-        data: { currentTaskTitle: updated.title, currentTaskId: updated.id, currentTaskSince: new Date() },
-      });
-      await audit(actor.company.id, actor.membership.id, 'reasignar_tarea', `${actor.membership.name} reasignó «${updated.title}»`, { taskId: id, assigneeId: body.assigneeId });
-    }
-    await broadcastPanel(actor.company.id);
-    return taskDto(updated);
-  });
-
-  app.delete('/api/tareas/:id', async (req) => {
-    const actor = await auth(req);
-    if (actor.membership.role === 'empleado') throw new HttpError(403, 'No puedes borrar tareas');
-    const id = (req.params as { id: string }).id;
-    const task = await prisma.task.findFirst({ where: { id, companyId: actor.company.id } });
-    if (!task) throw new HttpError(404, 'Tarea no encontrada');
-    if (actor.membership.role === 'administrador' && task.areaId !== actor.membership.areaId) throw new HttpError(403, 'Tarea de otra área');
-    await prisma.task.delete({ where: { id } });
-    return { ok: true };
-  });
+  registerTaskRoutes(app);
 
   app.get('/api/oficina', async (req) => {
     const actor = await auth(req);
@@ -1390,37 +1305,6 @@ async function buildPanel(actor: Actor, query: { from?: string; to?: string }) {
 function csvEscape(value: string) {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
   return value;
-}
-
-function taskWhere(actor: Actor) {
-  if (actor.membership.role === 'propietario') return { companyId: actor.company.id };
-  if (actor.membership.role === 'administrador') return { companyId: actor.company.id, areaId: actor.membership.areaId || '__none__' };
-  return { companyId: actor.company.id, OR: [{ assigneeId: actor.membership.id }, { areaId: actor.membership.areaId || '__none__' }] };
-}
-
-function taskDto(task: { id: string; title: string; description: string; status: string; areaId: string; assigneeId: string | null; createdAt: Date; area?: { name: string }; assignee?: { name: string } | null }) {
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    status: task.status,
-    areaId: task.areaId,
-    area: task.area?.name ?? null,
-    assigneeId: task.assigneeId,
-    assignee: task.assignee?.name ?? null,
-    createdAt: task.createdAt,
-  };
-}
-
-async function assertAssignee(actor: Actor, membershipId: string, areaId: string) {
-  const person = await loadPerson(actor.company.id, membershipId);
-  if (person.areaId !== areaId) throw new HttpError(400, 'La persona no está en esa área');
-}
-
-async function completeTaskPoints(membershipId: string) {
-  await prisma.membership.update({ where: { id: membershipId }, data: { points: { increment: 8 } } });
-  const done = await prisma.task.count({ where: { assigneeId: membershipId, status: 'hecho' } });
-  if (done >= 1) await awardBadge(membershipId, 'tarea_hecha', 'Manos a la obra');
 }
 
 function assertChatArea(actor: Actor, areaId: string) {
