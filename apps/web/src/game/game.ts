@@ -193,11 +193,11 @@ export class Game {
     this.player.mode = on ? 'car' : 'walk';
     if (on && !this.world.canStand(this.player.x, this.player.y, 12)) { /* sigue igual: se ajusta al moverse */ }
     this.emit('car', { on });
-    this.emit('toast', { text: on ? `🚗 Modo coche activado · ${matchMedia('(pointer: coarse)').matches ? 'toca 📯' : 'pulsa H'} para pitar` : '🚶 Modo a pie' });
+    this.emit('toast', { text: on ? t('office.carOn', { hint: matchMedia('(pointer: coarse)').matches ? t('office.carHintTouch') : t('office.carHintKey') }) : t('office.carOff') });
   }
 
   honk() {
-    if (this.player.mode !== 'car') { this.emit('toast', { text: 'Activa el modo Coche para pitar 🚗' }); return; }
+    if (this.player.mode !== 'car') { this.emit('toast', { text: t('office.honkNeedCar') }); return; }
     honk();
     this.honkUntil = performance.now() + 600;
     this.player.say('¡Piii piii! 📯', 1200);
@@ -208,7 +208,7 @@ export class Game {
   setPrivateLocked(locked: boolean, announce = true) {
     this.world.setPrivateLocked(locked);
     this.emit('lock', { locked });
-    if (announce) this.emit('toast', { text: locked ? '🔒 Despacho privado cerrado' : '🔓 Despacho privado abierto' });
+    if (announce) this.emit('toast', { text: locked ? t('office.doorClosed') : t('office.doorOpen') });
   }
 
   focusMember(id: string) {
@@ -231,7 +231,7 @@ export class Game {
 
   moveTo(wx: number, wy: number) {
     if (this.player.goTo(this.world, wx, wy)) this.clickMarker = { x: wx, y: wy, until: performance.now() + 900 };
-    else this.emit('toast', { text: 'No se puede llegar ahí' });
+    else this.emit('toast', { text: t('office.cantReach') });
   }
 
   react(emoji: string) { this.player.say(emoji, 2500); }
@@ -304,7 +304,7 @@ export class Game {
         : this.allAvatars().find((a) => a !== this.player && Math.abs(a.x - p.x) < 18 && p.y < a.y + 8 && p.y > a.y - 52);
     if (hit) {
       if (this.remotes.has(hit.id)) this.emit('dm', { id: hit.id, name: hit.name });
-      else this.emit('toast', { text: 'Ese personaje de demostración no recibe mensajes' });
+      else this.emit('toast', { text: t('office.demoNoMessage') });
       return;
     }
     this.stopFollow();
@@ -318,7 +318,7 @@ export class Game {
       const dx = (door.x + 0.5) * TILE - this.player.x, dy = (door.y + (door.h ?? 1) / 2) * TILE - this.player.y;
       if (Math.hypot(dx, dy) < TILE * 2.5) { this.setPrivateLocked(!this.world.isPrivateLocked()); return; }
     }
-    this.emit('toast', { text: 'Acércate a la puerta del despacho para abrir/cerrar (E)' });
+    this.emit('toast', { text: t('office.doorHint') });
   }
 
   private resize() {
@@ -562,7 +562,7 @@ export class Game {
       else if (!stageOn) drawAvatar(ctx, a.x, a.y, { look: a.look, dir: a.dir, moving: a.moving, sitting: a.sitting, t: this.t + a.x * 0.01, dim: a.status === 'ausente' || a.ghost, face: this.faceOf(a.look) });
     }
     const labels = avatars.map((a) => {
-      const name = a === this.player ? `${a.name.split(' ')[0]} (tú)` : a.name.split(' ')[0];
+      const name = a === this.player ? `${a.name.split(' ')[0]} ${t('office.you')}` : a.name.split(' ')[0];
       return { a, name, x: a.x, y: a.y + (a.mode === 'car' ? 12 : 4), w: name.length * 6.4 + 22 };
     });
     labels.sort((a, b) => a.y - b.y || a.x - b.x);

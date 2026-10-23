@@ -99,6 +99,7 @@ const KNOWN: Record<string, MessageKey> = {
   'Despacho privado': 'map.name.private',
   'Zona abierta': 'map.name.open',
   'Zona de descanso': 'map.name.lounge',
+  'Plaza central': 'office.plaza',
   'RANKING HOY': 'map.rank.today',
   Importe: 'map.rank.amount',
   'RANKING CITAS': 'map.rank.meetings',

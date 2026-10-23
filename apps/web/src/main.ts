@@ -1,7 +1,7 @@
 import './styles.css';
 import './platform/platform.css';
 import { io, type Socket } from 'socket.io-client';
-import { BRAND_NAME, BRAND_TAGLINE } from './config';
+import { BRAND_NAME } from './config';
 import { applyRooms, cloneOfficeMap } from './data/zones';
 import { Game } from './game/game';
 import { bootLocale, getLocale, pinLocale, t, type Locale } from './i18n';
@@ -22,7 +22,10 @@ import logoUrl from './assets/hivex-logo.png';
 import faviconUrl from './assets/hivex-favicon.png';
 
 bootLocale();
-document.title = `${BRAND_NAME} · ${BRAND_TAGLINE}`;
+function paintTitle() {
+  document.title = `${BRAND_NAME} · ${t('brand.tagline')}`;
+}
+paintTitle();
 (document.getElementById('favicon') as HTMLLinkElement).href = faviconUrl;
 
 if (import.meta.env.MODE !== 'single' && location.protocol.startsWith('http')) {
@@ -395,6 +398,7 @@ window.addEventListener('hivex-auth-rerender', () => {
 });
 
 async function refreshAfterLocale() {
+  paintTitle();
   if (session?.debeCambiarContrasena && !isPublicJoin(location.hash)) {
     showPasswordGate();
     return;
