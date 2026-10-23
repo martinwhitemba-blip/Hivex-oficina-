@@ -33,12 +33,11 @@ function line(task: DayTask) {
 
 export async function renderMyDay(root: HTMLElement) {
   const day = await api<DayPayload>('/api/mi-dia');
-  const mission = day.missions[0];
   const streak = day.streakDays > 0
     ? `<span class="streak-pill">${t('missions.streak', { days: day.streakDays })}</span>`
     : `<span class="chip">${t('missions.streakZero')}</span>`;
   root.innerHTML = shell('mi-dia', t('myday.title'), t('myday.subtitle'), `
-    <div class="toolbar">${streak}<span class="chip">${t('myday.rank', { place: day.rank.place, of: day.rank.of })}</span><span class="chip">${t('person.points', { n: day.points })}</span></div>
+    <div class="toolbar">${streak}<span class="chip">${t('myday.rank', { place: day.rank.place, of: day.rank.of })}</span><span class="chip">${t('tower.doneWeek', { n: day.rank.doneThisWeek })}</span><span class="chip">${t('person.points', { n: day.points })}</span></div>
     <p class="mission-celebrate">${t('myday.mirror')}</p>
     <div class="day-grid">
       <article class="cardx">
@@ -48,9 +47,9 @@ export async function renderMyDay(root: HTMLElement) {
       </article>
       <article class="cardx">
         <h2>${t('myday.mission')}</h2>
-        ${mission ? `<strong>${esc(mission.title)}</strong>
-          <div class="mission-bar"><span style="width:${Math.max(0, Math.min(100, mission.pct))}%"></span></div>
-          <p>${mission.awarded ? `<b>${t('missions.done')}</b> ` : ''}${t('missions.progress', { current: mission.current, target: mission.target })}</p>` : `<p class="muted">${t('missions.empty')}</p>`}
+        ${day.missions.length ? day.missions.map((item) => `<div class="mission${item.awarded || item.pct >= 100 ? ' mission-pop' : ''}"><strong>${esc(item.title)}</strong>
+          <div class="mission-bar"><span style="width:${Math.max(0, Math.min(100, item.pct))}%"></span></div>
+          <p>${item.awarded || item.pct >= 100 ? `<b>${t('missions.done')}</b> ` : ''}${t('missions.progress', { current: item.current, target: item.target })}</p></div>`).join('') : `<p class="muted">${t('missions.empty')}</p>`}
       </article>
     </div>
     <h2>${t('myday.today')}</h2>

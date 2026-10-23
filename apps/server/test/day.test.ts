@@ -149,5 +149,14 @@ describe('mi día y torre', () => {
     expect(foreign.body.overdue.some((task: { title: string }) => task.title === 'Carta dormida')).toBe(false);
     const foreignDay = await json('GET', '/api/mi-dia', tokenB);
     expect(foreignDay.body.todayTasks.some((task: { title: string }) => task.title === 'Carta de hoy')).toBe(false);
+
+    const luciaId = (await json('GET', '/api/auth/yo', tokenLucia)).body.membership.id as string;
+    const moved = await json('POST', `/api/dueno/tareas/${late.body.id}/reasignar`, tokenA, { assigneeId: luciaId });
+    expect(moved.status).toBe(200);
+    const handoff = await prisma.notification.findFirst({ where: { recipientId: evaId, kind: 'handoff' }, orderBy: { createdAt: 'desc' } });
+    const assigned = await prisma.notification.findFirst({ where: { recipientId: luciaId, kind: 'assignment' }, orderBy: { createdAt: 'desc' } });
+    expect(JSON.parse(handoff?.payload || '{}').title).toBe('Carta dormida');
+    expect(JSON.parse(assigned?.payload || '{}').title).toBe('Carta dormida');
+    expect((await json('POST', `/api/dueno/tareas/${late.body.id}/reasignar`, tokenEva, { assigneeId: evaId })).status).toBe(403);
   });
 });
