@@ -3,6 +3,7 @@ import { assignLods, drawBudget, DRAW_FULL, DRAW_MID } from '../../web/src/game/
 import { govern, startingProfile } from '../../web/src/game/crowd/quality';
 import { expressionFor, photoSpot } from '../../web/src/game/crowd/look';
 import { HIGH_FIVE_RANGE, highFivePartner } from '../../web/src/game/crowd/emotes';
+import { TaskState, clockLabel, isLate } from '../../web/src/game/crowd/taskState';
 
 describe('presupuesto de la oficina 3D', () => {
   it('cien avatares caben en menos de 300 llamadas de dibujo', () => {
@@ -48,6 +49,26 @@ describe('presupuesto de la oficina 3D', () => {
     expect(highFivePartner(self, [far, ghost, self])).toBeNull();
     expect(highFivePartner(self, [far, close, ghost])?.id).toBe('cerca');
     expect(highFivePartner(self, [close, { id: 'mas', x: 8, y: 0 }])?.id).toBe('mas');
+  });
+
+  it('la carta, el retraso y la misión salen del evento sin esperar al servidor', () => {
+    const board = new TaskState();
+    const now = Date.parse('2026-10-23T12:00:00.000Z');
+    board.applyTask({ taskId: 'padre', title: 'Llamar al cliente oro', status: 'en_curso', areaId: 'atlas', assigneeId: 'ana', parentId: null, dueDate: '2026-10-20', updatedAt: '2026-10-23T11:58:20.000Z' });
+    board.applyTask({ taskId: 'paso', title: 'Marcar', status: 'hecho', areaId: 'atlas', assigneeId: 'ana', parentId: 'padre', dueDate: null, updatedAt: '2026-10-23T11:59:00.000Z' });
+    board.applyTask({ taskId: 'paso2', title: 'Apuntar', status: 'pendiente', areaId: 'atlas', assigneeId: 'ana', parentId: 'padre', dueDate: null, updatedAt: '2026-10-23T11:59:00.000Z' });
+    board.applyTask({ taskId: 'cola', title: 'Archivar', status: 'pendiente', areaId: 'atlas', assigneeId: null, parentId: null, dueDate: null, updatedAt: '2026-10-23T11:00:00.000Z' });
+    board.applyGoal({ goalId: 'm1', areaId: 'atlas', pct: 40 });
+    const duty = board.duty('ana', now, '2026-10-23');
+    expect(duty?.title).toBe('Llamar al cliente oro');
+    expect(duty?.overdue).toBe(true);
+    expect(duty?.done).toBe(1);
+    expect(duty?.total).toBe(2);
+    expect(duty?.time).toBe(clockLabel(now - Date.parse('2026-10-23T11:58:20.000Z')));
+    expect(isLate('2026-10-24', 'en_curso', '2026-10-23')).toBe(false);
+    expect(board.tally('atlas')).toMatchObject({ pending: 1, doing: 1, done: 0, pct: 40 });
+    board.applyTask({ taskId: 'padre', deleted: true });
+    expect(board.duty('ana', now, '2026-10-23')).toBeNull();
   });
 
   it('esconde a los ausentes que quedan lejos y no les pone sombra', () => {

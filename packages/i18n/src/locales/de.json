@@ -569,7 +569,11 @@
     "emoteHeart": "Herz",
     "emoteConfetti": "Konfetti",
     "emoteHighFive": "Abklatschen",
-    "highFiveNone": "Komm näher! Das Abklatschen reicht nur 2 Fliesen"
+    "highFiveNone": "Komm näher! Das Abklatschen reicht nur 2 Fliesen",
+    "boardPending": "Wartend",
+    "boardDoing": "Dran",
+    "boardDone": "Fertig!",
+    "boardMission": "Mission {n}%"
   },
   "media": {
     "livekit": "Nähe-Audio und -Video mit LiveKit.",

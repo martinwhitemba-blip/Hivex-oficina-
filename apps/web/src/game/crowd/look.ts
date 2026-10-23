@@ -1,3 +1,5 @@
+import type { AvatarLook } from '../types';
+
 /** Dónde va la foto y qué cara pone un gesto. Sin Three.js. */
 
 export type PhotoSpot = 'cara' | 'gafete';
@@ -5,6 +7,12 @@ export type Expression = 'neutral' | 'happy' | 'surprised' | 'wink';
 
 export function photoSpot(value: unknown): PhotoSpot {
   return value === 'gafete' ? 'gafete' : 'cara';
+}
+
+export function withSpot(look: AvatarLook, placement: unknown): AvatarLook {
+  const spot = photoSpot(placement ?? look.photoPlacement);
+  if (look.photoPlacement === spot) return look;
+  return { ...look, photoPlacement: spot };
 }
 
 export function expressionFor(emote: string | null | undefined): Expression {

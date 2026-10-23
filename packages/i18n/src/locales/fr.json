@@ -569,7 +569,11 @@
     "emoteHeart": "Cœur",
     "emoteConfetti": "Confettis",
     "emoteHighFive": "Tope là",
-    "highFiveNone": "Rapproche-toi ! Le tope là porte à 2 dalles"
+    "highFiveNone": "Rapproche-toi ! Le tope là porte à 2 dalles",
+    "boardPending": "En attente",
+    "boardDoing": "En cours",
+    "boardDone": "Terminé !",
+    "boardMission": "Mission {n}%"
   },
   "media": {
     "livekit": "Audio et vidéo de proximité avec LiveKit.",

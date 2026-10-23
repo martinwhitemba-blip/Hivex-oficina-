@@ -18,6 +18,8 @@ import { Npc, SeatPool } from './npc';
 import type { AvatarLook, AvatarState, MapDefinition, RoomDef, StatusId } from './types';
 import { SAMPLE_RANKINGS } from '../data/sampleData';
 import { emoteMs, highFivePartner, isHighFive } from './crowd/emotes';
+import { withSpot } from './crowd/look';
+import { TaskState, type GoalNote, type TaskNote } from './crowd/taskState';
 import { localCrowd } from './crowd/load';
 import { Stage3D } from './stage3d';
 import { World } from './world';
@@ -32,6 +34,7 @@ export interface GameEvents {
   dm: { id: string; name: string };
   emote: { emote: string };
   bubble: { text: string };
+  openBoard: { taskId?: string; areaId?: string | null };
 }
 type Listener<K extends keyof GameEvents> = (e: GameEvents[K]) => void;
 
@@ -70,6 +73,9 @@ export class Game {
   private peersKey = '';
   private sendAcc = 0;
   private relayAt = { emote: 0, bubble: 0 };
+  private tasks = new TaskState();
+  private flights: { from: string; to: string; t0: number }[] = [];
+  private areaLinks: { roomId: string; areaId: string | null }[] = [];
   private running = true;
   private faces = new Map<string, HTMLImageElement>();
   private stage: Stage3D | null = null;
@@ -139,6 +145,24 @@ export class Game {
   /** 3D después de pintar la interfaz. Si WebGL no responde, se queda el plano 2D. */
   async mount3d() {
     this.stage = await Stage3D.mount(this.canvas, this.world);
+    this.stage?.setAreas(this.areaLinks);
+  }
+
+  setAreas(links: { roomId: string; areaId: string | null }[]) {
+    this.areaLinks = links;
+    this.stage?.setAreas(links);
+  }
+
+  applyTask(note: TaskNote) { this.tasks.applyTask(note); }
+
+  applyGoal(note: GoalNote) { this.tasks.applyGoal(note); }
+
+  applyHandoff(payload: { fromMembershipId?: string | null; toMembershipId?: string | null }) {
+    const from = payload?.fromMembershipId || '';
+    const to = payload?.toMembershipId || '';
+    if (!from || !to || from === to) return;
+    this.flights.push({ from, to, t0: performance.now() });
+    if (this.flights.length > 6) this.flights.shift();
   }
 
   /** El lienzo recibe WASD aunque antes hubiera un input del panel. */
@@ -169,6 +193,17 @@ export class Game {
     const originX = this.world.def.plaza.cx * TILE - ((columns - 1) * gap) / 2;
     const originY = this.world.def.plaza.cy * TILE - ((columns - 1) * gap) / 2;
     this.crowd = localCrowd(safe, originX, originY);
+    if (!this.areaLinks.length) this.setAreas(this.world.def.rooms.map((room) => ({ roomId: room.id, areaId: room.id })));
+    const areaId = this.areaLinks.find((link) => link.areaId)?.areaId || '';
+    const started = new Date(Date.now() - 75000).toISOString();
+    if (areaId) {
+      this.applyTask({ taskId: 'carga-carta', title: 'Cerrar la ronda de oro', status: 'en_curso', areaId, assigneeId: this.player.id, parentId: null, dueDate: '2020-01-01', updatedAt: started });
+      this.applyTask({ taskId: 'carga-paso-1', title: 'Llamar', status: 'hecho', areaId, assigneeId: this.player.id, parentId: 'carga-carta', dueDate: null, updatedAt: started });
+      this.applyTask({ taskId: 'carga-paso-2', title: 'Apuntar', status: 'pendiente', areaId, assigneeId: this.player.id, parentId: 'carga-carta', dueDate: null, updatedAt: started });
+      this.applyTask({ taskId: 'carga-cola', title: 'Preparar el café', status: 'pendiente', areaId, assigneeId: null, parentId: null, dueDate: null, updatedAt: started });
+      this.applyTask({ taskId: 'carga-hecha', title: 'Archivar', status: 'hecho', areaId, assigneeId: null, parentId: null, dueDate: null, updatedAt: started });
+      this.applyGoal({ goalId: 'carga-mision', areaId, pct: 60 });
+    }
     this.emit('toast', { text: t('office.loadCrowd', { n: this.crowd.length }) });
   }
 
@@ -365,7 +400,27 @@ export class Game {
   private tapAt(clientX: number, clientY: number) {
     const r = this.canvas.getBoundingClientRect();
     const picked = this.stage?.ok ? this.stage.pick(clientX, clientY, r) : null;
+    if (picked?.taskId) {
+      this.emit('openBoard', { taskId: picked.taskId });
+      return;
+    }
+    if (picked?.board) {
+      this.emit('openBoard', { areaId: picked.areaId });
+      return;
+    }
     const p = picked ?? this.camera.screenToWorld(clientX - r.left, clientY - r.top);
+    if (!this.stage?.ok) {
+      const today = new Date().toISOString().slice(0, 10);
+      const duty = this.allAvatars().find((avatar) => {
+        if (!this.tasks.duty(avatar.id, performance.now(), today)) return false;
+        return Math.abs(avatar.x - p.x) < 36 && p.y < avatar.y - 28 && p.y > avatar.y - 78;
+      });
+      const card = duty ? this.tasks.duty(duty.id, performance.now(), today) : null;
+      if (card) {
+        this.emit('openBoard', { taskId: card.taskId });
+        return;
+      }
+    }
     const hit = picked?.avatarId
       ? this.allAvatars().find((a) => a.id === picked.avatarId && a !== this.player)
       : this.stage?.ok
@@ -473,7 +528,7 @@ export class Game {
       a.sitting = !!s.sitting;
       a.name = s.name;
       a.role = s.role;
-      a.look = s.look;
+      a.look = withSpot(s.look, (s as { photoPlacement?: unknown }).photoPlacement);
       a.glide(dt, a.moving);
     }
     const target = this.followId ? this.allAvatars().find((a) => a.id === this.followId) ?? this.player : this.player;
@@ -487,6 +542,45 @@ export class Game {
     // red: ~10 Hz
     this.sendAcc += dt;
     if (this.sendAcc > 0.1) { this.sendAcc = 0; this.opts.transport.sendState(this.player.toState()); }
+  }
+
+  private dutySpots(now: number) {
+    const today = new Date().toISOString().slice(0, 10);
+    const cards = [];
+    for (const avatar of this.allAvatars()) {
+      const duty = this.tasks.duty(avatar.id, now, today);
+      if (!duty) continue;
+      cards.push({ ...duty, x: avatar.x, y: avatar.sitting || avatar.ghost ? 96 : 112, z: avatar.y });
+    }
+    return cards;
+  }
+
+  private packageSpots(now: number) {
+    this.flights = this.flights.filter((flight) => now - flight.t0 < 980);
+    const spots = [];
+    for (const flight of this.flights) {
+      const from = this.allAvatars().find((avatar) => avatar.id === flight.from);
+      const to = this.allAvatars().find((avatar) => avatar.id === flight.to);
+      if (!from || !to) continue;
+      const u = Math.min(1, (now - flight.t0) / 900);
+      spots.push({
+        x: from.x + (to.x - from.x) * u,
+        y: 46 + Math.sin(u * Math.PI) * 40,
+        z: from.y + (to.y - from.y) * u,
+      });
+    }
+    return spots.slice(0, 3);
+  }
+
+  private areaViews() {
+    const seen = new Set<string>();
+    const areas = [];
+    for (const link of this.areaLinks) {
+      if (!link.areaId || seen.has(link.areaId)) continue;
+      seen.add(link.areaId);
+      areas.push({ areaId: link.areaId, tally: this.tasks.tally(link.areaId) });
+    }
+    return areas;
   }
 
   private expireCues(now: number) {
@@ -580,7 +674,7 @@ export class Game {
       r.dur = gap > 240 ? 0 : 150;
       r.target = s;
     } else {
-      const avatar = Object.assign(new Avatar(s.id, s.name, s.role, s.look, s.x, s.y), { status: s.status, sitting: !!s.sitting });
+      const avatar = Object.assign(new Avatar(s.id, s.name, s.role, withSpot(s.look, (s as { photoPlacement?: unknown }).photoPlacement), s.x, s.y), { status: s.status, sitting: !!s.sitting });
       this.remotes.set(s.id, { avatar, target: s, fromX: s.x, fromY: s.y, toX: s.x, toY: s.y, t0: now, dur: 0 });
     }
   }
@@ -600,6 +694,15 @@ export class Game {
           path: this.player.path,
           marker: this.clickMarker && now < this.clickMarker.until ? { x: this.clickMarker.x, y: this.clickMarker.y } : null,
           proximity: this.peers.length > 0,
+          duties: this.dutySpots(now),
+          packages: this.packageSpots(now),
+          areas: this.areaViews(),
+          boardWords: {
+            pending: t('office.boardPending'),
+            doing: t('office.boardDoing'),
+            done: t('office.boardDone'),
+            mission: t('office.boardMission'),
+          },
         });
         return;
       }
@@ -674,6 +777,14 @@ export class Game {
         if (now > a.bubble.until) a.bubble = null;
         else drawBubble(ctx, a.x, a.y - (a.mode === 'car' ? 34 : 56), a.bubble.text, Math.min(1, (a.bubble.until - now) / 300));
       }
+      const duty = this.tasks.duty(a.id, now, new Date().toISOString().slice(0, 10));
+      if (duty) {
+        fillRR(ctx, a.x - 28, a.y - 74, 56, 16, 5, duty.overdue ? '#3A1420' : '#141418', duty.overdue ? '#FF4D6A' : '#F5C518', 1.5);
+        text(ctx, `${duty.title.slice(0, 12)} ${duty.time}`, a.x, a.y - 66, 7, duty.overdue ? '#FFD0D8' : '#FFF8E8', 700);
+      }
+    }
+    for (const spot of this.packageSpots(now)) {
+      fillRR(ctx, spot.x - 7, spot.z - 6, 14, 10, 2, '#F5C518', '#C4920A', 1);
     }
   }
 

@@ -6,7 +6,7 @@ import { applyRooms, cloneOfficeMap } from './data/zones';
 import { Game } from './game/game';
 import { bootLocale, getLocale, pinLocale, t, type Locale } from './i18n';
 import type { AvatarLook, StatusId } from './game/types';
-import { photoSpot } from './game/crowd/look';
+import { withSpot } from './game/crowd/look';
 import { LiveKitMediaProvider } from './media/livekitMedia';
 import { P2PMediaProvider } from './media/p2pMedia';
 import type { ProximityMediaProvider } from './media/proximityMedia';
@@ -45,7 +45,7 @@ interface Hud {
   isDemo: boolean;
   stats: { ventasHoy: number; importeHoy: number; citasHoy: number; seguimiento: number; demo: boolean };
   rankings: { ventas: { title: string; subtitle: string; rows: { name: string; value: number; fmt: string }[] }; citas: { title: string; subtitle: string; rows: { name: string; value: number; fmt: string }[] } };
-  rooms: { mapRoomId: string; name: string; label: string }[];
+  rooms: { mapRoomId: string; name: string; label: string; areaId?: string | null }[];
   deskId: string | null;
   directory: { id: string; name: string; role: string; photoUrl?: string | null; deskId?: string | null; look?: Session['membership']['look']; photoPlacement?: 'cara' | 'gafete' }[];
   alertCount: number;
@@ -103,13 +103,12 @@ function loadImage(src: string) {
   });
 }
 
-function asLook(look: Session['membership']['look']): AvatarLook {
+function asLook(look: Session['membership']['look'], placement?: unknown): AvatarLook {
   const hairStyle = (look.hairStyle === 1 || look.hairStyle === 2 || look.hairStyle === 3 ? look.hairStyle : 0) as 0 | 1 | 2 | 3;
-  const raw = look as { photoPlacement?: unknown };
-  return {
+  return withSpot({
     skin: look.skin, hair: look.hair, hairStyle, shirt: look.shirt, pants: look.pants, glasses: look.glasses,
-    usePhoto: look.usePhoto === true, photoUrl: look.photoUrl, photoPlacement: photoSpot(raw.photoPlacement),
-  };
+    usePhoto: look.usePhoto === true, photoUrl: look.photoUrl,
+  }, placement);
 }
 
 function revealAuth() {
@@ -256,7 +255,7 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null, run 
       id: current.membership.id,
       name: current.membership.name,
       role: current.membership.jobTitle?.name || current.membership.roleLabel,
-      look: asLook(current.membership.look),
+      look: asLook(current.membership.look, current.membership.photoPlacement),
     },
     rankings: hud.rankings,
     deskId: hud.deskId,
@@ -301,8 +300,22 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null, run 
   });
   game.setColleagues(hud.directory.flatMap((person) => {
     if (!person.look || !person.deskId) return [];
-    return [{ id: person.id, name: person.name, role: person.role, deskId: person.deskId, look: asLook(person.look) }];
+    return [{ id: person.id, name: person.name, role: person.role, deskId: person.deskId, look: asLook(person.look, person.photoPlacement) }];
   }));
+  game.setAreas(hud.rooms.map((room) => ({ roomId: room.mapRoomId, areaId: room.areaId || null })));
+  game.on('openBoard', ({ taskId, areaId }) => {
+    const params = new URLSearchParams();
+    if (areaId) params.set('area', areaId);
+    if (taskId) params.set('tarea', taskId);
+    location.hash = params.toString() ? `#/tareas?${params}` : '#/tareas';
+  });
+  socket.on('task:update', (payload: { taskId?: string; title?: string; status?: string; areaId?: string; assigneeId?: string | null; parentId?: string | null; dueDate?: string | null; updatedAt?: string; deleted?: boolean }) => {
+    if (payload?.taskId) game?.applyTask({ ...payload, taskId: payload.taskId });
+  });
+  socket.on('task:handoff', (payload: { fromMembershipId?: string | null; toMembershipId?: string | null }) => game?.applyHandoff(payload || {}));
+  socket.on('goal:progress', (payload: { goalId?: string; areaId?: string | null; pct?: number }) => {
+    if (payload?.goalId) game?.applyGoal({ ...payload, goalId: payload.goalId });
+  });
   game.start();
   const crowdCount = Number(new URLSearchParams(location.search).get('carga') || new URLSearchParams(location.search).get('load') || 0);
   if (Number.isFinite(crowdCount) && crowdCount > 0) game.spawnCrowd(crowdCount);

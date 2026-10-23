@@ -13,10 +13,13 @@ import { Cell, type World } from './world';
 import { bakeStatic, releaseChunk } from './crowd/bake';
 import { NameBatch } from './crowd/atlas';
 import { isCoarseMobile } from './crowd/device';
+import { RoomBoards, type BoardWords } from './crowd/boards';
 import { OfficeFx } from './crowd/fx';
+import { TaskCards } from './crowd/taskCards';
+import type { AreaTally, DutyCard } from './crowd/taskState';
 import { emoteMs } from './crowd/emotes';
 import { CrowdExtras } from './crowd/impostors';
-import { clearSharedResources, sharedStandard, sharedTextured } from './crowd/materials';
+import { clearSharedResources, sharedStandard, sharedTextured, sharedToon } from './crowd/materials';
 import { assignLods, type LodTier } from './crowd/rules';
 import { govern, startingProfile, type QualityProfile } from './crowd/quality';
 import { expressionFor } from './crowd/look';
@@ -33,6 +36,10 @@ export interface StageExtras {
   path: { x: number; y: number }[];
   marker: { x: number; y: number } | null;
   proximity: boolean;
+  duties?: (DutyCard & { x: number; y: number; z: number })[];
+  packages?: { x: number; y: number; z: number }[];
+  areas?: { areaId: string; tally: AreaTally }[];
+  boardWords?: BoardWords;
 }
 
 export class Stage3D {
@@ -48,6 +55,9 @@ export class Stage3D {
   private names: NameBatch;
   private crowd: CrowdExtras;
   private fx: OfficeFx;
+  private taskCards: TaskCards;
+  private boards: RoomBoards;
+  private parcels: THREE.Mesh[];
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
   private viewW = 0;
@@ -72,18 +82,26 @@ export class Stage3D {
   private boardCount = 0;
   private scratch: { id: string; dist: number; ghost: boolean }[] = [];
   private labels: { text: string; tone: string; self: boolean; x: number; y: number; z: number }[] = [];
-  private boards: { id: string; x: number; y: number; color: string; dim: boolean; sitting: boolean }[] = [];
+  private posters: { id: string; x: number; y: number; color: string; dim: boolean; sitting: boolean }[] = [];
   private ghosts: { id: string; x: number; y: number; skin: string; shirt: string; pants: string }[] = [];
   private blobs: { x: number; y: number }[] = [];
 
-  private constructor() {
+  private constructor(world: World) {
     this.names = new NameBatch();
     this.crowd = new CrowdExtras();
     this.fx = new OfficeFx();
+    this.taskCards = new TaskCards();
+    this.boards = new RoomBoards(world.def.rooms, world.def.objects);
+    this.parcels = [0, 1, 2].map(() => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(12, 9, 14), sharedToon('#F5C518'));
+      mesh.visible = false;
+      mesh.raycast = () => {};
+      return mesh;
+    });
   }
 
   static async mount(gameCanvas: HTMLCanvasElement, world: World): Promise<Stage3D> {
-    const stage = new Stage3D();
+    const stage = new Stage3D(world);
     const ready = await probeWebGL(2000);
     if (!ready) return stage;
     try {
@@ -114,8 +132,10 @@ export class Stage3D {
       stage.renderer = renderer;
       stage.buildOffice(world, Math.min(8, renderer.capabilities.getMaxAnisotropy()));
       stage.scene.add(
-        stage.actors, stage.names.mesh, stage.fx.bubbles, stage.fx.hearts, stage.fx.confetti,
+        stage.actors, stage.names.mesh, stage.taskCards.mesh, stage.boards.mesh,
+        stage.fx.bubbles, stage.fx.hearts, stage.fx.confetti,
         stage.crowd.billboards, stage.crowd.ghostHead, stage.crowd.ghostBody, stage.crowd.ghostLegs, stage.crowd.blobs,
+        ...stage.parcels,
       );
       stage.pathGeo.setAttribute('position', stage.pathAttr);
       const dots = new THREE.Points(stage.pathGeo, new THREE.PointsMaterial({ color: 0xe0a800, size: 12, sizeAttenuation: true }));
@@ -164,7 +184,11 @@ export class Stage3D {
     };
   }
 
-  pick(clientX: number, clientY: number, rect: DOMRect): { x: number; y: number; avatarId?: string } | null {
+  setAreas(links: { roomId: string; areaId: string | null }[]) {
+    this.boards.setAreas(links);
+  }
+
+  pick(clientX: number, clientY: number, rect: DOMRect): { x: number; y: number; avatarId?: string; taskId?: string; areaId?: string | null; board?: boolean } | null {
     if (!this.ok || rect.width < 2 || rect.height < 2) return null;
     this.pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
@@ -175,6 +199,14 @@ export class Stage3D {
       if (hit.object instanceof THREE.Sprite || hit.object instanceof THREE.Points) continue;
       if (hit.object === this.names.mesh || hit.object === this.crowd.blobs) continue;
       if (hit.object === this.fx.bubbles || hit.object === this.fx.hearts || hit.object === this.fx.confetti) continue;
+      if (hit.object === this.taskCards.mesh && hit.instanceId != null) {
+        const taskId = this.taskCards.taskOf[hit.instanceId];
+        if (taskId) return { x: hit.point.x, y: hit.point.z, taskId };
+      }
+      if (hit.object === this.boards.mesh && hit.instanceId != null) {
+        const roomId = this.boards.ids[hit.instanceId];
+        if (roomId) return { x: hit.point.x, y: hit.point.z, areaId: this.boards.areaId(hit.instanceId), board: true };
+      }
       const instanced = this.instanceId(hit.object, hit.instanceId);
       if (instanced) return { x: hit.point.x, y: hit.point.z, avatarId: instanced };
       let node: THREE.Object3D | null = hit.object;
@@ -236,7 +268,7 @@ export class Stage3D {
     const seenFull = new Set<string>();
     const seenMid = new Set<string>();
     this.labels.length = 0;
-    this.boards.length = 0;
+    this.posters.length = 0;
     this.ghosts.length = 0;
     this.blobs.length = 0;
     this.fullCount = 0;
@@ -292,7 +324,7 @@ export class Stage3D {
       } else {
         this.drop(this.full, avatar.id);
         this.drop(this.mids, avatar.id);
-        this.boards.push({
+        this.posters.push({
           id: avatar.id,
           x: avatar.x,
           y: avatar.y,
@@ -311,9 +343,9 @@ export class Stage3D {
     for (const id of this.full.keys()) if (!seenFull.has(id)) this.drop(this.full, id);
     for (const id of this.mids.keys()) if (!seenMid.has(id)) this.drop(this.mids, id);
 
-    this.crowd.sync({ billboards: this.boards, ghosts: this.ghosts, blobs: this.blobs, camera: this.camera });
+    this.crowd.sync({ billboards: this.posters, ghosts: this.ghosts, blobs: this.blobs, camera: this.camera });
     this.names.sync(this.labels, this.camera, cam.viewW, cam.viewH, FOV);
-    this.syncFx(avatars);
+    this.syncFx(avatars, extras);
     if (this.plazaLogo) {
       const dx = this.camera.position.x - this.plazaLogo.position.x;
       const dz = this.camera.position.z - this.plazaLogo.position.z;
@@ -368,6 +400,8 @@ export class Stage3D {
     this.mids.clear();
     this.names.dispose();
     this.fx.dispose();
+    this.taskCards.dispose();
+    this.boards.dispose();
     this.crowd.dispose();
     this.scene.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
@@ -389,7 +423,7 @@ export class Stage3D {
     this.ok = false;
   }
 
-  private syncFx(avatars: Avatar[]) {
+  private syncFx(avatars: Avatar[], extras: StageExtras) {
     const now = performance.now();
     const hearts: { id: string; x: number; y: number; z: number; life: number }[] = [];
     const confetti: { id: string; x: number; y: number; z: number; life: number }[] = [];
@@ -408,12 +442,25 @@ export class Stage3D {
         bubbles.push({
           text: avatar.bubble.text,
           x: avatar.x,
-          y: avatar.sitting || avatar.ghost ? 78 : CHAR_H + 36,
+          y: avatar.sitting || avatar.ghost ? 128 : CHAR_H + 78,
           z: avatar.y,
         });
       }
     }
     this.fx.sync({ hearts, confetti, bubbles, camera: this.camera, viewH: this.viewH, fovDeg: FOV });
+    const duties = extras.duties || [];
+    this.taskCards.sync(duties, this.camera, this.viewH, FOV);
+    const tallies = new Map<string, AreaTally>();
+    for (const area of extras.areas || []) tallies.set(area.areaId, area.tally);
+    if (extras.boardWords) this.boards.sync(tallies, extras.boardWords);
+    this.parcels.forEach((mesh, index) => {
+      const spot = extras.packages?.[index];
+      mesh.visible = Boolean(spot);
+      if (spot) {
+        mesh.position.set(spot.x, spot.y, spot.z);
+        mesh.rotation.y += 0.08;
+      }
+    });
   }
 
   private noteFrame() {
@@ -533,7 +580,10 @@ export class Stage3D {
       floor.position.set((rect.x + rect.w / 2) * TILE, 1.15, (rect.y + rect.h / 2) * TILE);
       ground.add(floor);
     }
-    for (const object of world.def.objects) ground.add(furnish(object));
+    for (const object of world.def.objects) {
+      if (object.type === 'whiteboard') continue;
+      ground.add(furnish(object));
+    }
     this.scene.add(this.finishChunk(ground));
 
     const walls: { x: number; z: number }[] = [];

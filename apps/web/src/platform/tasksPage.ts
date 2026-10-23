@@ -120,6 +120,8 @@ function note(node: Element | null, error: unknown) {
 }
 
 export async function renderTasks(root: HTMLElement, session: Session) {
+  const wanted = new URLSearchParams(location.hash.split('?')[1] || '').get('tarea');
+  if (wanted) openTaskId = wanted;
   const filters = readFilters();
   const query = new URLSearchParams();
   query.set('vista', filters.vista);

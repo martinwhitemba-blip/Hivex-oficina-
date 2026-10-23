@@ -569,7 +569,11 @@
     "emoteHeart": "Heart",
     "emoteConfetti": "Confetti",
     "emoteHighFive": "High five",
-    "highFiveNone": "Step closer! A high five only reaches 2 tiles"
+    "highFiveNone": "Step closer! A high five only reaches 2 tiles",
+    "boardPending": "In queue",
+    "boardDoing": "On it",
+    "boardDone": "Done!",
+    "boardMission": "Quest {n}%"
   },
   "media": {
     "livekit": "Proximity audio and video with LiveKit.",

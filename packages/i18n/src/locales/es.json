@@ -569,7 +569,11 @@
     "emoteHeart": "Corazón",
     "emoteConfetti": "Confeti",
     "emoteHighFive": "Chocar los cinco",
-    "highFiveNone": "¡Acércate! El choque de cinco llega a 2 baldosas"
+    "highFiveNone": "¡Acércate! El choque de cinco llega a 2 baldosas",
+    "boardPending": "En cola",
+    "boardDoing": "En juego",
+    "boardDone": "¡Listo!",
+    "boardMission": "Misión {n}%"
   },
   "media": {
     "livekit": "Audio y vídeo de proximidad con LiveKit.",

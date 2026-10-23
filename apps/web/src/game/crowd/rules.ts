@@ -29,6 +29,9 @@ export const DRAW_MID = 3;
 export const DRAW_FIXED = 46;
 /** Corazones, confeti y el atlas de bocadillos. Cuentan 0 si nadie gesticula. */
 export const DRAW_FX = 3;
+/** Pizarras de área (1) y cartas de tarea (1). El paquete de entrega suma otra cuando vuela. */
+export const DRAW_HUD = 2;
+export const DRAW_PACKAGE = 1;
 
 export const DEFAULT_LIMITS: LodLimits = {
   fullCap: 12,
@@ -70,5 +73,5 @@ export function assignLods(people: LodPerson[], limits: LodLimits = DEFAULT_LIMI
 
 /** Peor caso de llamadas de color con los topes indicados (las sombras suman una por avatar). */
 export function drawBudget(limits: LodLimits = DEFAULT_LIMITS) {
-  return DRAW_FIXED + DRAW_FX + limits.fullCap * DRAW_FULL + limits.midCap * DRAW_MID + Math.min(limits.shadowCap, limits.fullCap);
+  return DRAW_FIXED + DRAW_FX + DRAW_HUD + DRAW_PACKAGE + limits.fullCap * DRAW_FULL + limits.midCap * DRAW_MID + Math.min(limits.shadowCap, limits.fullCap);
 }
