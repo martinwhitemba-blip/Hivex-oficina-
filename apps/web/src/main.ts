@@ -13,7 +13,7 @@ import { SocketIoTransport } from './net/socketTransport';
 import { ApiError, api, clearToken, getToken } from './platform/api';
 import { applyMarca, type Marca } from './platform/brand';
 import { paintSessionNotice, renderAuth, renderPasswordGate, renderView, setProfileLocale, type Session } from './platform/pages';
-import { isPublicJoin, viewForSession } from './routing';
+import { isAuthScreen, isPublicJoin, viewForSession } from './routing';
 import { UI } from './ui/ui';
 import markUrl from './assets/hivex-mark.png';
 import wordmarkUrl from './assets/hivex-wordmark.png';
@@ -84,7 +84,7 @@ let socket: Socket | null = null;
 let game: Game | null = null;
 let ui: UI | null = null;
 let pingTimer = 0;
-let booting = false;
+let enterRun = 0;
 let applyingLock = false;
 
 function loadImage(src: string) {
@@ -118,9 +118,7 @@ function revealApp() {
 
 function showAuth() {
   revealAuth();
-  const hash = location.hash;
-  const keep = ['#/registro', '#/unirse', '#/entrar', '#/codigo', '#/oficina', '#/activar'];
-  if (!keep.some((prefix) => hash.startsWith(prefix))) location.hash = '#/entrar';
+  if (!isAuthScreen(location.hash)) location.hash = '#/entrar';
   if (isPublicJoin(location.hash)) {
     openPublicJoin();
     return;
@@ -129,6 +127,9 @@ function showAuth() {
 }
 
 function openPublicJoin() {
+  // Cancela un enter() que ya iba hacia la oficina: si no, al terminar tapa el formulario.
+  enterRun += 1;
+  teardownOffice();
   revealAuth();
   renderAuth(authEl, () => { void enter(); });
   if (session) {
@@ -167,15 +168,19 @@ function teardownOffice() {
   appEl.innerHTML = '';
 }
 
+function enterStale(run: number) {
+  return run !== enterRun || isPublicJoin(location.hash) || !getToken();
+}
+
 async function enter() {
-  if (booting) return;
-  booting = true;
+  const run = ++enterRun;
   try {
     if (isPublicJoin(location.hash)) {
       openPublicJoin();
       return;
     }
     session = await withTimeout(api<Session>('/api/auth/yo'), 12000, 'sesión');
+    if (enterStale(run)) return;
     setProfileLocale(session.locale ?? null);
     bootLocale({ user: session.locale, company: session.companyLocale });
     if (session.debeCambiarContrasena) {
@@ -185,13 +190,16 @@ async function enter() {
     // La sesión ya se conoce: la interfaz sale antes de marca, fuentes o 3D.
     revealApp();
     await nextFrame();
+    if (enterStale(run)) return;
     const [hud, marca] = await withTimeout(Promise.all([
       api<Hud>('/api/oficina/hud'),
       api<Marca>('/api/marca'),
     ]), 12000, 'oficina');
+    if (enterStale(run)) return;
     try { applyMarca(marca); } catch (error) { console.error(error); }
-    await startOffice(session, hud, marca);
+    await startOffice(session, hud, marca, run);
   } catch (error) {
+    if (enterStale(run)) return;
     const message = error instanceof Error ? error.message : t('common.enterFail');
     if (error instanceof ApiError && error.status === 401) {
       clearToken();
@@ -205,17 +213,19 @@ async function enter() {
       return;
     }
     showBootError(message);
-    if (session) revealApp();
+    if (isPublicJoin(location.hash)) openPublicJoin();
+    else if (session) revealApp();
     else showAuth();
-  } finally {
-    booting = false;
   }
 }
 
-async function startOffice(current: Session, hud: Hud, marca: Marca | null) {
+async function startOffice(current: Session, hud: Hud, marca: Marca | null, run = enterRun) {
+  if (enterStale(run)) return;
   teardownOffice();
+  if (enterStale(run)) return;
   revealApp();
   const emblem = await loadImage(marca?.logoUrl || markUrl).catch(() => null);
+  if (enterStale(run)) return;
   const canvas = document.createElement('canvas');
   canvas.id = 'game';
   document.body.append(canvas);
@@ -277,14 +287,20 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null) {
     if (location.hash.startsWith('#/chat')) return;
     ui?.bumpDirectUnread(1);
   });
+  if (enterStale(run)) {
+    teardownOffice();
+    return;
+  }
   route();
   await nextFrame();
+  if (enterStale(run)) return;
   try {
     await withTimeout(game.mount3d(), 4000, 'webgl');
   } catch (error) {
     console.error(error);
   }
-  if (marca?.logoUrl && emblem?.naturalWidth) game.setPlazaLogo(emblem);
+  if (enterStale(run)) return;
+  if (marca?.logoUrl && emblem?.naturalWidth) game?.setPlazaLogo(emblem);
   pingTimer = window.setInterval(() => socket?.emit('presence:ping'), 20000);
   socket.emit('presence:ping');
   (window as unknown as { __game?: Game }).__game = game;

@@ -1,6 +1,7 @@
 import type { Socket } from 'socket.io-client';
 import { ZONE_LAYOUT } from '../data/zones';
 import { bootLocale, formatClock, formatWhen, getLocale, knownPhrase, LANG_NAMES, langSelect, LOCALES, roleName, statusText, t, type MessageKey } from '../i18n';
+import { authMode } from '../routing';
 import { api, clock, esc, getToken, money, num } from './api';
 import { applyMarca, readableOnInk, type Marca } from './brand';
 import logoUrl from '../assets/hivex-logo.png';
@@ -87,7 +88,7 @@ export function paintSessionNotice(root: HTMLElement, name: string, onLogout: ()
 
 export function renderAuth(root: HTMLElement, onDone: () => void) {
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
-  const mode = location.hash.startsWith('#/registro') ? 'registro' : location.hash.startsWith('#/unirse') ? 'unirse' : location.hash.startsWith('#/codigo') ? 'codigo' : location.hash.startsWith('#/activar') ? 'activar' : 'entrar';
+  const mode = authMode(location.hash);
   const title = mode === 'registro' ? t('auth.registerTitle') : mode === 'unirse' ? t('auth.joinTitle') : mode === 'codigo' ? t('auth.codeTitle') : mode === 'activar' ? t('auth.activateTitle') : t('auth.enterTitle');
   const lead = mode === 'activar'
     ? t('auth.leadActivate')

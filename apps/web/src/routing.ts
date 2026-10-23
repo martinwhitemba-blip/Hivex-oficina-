@@ -1,12 +1,36 @@
 /** Rutas públicas de alta. Tienen que pintarse aunque ya haya sesión. */
 const PUBLIC_JOIN = new Set(['unirse', 'codigo', 'activar']);
+const AUTH_SCREENS = new Set(['registro', 'unirse', 'entrar', 'codigo', 'oficina', 'activar']);
 
+/**
+ * Primer tramo de la ruta, sin query y sin barra final.
+ * El tramo se compara en minúsculas; el resto (un id) se deja igual.
+ */
 export function hashPath(hash: string) {
-  return hash.replace(/^#\//, '').split('?')[0];
+  let raw = hash.trim();
+  if (raw.startsWith('#')) raw = raw.slice(1);
+  if (raw.startsWith('/')) raw = raw.slice(1);
+  raw = raw.split('?')[0].replace(/\/+$/, '');
+  const slash = raw.indexOf('/');
+  if (slash === -1) return raw.toLowerCase();
+  return raw.slice(0, slash).toLowerCase() + raw.slice(slash);
 }
 
 export function isPublicJoin(hash: string) {
   return PUBLIC_JOIN.has(hashPath(hash));
+}
+
+/** Pantallas de entrada que no hay que reescribir a #/entrar. */
+export function isAuthScreen(hash: string) {
+  return AUTH_SCREENS.has(hashPath(hash));
+}
+
+export type AuthMode = 'registro' | 'unirse' | 'codigo' | 'activar' | 'entrar';
+
+export function authMode(hash: string): AuthMode {
+  const path = hashPath(hash);
+  if (path === 'registro' || path === 'unirse' || path === 'codigo' || path === 'activar') return path;
+  return 'entrar';
 }
 
 /**
