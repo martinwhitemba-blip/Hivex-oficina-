@@ -11,6 +11,73 @@ import { photoUrl, parseLook } from './services';
 
 let ioRef: Server | null = null;
 
+export function companyRoom(companyId: string) {
+  return `empresa:${companyId}`;
+}
+
+/** Emite solo a los sockets de esa empresa. */
+export function emitCompany(companyId: string, event: string, payload: unknown) {
+  ioRef?.to(companyRoom(companyId)).emit(event, payload);
+}
+
+export interface TaskUpdateEvent {
+  taskId: string;
+  companyId: string;
+  title: string;
+  status: string;
+  areaId: string;
+  assigneeId: string | null;
+  parentId: string | null;
+  priority: string;
+  dueDate: string | null;
+  sort: number;
+  weeklyGoalId: string | null;
+  updatedAt: string;
+  deleted?: boolean;
+}
+
+export interface TaskHandoffEvent {
+  fromMembershipId: string | null;
+  toMembershipId: string | null;
+  taskId: string;
+}
+
+export interface GoalProgressEvent {
+  goalId: string;
+  companyId: string;
+  weekStart: string;
+  metric: string;
+  current: number;
+  target: number;
+  pct: number;
+  areaId: string | null;
+  membershipId: string | null;
+  awarded: boolean;
+}
+
+export function publishTaskUpdate(companyId: string, payload: TaskUpdateEvent) {
+  emitCompany(companyId, 'task:update', payload);
+}
+
+export function publishTaskHandoff(companyId: string, payload: TaskHandoffEvent) {
+  emitCompany(companyId, 'task:handoff', payload);
+}
+
+export function publishGoalProgress(companyId: string, payload: GoalProgressEvent) {
+  emitCompany(companyId, 'goal:progress', payload);
+}
+
+const relayAt = new Map<string, number>();
+
+/** Un emote y una burbuja por segundo y persona. No se guardan. */
+export function allowRelay(membershipId: string, kind: 'emote' | 'bubble', now = Date.now()) {
+  const key = `${kind}:${membershipId}`;
+  const previous = relayAt.get(key) || 0;
+  if (now - previous < 1000) return false;
+  relayAt.set(key, now);
+  return true;
+}
+
 export function collectOnline(companyId: string): Map<string, LivePresence> {
   const map = new Map<string, LivePresence>();
   if (!ioRef) return map;
@@ -147,7 +214,7 @@ export function attachSocket(io: Server) {
   io.on('connection', (socket) => {
     const companyId = String(socket.data.companyId);
     const membershipId = String(socket.data.membershipId);
-    const room = `empresa:${companyId}`;
+    const room = companyRoom(companyId);
     socket.join(room);
 
     socket.on('office:join', (incoming: Partial<PresenceState>) => {
@@ -232,6 +299,20 @@ export function attachSocket(io: Server) {
           peer.emit('webrtc:signal', { from: membershipId, data: payload.data });
         }
       }
+    });
+
+    socket.on('office:emote', (payload: { emote?: string }) => {
+      if (!allowRelay(membershipId, 'emote')) return;
+      const emote = String(payload?.emote || '').trim().slice(0, 16);
+      if (!emote) return;
+      io.to(room).emit('office:emote', { membershipId, emote, at: new Date().toISOString() });
+    });
+
+    socket.on('office:bubble', (payload: { text?: string }) => {
+      if (!allowRelay(membershipId, 'bubble')) return;
+      const text = String(payload?.text || '').trim().slice(0, 140);
+      if (!text) return;
+      io.to(room).emit('office:bubble', { membershipId, text, at: new Date().toISOString() });
     });
 
     socket.on('presence:ping', async () => {

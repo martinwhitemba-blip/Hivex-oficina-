@@ -4,7 +4,7 @@ import { HttpError, type Actor } from './http';
 import { prisma } from './prisma';
 import { audit } from './billing';
 import { awardBadge } from './services';
-import { broadcastPanel } from './socket';
+import { broadcastPanel, publishTaskHandoff, publishTaskUpdate, type TaskUpdateEvent } from './socket';
 import { resolveMentions } from './mentions';
 
 export const TASK_STATUSES = ['pendiente', 'en_curso', 'hecho'] as const;
@@ -154,6 +154,10 @@ export async function createTask(actor: Actor, input: {
   });
   if (status === 'hecho' && task.assigneeId) await completeTaskPoints(actor.company.id, task.assigneeId);
   if (task.assigneeId && status === 'en_curso') await focusTask(actor.company.id, task.assigneeId, task.id, task.title);
+  publishTaskUpdate(actor.company.id, taskEvent(actor.company.id, task));
+  if (task.assigneeId) {
+    publishTaskHandoff(actor.company.id, { fromMembershipId: null, toMembershipId: task.assigneeId, taskId: task.id });
+  }
   await broadcastPanel(actor.company.id);
   return taskDto(task, true);
 }
@@ -188,6 +192,10 @@ export async function createSubtask(actor: Actor, parentId: string, input: {
     },
     include: boardInclude(actor.company.id),
   });
+  publishTaskUpdate(actor.company.id, taskEvent(actor.company.id, task));
+  if (task.assigneeId) {
+    publishTaskHandoff(actor.company.id, { fromMembershipId: null, toMembershipId: task.assigneeId, taskId: task.id });
+  }
   await broadcastPanel(actor.company.id);
   return taskDto(task, false);
 }
@@ -243,6 +251,14 @@ export async function updateTask(actor: Actor, id: string, input: {
   } else if (updated.assigneeId && updated.status === 'en_curso' && task.status !== 'en_curso') {
     await focusTask(actor.company.id, updated.assigneeId, updated.id, updated.title);
   }
+  publishTaskUpdate(actor.company.id, taskEvent(actor.company.id, updated));
+  if (reassigned) {
+    publishTaskHandoff(actor.company.id, {
+      fromMembershipId: task.assigneeId,
+      toMembershipId: input.assigneeId ?? null,
+      taskId: updated.id,
+    });
+  }
   await broadcastPanel(actor.company.id);
   return {
     task: taskDto(updated, true),
@@ -262,6 +278,7 @@ export async function deleteTask(actor: Actor, id: string) {
     data: { currentTaskTitle: '', currentTaskId: null, currentTaskSince: null },
   });
   await prisma.task.delete({ where: { id } });
+  publishTaskUpdate(actor.company.id, { ...taskEvent(actor.company.id, task), deleted: true, updatedAt: new Date().toISOString() });
   await broadcastPanel(actor.company.id);
   return { ok: true as const };
 }
@@ -423,6 +440,35 @@ function sortTasks<T extends { sort: number; createdAt: Date; updatedAt: Date; d
     if (cmp === 0) cmp = a.createdAt.getTime() - b.createdAt.getTime();
     return cmp * sign;
   });
+}
+
+function taskEvent(companyId: string, task: {
+  id: string;
+  title: string;
+  status: string;
+  areaId: string;
+  assigneeId: string | null;
+  parentId: string | null;
+  priority: string;
+  dueDate: Date | null;
+  sort: number;
+  weeklyGoalId: string | null;
+  updatedAt: Date;
+}): TaskUpdateEvent {
+  return {
+    taskId: task.id,
+    companyId,
+    title: task.title,
+    status: task.status,
+    areaId: task.areaId,
+    assigneeId: task.assigneeId,
+    parentId: task.parentId,
+    priority: task.priority,
+    dueDate: dueIso(task.dueDate),
+    sort: task.sort,
+    weeklyGoalId: task.weeklyGoalId,
+    updatedAt: task.updatedAt.toISOString(),
+  };
 }
 
 function leafDto(task: {

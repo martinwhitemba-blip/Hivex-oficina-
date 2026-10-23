@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { assertCanAddArea, attachPlan, audit, companyUsage, PLAN_DEFS } from './billing';
 import { canManageCompany } from './domain';
 import { actorFromRequest, HttpError, parseBody } from './http';
-import { collectOnline, broadcastPanel, filterOwner } from './socket';
+import { collectOnline, broadcastPanel, filterOwner, publishTaskHandoff, publishTaskUpdate } from './socket';
+import { dueIso } from './taskBoard';
 import { ownerSnapshot } from './ownerSnapshot';
 import { payments } from './payments';
 import { prisma } from './prisma';
@@ -62,6 +63,24 @@ export function registerOwnerRoutes(app: FastifyInstance) {
     });
     const summary = `${actor.membership.name} reasignó «${task.title}» a ${next.name}`;
     await audit(actor.company.id, actor.membership.id, 'reasignar_tarea', summary, { taskId: task.id, assigneeId: next.id });
+    const nextStatus = task.status === 'pendiente' ? 'en_curso' : task.status;
+    publishTaskUpdate(actor.company.id, {
+      taskId: task.id,
+      companyId: actor.company.id,
+      title: task.title,
+      status: nextStatus,
+      areaId: task.areaId,
+      assigneeId: next.id,
+      parentId: task.parentId,
+      priority: task.priority,
+      dueDate: dueIso(task.dueDate),
+      sort: task.sort,
+      weeklyGoalId: task.weeklyGoalId,
+      updatedAt: new Date().toISOString(),
+    });
+    if (task.assigneeId !== next.id) {
+      publishTaskHandoff(actor.company.id, { fromMembershipId: task.assigneeId, toMembershipId: next.id, taskId: task.id });
+    }
     await broadcastPanel(actor.company.id);
     return { ok: true, summary };
   });
