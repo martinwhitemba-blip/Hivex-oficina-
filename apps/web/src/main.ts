@@ -6,6 +6,7 @@ import { applyRooms, cloneOfficeMap } from './data/zones';
 import { Game } from './game/game';
 import { bootLocale, getLocale, pinLocale, t, type Locale } from './i18n';
 import type { AvatarLook, StatusId } from './game/types';
+import { notesFromGoals, notesFromTasks } from './game/crowd/boardFeed';
 import { withSpot } from './game/crowd/look';
 import { LiveKitMediaProvider } from './media/livekitMedia';
 import { P2PMediaProvider } from './media/p2pMedia';
@@ -319,6 +320,7 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null, run 
   game.start();
   const crowdCount = Number(new URLSearchParams(location.search).get('carga') || new URLSearchParams(location.search).get('load') || 0);
   if (Number.isFinite(crowdCount) && crowdCount > 0) game.spawnCrowd(crowdCount);
+  void fillBoard(game);
   resetDirectUnread();
   hintDirectUnread(hud.directUnread ?? 0);
   void refreshNotifyUnread().catch(() => {});
@@ -346,6 +348,21 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null, run 
   pingTimer = window.setInterval(() => socket?.emit('presence:ping'), 20000);
   socket.emit('presence:ping');
   (window as unknown as { __game?: Game }).__game = game;
+}
+
+/** Cartas y misión que ya existían, para que la burbuja y la pizarra salgan al entrar. */
+async function fillBoard(office: Game) {
+  try {
+    const [tasks, missions] = await Promise.all([
+      api<unknown>('/api/tareas?vista=lista'),
+      api<unknown>('/api/misiones'),
+    ]);
+    if (game !== office) return;
+    for (const note of notesFromTasks(tasks)) office.applyTask(note);
+    for (const note of notesFromGoals(missions)) office.applyGoal(note);
+  } catch {
+    // La oficina sigue. task:update y goal:progress rellenan lo que llegue después.
+  }
 }
 
 function showPasswordGate() {

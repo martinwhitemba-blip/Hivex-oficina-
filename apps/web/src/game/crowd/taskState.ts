@@ -9,6 +9,8 @@ export interface TaskNote {
   parentId?: string | null;
   dueDate?: string | null;
   updatedAt?: string;
+  /** Inicio del reloj, si la ficha trae `currentTaskSince`. Si no, vale `updatedAt`. */
+  startedAt?: string;
   deleted?: boolean;
 }
 
@@ -85,6 +87,13 @@ export class TaskState {
       dueDate: note.dueDate === undefined ? prev?.dueDate ?? null : note.dueDate,
       updatedAt,
     });
+    if (note.startedAt && note.assigneeId) {
+      const at = Date.parse(note.startedAt);
+      const remembered = this.since.get(note.assigneeId);
+      if (Number.isFinite(at) && (!remembered || remembered.taskId !== note.taskId)) {
+        this.since.set(note.assigneeId, { taskId: note.taskId, at });
+      }
+    }
   }
 
   applyGoal(note: GoalNote) {

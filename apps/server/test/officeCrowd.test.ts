@@ -3,6 +3,7 @@ import { assignLods, drawBudget, DRAW_FULL, DRAW_MID } from '../../web/src/game/
 import { govern, startingProfile } from '../../web/src/game/crowd/quality';
 import { expressionFor, photoSpot } from '../../web/src/game/crowd/look';
 import { HIGH_FIVE_RANGE, highFivePartner } from '../../web/src/game/crowd/emotes';
+import { notesFromGoals, notesFromTasks } from '../../web/src/game/crowd/boardFeed';
 import { TaskState, clockLabel, isLate } from '../../web/src/game/crowd/taskState';
 
 describe('presupuesto de la oficina 3D', () => {
@@ -69,6 +70,28 @@ describe('presupuesto de la oficina 3D', () => {
     expect(board.tally('atlas')).toMatchObject({ pending: 1, doing: 1, done: 0, pct: 40 });
     board.applyTask({ taskId: 'padre', deleted: true });
     expect(board.duty('ana', now, '2026-10-23')).toBeNull();
+  });
+
+  it('al entrar, las listas de tareas y misiones pintan la carta y la pizarra', () => {
+    const board = new TaskState();
+    const now = Date.parse('2026-10-23T12:00:00.000Z');
+    for (const note of notesFromTasks([
+      { id: 'padre', title: 'Llamar al cliente oro', status: 'en_curso', areaId: 'atlas', assigneeId: 'ana', dueDate: '2026-10-01', updatedAt: '2026-10-23T11:00:00.000Z', currentTaskSince: '2026-10-23T11:50:00.000Z', subtasks: [
+        { id: 'paso', title: 'Marcar', status: 'hecho', assigneeId: 'ana' },
+        { id: 'paso2', title: 'Apuntar', status: 'pendiente', assigneeId: 'ana' },
+      ] },
+      { id: 'cola', title: 'Archivar', status: 'pendiente', areaId: 'atlas' },
+      { id: 'hecha', title: 'Cerrar', status: 'hecho', areaId: 'atlas' },
+      { title: 'sin id' },
+    ])) board.applyTask(note);
+    for (const note of notesFromGoals({ goals: [{ id: 'm1', areaId: 'atlas', pct: 60 }, { id: 'personal', membershipId: 'ana', pct: 10 }] })) board.applyGoal(note);
+    const duty = board.duty('ana', now, '2026-10-23');
+    expect(duty).toMatchObject({ title: 'Llamar al cliente oro', overdue: true, done: 1, total: 2, time: '10:00' });
+    expect(board.tally('atlas')).toMatchObject({ pending: 1, doing: 1, done: 1, pct: 60 });
+    board.applyTask({ taskId: 'padre', title: 'Ya está', status: 'en_curso', areaId: 'atlas', assigneeId: 'ana' });
+    expect(board.duty('ana', now, '2026-10-23')?.title).toBe('Ya está');
+    expect(notesFromGoals(null)).toEqual([]);
+    expect(notesFromTasks({})).toEqual([]);
   });
 
   it('esconde a los ausentes que quedan lejos y no les pone sombra', () => {
