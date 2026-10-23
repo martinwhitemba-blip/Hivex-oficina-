@@ -285,6 +285,8 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null, run 
     return [{ id: person.id, name: person.name, role: person.role, deskId: person.deskId, look: asLook(person.look) }];
   }));
   game.start();
+  const crowdCount = Number(new URLSearchParams(location.search).get('carga') || new URLSearchParams(location.search).get('load') || 0);
+  if (Number.isFinite(crowdCount) && crowdCount > 0) game.spawnCrowd(crowdCount);
   resetDirectUnread();
   hintDirectUnread(hud.directUnread ?? 0);
   void refreshNotifyUnread().catch(() => {});

@@ -17,6 +17,7 @@ import { MapRenderer } from './mapRenderer';
 import { Npc, SeatPool } from './npc';
 import type { AvatarLook, AvatarState, MapDefinition, RoomDef, StatusId } from './types';
 import { SAMPLE_RANKINGS } from '../data/sampleData';
+import { localCrowd } from './crowd/load';
 import { Stage3D } from './stage3d';
 import { World } from './world';
 
@@ -50,6 +51,7 @@ export class Game {
   readonly npcs: Npc[] = [];
   readonly remotes = new Map<string, { avatar: Avatar; target: AvatarState; fromX: number; fromY: number; toX: number; toY: number; t0: number; dur: number }>();
   private readonly colleagues = new Map<string, Avatar>();
+  private crowd: Avatar[] = [];
   private roster: { id: string; name: string; role: string; deskId?: string | null; look: AvatarLook }[] = [];
   readonly mapRenderer: MapRenderer;
   private ctx: Ctx;
@@ -152,7 +154,22 @@ export class Game {
   }
 
   allAvatars(): Avatar[] {
-    return [this.player, ...this.npcs.map((n) => n.avatar), ...[...this.remotes.values()].map((r) => r.avatar), ...this.colleagues.values()];
+    return [this.player, ...this.npcs.map((n) => n.avatar), ...[...this.remotes.values()].map((r) => r.avatar), ...this.colleagues.values(), ...this.crowd];
+  }
+
+  /** Modo carga: N compañeros falsos en la plaza, solo en este navegador. */
+  spawnCrowd(count: number) {
+    const safe = Math.max(1, Math.min(400, Math.floor(count)));
+    const columns = Math.ceil(Math.sqrt(safe));
+    const gap = 40;
+    const originX = this.world.def.plaza.cx * TILE - ((columns - 1) * gap) / 2;
+    const originY = this.world.def.plaza.cy * TILE - ((columns - 1) * gap) / 2;
+    this.crowd = localCrowd(safe, originX, originY);
+    this.emit('toast', { text: t('office.loadCrowd', { n: this.crowd.length }) });
+  }
+
+  clearCrowd() {
+    this.crowd = [];
   }
 
   /** Personas de la empresa que aún no han entrado: sentadas en su puesto, atenuadas. */
@@ -453,7 +470,7 @@ export class Game {
     const enclosed = myRoom && myRoom.walls && (myRoom.kind === 'meeting' || myRoom.kind === 'private');
     const peers: PeerAudio[] = [];
     for (const a of this.allAvatars()) {
-      if (a === me || a.status === 'ausente' || a.ghost) continue;
+      if (a === me || a.status === 'ausente' || a.ghost || a.crowd) continue;
       const d = dist(a, me);
       const room = this.world.roomAt(a.x, a.y);
       if (enclosed) {
@@ -505,6 +522,7 @@ export class Game {
       if (this.stage?.ok) {
         this.stage.render(this.allAvatars(), this.camera, this.dpr, this.t, (look) => this.faceOf(look), {
           selfId: this.player.id,
+          selfLabel: t('office.you'),
           path: this.player.path,
           marker: this.clickMarker && now < this.clickMarker.until ? { x: this.clickMarker.x, y: this.clickMarker.y } : null,
           proximity: this.peers.length > 0,

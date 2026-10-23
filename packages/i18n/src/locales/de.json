@@ -498,7 +498,8 @@
     "demoMates": "Demonstrationskollegen",
     "demoTitle": "NPCs zeigen oder ausblenden",
     "offline": "Offline",
-    "aria": "Büro"
+    "aria": "Büro",
+    "loadCrowd": "Volles Haus! {n} Übungskollegen kommen ins Büro"
   },
   "media": {
     "livekit": "Nähe-Audio und -Video mit LiveKit.",

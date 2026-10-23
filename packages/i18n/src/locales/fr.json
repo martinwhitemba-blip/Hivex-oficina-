@@ -498,7 +498,8 @@
     "demoMates": "Collègues de démonstration",
     "demoTitle": "Afficher ou masquer les PNJ",
     "offline": "Hors ligne",
-    "aria": "Bureau"
+    "aria": "Bureau",
+    "loadCrowd": "Salle comble ! {n} collègues d'essai entrent dans le bureau"
   },
   "media": {
     "livekit": "Audio et vidéo de proximité avec LiveKit.",

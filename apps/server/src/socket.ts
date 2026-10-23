@@ -7,6 +7,7 @@ import { env } from './env';
 import { ownerSnapshot, type LivePresence } from './ownerSnapshot';
 import { prisma } from './prisma';
 import { sendDirect, type DirectDto } from './direct';
+import { closeEnough, fanoutPresence, INTEREST_RADIUS, INTEREST_UNDER, type PresenceViewer } from './presenceFanout';
 import { photoUrl, parseLook } from './services';
 
 let ioRef: Server | null = null;
@@ -148,21 +149,59 @@ interface PresenceState {
 const lastStates = new Map<string, Map<string, PresenceState>>();
 const lastBroadcast = new Map<string, number>();
 const pendingPresence = new Map<string, { timer: ReturnType<typeof setTimeout>; state: PresenceState }>();
-const INTEREST_UNDER = 40;
-const INTEREST_RADIUS = 720;
+/** Sockets locales de cada sala `empresa:{id}`. Las otras instancias tienen el suyo. */
+const roomMembers = new Map<string, Set<Socket>>();
+const crowdCache = new Map<string, { at: number; size: number }>();
+
+function remember(room: string, socket: Socket) {
+  let bucket = roomMembers.get(room);
+  if (!bucket) {
+    bucket = new Set();
+    roomMembers.set(room, bucket);
+  }
+  bucket.add(socket);
+}
+
+function forget(room: string, socket: Socket) {
+  const bucket = roomMembers.get(room);
+  if (!bucket) return;
+  bucket.delete(socket);
+  if (!bucket.size) roomMembers.delete(room);
+}
+
+function viewerOf(socket: Socket): PresenceViewer {
+  return {
+    id: socket.id,
+    areaId: (socket.data.areaId as string | null | undefined) ?? null,
+    x: Number(socket.data.x || 0),
+    y: Number(socket.data.y || 0),
+  };
+}
 
 function roomCrowd(io: Server, room: string) {
-  return io.sockets.adapter.rooms.get(room)?.size ?? 1;
+  const local = roomMembers.get(room)?.size ?? io.sockets.adapter.rooms.get(room)?.size ?? 1;
+  const cached = crowdCache.get(room);
+  const now = Date.now();
+  if (!cached || now - cached.at > 1000) {
+    crowdCache.set(room, { at: now, size: cached?.size ?? local });
+    void io.in(room).allSockets().then((ids) => {
+      crowdCache.set(room, { at: Date.now(), size: ids.size });
+    }).catch(() => {});
+  }
+  return crowdCache.get(room)?.size ?? local;
 }
 
-function closeEnough(viewer: Socket, other: { areaId?: string | null; x: number; y: number }) {
-  if (viewer.data.areaId && other.areaId && viewer.data.areaId === other.areaId) return true;
-  const dx = Number(viewer.data.x || 0) - other.x;
-  const dy = Number(viewer.data.y || 0) - other.y;
-  return Math.hypot(dx, dy) < INTEREST_RADIUS;
+function relay(io: Server, event: string, payload: unknown) {
+  const emitter = io as Server & { serverSideEmit?: (name: string, body: unknown) => Promise<void> | void };
+  if (typeof emitter.serverSideEmit !== 'function') return;
+  try {
+    void Promise.resolve(emitter.serverSideEmit(event, payload)).catch(() => {});
+  } catch {
+    // El adaptador en memoria no habla con otras instancias.
+  }
 }
 
-function emitPresence(io: Server, socket: Socket, room: string, companyId: string, state: PresenceState, immediate: boolean) {
+function emitPresence(io: Server, socket: Socket, room: string, state: PresenceState, immediate: boolean) {
   const now = Date.now();
   const previous = lastBroadcast.get(socket.id) || 0;
   if (!immediate && now - previous < 80) {
@@ -172,25 +211,58 @@ function emitPresence(io: Server, socket: Socket, room: string, companyId: strin
       const timer = setTimeout(() => {
         const item = pendingPresence.get(socket.id);
         pendingPresence.delete(socket.id);
-        if (item) emitPresence(io, socket, room, companyId, item.state, true);
+        if (item) emitPresence(io, socket, room, item.state, true);
       }, 80);
       pendingPresence.set(socket.id, { timer, state });
     }
     return;
   }
   lastBroadcast.set(socket.id, now);
-  if (roomCrowd(io, room) <= INTEREST_UNDER) {
+  const members = roomMembers.get(room) ?? new Set<Socket>();
+  const plan = fanoutPresence(
+    [...members].map(viewerOf),
+    socket.id,
+    { x: state.x, y: state.y, areaId: socket.data.areaId ?? null },
+    roomCrowd(io, room),
+  );
+  if (plan.mode === 'room') {
     socket.to(room).emit('office:state', state);
     return;
   }
-  for (const peer of io.sockets.sockets.values()) {
-    if (peer.data.companyId !== companyId || peer.id === socket.id) continue;
-    if (closeEnough(peer, { areaId: socket.data.areaId ?? null, x: state.x, y: state.y })) peer.emit('office:state', state);
+  const wanted = new Set(plan.targets.map((target) => target.id));
+  for (const peer of members) {
+    if (wanted.has(peer.id)) peer.emit('office:state', state);
   }
+  relay(io, 'office:presence-relay', { room, areaId: socket.data.areaId ?? null, state });
 }
 
 export function attachSocket(io: Server) {
   ioRef = io;
+  io.on('office:presence-relay', (payload: { room?: string; areaId?: string | null; state?: PresenceState }) => {
+    const room = String(payload?.room || '');
+    const state = payload?.state;
+    if (!room || !state || typeof state.id !== 'string') return;
+    const members = roomMembers.get(room);
+    if (!members) return;
+    for (const peer of members) {
+      if (closeEnough(viewerOf(peer), { areaId: payload.areaId ?? null, x: state.x, y: state.y })) peer.emit('office:state', state);
+    }
+  });
+  io.on('office:presence-want', (payload: { room?: string; to?: string }) => {
+    const room = String(payload?.room || '');
+    const to = String(payload?.to || '');
+    if (!room.startsWith('empresa:') || !to) return;
+    const states = [...(lastStates.get(room.slice('empresa:'.length))?.values() ?? [])];
+    if (!states.length) return;
+    relay(io, 'office:presence-snapshot', { to, states });
+  });
+  io.on('office:presence-snapshot', (payload: { to?: string; states?: PresenceState[] }) => {
+    const peer = io.sockets.sockets.get(String(payload?.to || ''));
+    if (!peer || !Array.isArray(payload.states)) return;
+    for (const state of payload.states) {
+      if (state && typeof state.id === 'string') peer.emit('office:state', state);
+    }
+  });
   io.use(async (socket, next) => {
     try {
       const token = String(socket.handshake.auth?.token || '');
@@ -226,6 +298,7 @@ export function attachSocket(io: Server) {
     const membershipId = String(socket.data.membershipId);
     const room = companyRoom(companyId);
     socket.join(room);
+    remember(room, socket);
 
     socket.on('office:join', (incoming: Partial<PresenceState>) => {
       const state = sanitize(incoming, socket);
@@ -241,7 +314,8 @@ export function attachSocket(io: Server) {
       socket.data.liveStatus = state.status;
       socket.data.x = state.x;
       socket.data.y = state.y;
-      emitPresence(io, socket, room, companyId, state, true);
+      emitPresence(io, socket, room, state, true);
+      relay(io, 'office:presence-want', { room, to: socket.id });
       void broadcastPanel(companyId);
     });
 
@@ -253,7 +327,7 @@ export function attachSocket(io: Server) {
       socket.data.liveStatus = state.status;
       socket.data.x = state.x;
       socket.data.y = state.y;
-      emitPresence(io, socket, room, companyId, state, false);
+      emitPresence(io, socket, room, state, false);
     });
 
     socket.on('panel:sync', () => { void broadcastPanel(companyId); });
@@ -344,6 +418,7 @@ export function attachSocket(io: Server) {
       if (pending) clearTimeout(pending.timer);
       pendingPresence.delete(socket.id);
       lastBroadcast.delete(socket.id);
+      forget(room, socket);
       lastStates.get(companyId)?.delete(membershipId);
       socket.to(room).emit('office:leave', membershipId);
       void broadcastPanel(companyId);

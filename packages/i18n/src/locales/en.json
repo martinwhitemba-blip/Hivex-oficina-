@@ -498,7 +498,8 @@
     "demoMates": "Demonstration coworkers",
     "demoTitle": "Show or hide NPCs",
     "offline": "Offline",
-    "aria": "Office"
+    "aria": "Office",
+    "loadCrowd": "Full house! {n} practice teammates just walked in"
   },
   "media": {
     "livekit": "Proximity audio and video with LiveKit.",

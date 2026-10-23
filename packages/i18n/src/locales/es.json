@@ -498,7 +498,8 @@
     "demoMates": "Compañeros de demostración",
     "demoTitle": "Mostrar u ocultar NPC",
     "offline": "Desconectados",
-    "aria": "Oficina"
+    "aria": "Oficina",
+    "loadCrowd": "¡Sala llena! {n} compañeros de prueba entran en la oficina"
   },
   "media": {
     "livekit": "Audio y vídeo de proximidad con LiveKit.",
