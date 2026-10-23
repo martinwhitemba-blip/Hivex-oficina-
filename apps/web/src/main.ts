@@ -13,6 +13,7 @@ import { SocketIoTransport } from './net/socketTransport';
 import { ApiError, api, clearToken, getToken } from './platform/api';
 import { applyMarca, type Marca } from './platform/brand';
 import { paintSessionNotice, renderAuth, renderPasswordGate, renderView, setProfileLocale, type Session } from './platform/pages';
+import { hintDirectUnread, receiveDirect, resetDirectUnread, watchDirect } from './platform/directUnread';
 import { isAuthScreen, isPublicJoin, viewForSession } from './routing';
 import { UI } from './ui/ui';
 import markUrl from './assets/hivex-mark.png';
@@ -280,12 +281,12 @@ async function startOffice(current: Session, hud: Hud, marca: Marca | null, run 
     return [{ id: person.id, name: person.name, role: person.role, deskId: person.deskId, look: asLook(person.look) }];
   }));
   game.start();
-  ui.setDirectUnread(hud.directUnread ?? 0);
+  resetDirectUnread();
+  hintDirectUnread(hud.directUnread ?? 0);
   ui.applyMarca({ nombre: marca?.nombre || current.membership.company.name, oficina: marca?.oficina || hud.officeName, logoUrl: marca?.logoUrl || null });
-  socket.on('dm:message', (message: { recipientId?: string }) => {
-    if (message.recipientId !== current.membership.id) return;
-    if (location.hash.startsWith('#/chat')) return;
-    ui?.bumpDirectUnread(1);
+  socket.on('dm:message', (message: { id?: string; senderId?: string; recipientId?: string }) => {
+    if (!message?.id || !message.senderId || !message.recipientId) return;
+    receiveDirect({ id: message.id, senderId: message.senderId, recipientId: message.recipientId }, current.membership.id);
   });
   if (enterStale(run)) {
     teardownOffice();
@@ -333,6 +334,7 @@ window.addEventListener('hivex-marca', (event) => {
 function logout(opts?: { keepHash?: boolean }) {
   clearToken();
   teardownOffice();
+  resetDirectUnread();
   session = null;
   setProfileLocale(null);
   officeMedia = null;
@@ -347,6 +349,7 @@ function currentView() {
 
 function route() {
   if (isPublicJoin(location.hash)) {
+    watchDirect(null);
     openPublicJoin();
     return;
   }
@@ -359,6 +362,7 @@ function route() {
     return;
   }
   const view = currentView();
+  if (!view.startsWith('chat')) watchDirect(null);
   if (view === 'oficina') {
     pagesEl.classList.add('hidden');
     pagesEl.hidden = true;

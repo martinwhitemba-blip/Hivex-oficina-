@@ -2,6 +2,7 @@ import type { Socket } from 'socket.io-client';
 import { ZONE_LAYOUT } from '../data/zones';
 import { bootLocale, formatClock, formatWhen, getLocale, knownPhrase, LANG_NAMES, langSelect, LOCALES, roleName, statusText, t, type MessageKey } from '../i18n';
 import { authMode } from '../routing';
+import { clearDirect, directConversationOpen, directUnreadOf, directUnreadTotal, onDirectArrival, seedDirectUnread, watchDirect } from './directUnread';
 import { api, clock, esc, getToken, money, num } from './api';
 import { applyMarca, readableOnInk, type Marca } from './brand';
 import logoUrl from '../assets/hivex-logo.png';
@@ -944,12 +945,31 @@ async function renderDay(root: HTMLElement, session: Session) {
   });
 }
 
+let chatDmHandler: ((message: DirectLine) => void) | null = null;
+
+function chatPanelVisible(root: HTMLElement) {
+  return root.isConnected && !root.hidden && !root.classList.contains('hidden') && location.hash.startsWith('#/chat');
+}
+
 async function renderChat(root: HTMLElement, session: Session, socket: Socket | null) {
   const initial = new URLSearchParams((location.hash.split('?')[1] || '')).get('con') || '';
+  if (chatDmHandler) socket?.off('dm:message', chatDmHandler);
+  chatDmHandler = null;
+  watchDirect(null);
+  let missed = false;
+  const stopArrival = onDirectArrival(() => { missed = true; });
   const [areas, directory] = await Promise.all([
     api<{ id: string; name: string }[]>('/api/areas'),
     api<{ personas: DirectPerson[] }>('/api/directos'),
   ]);
+  seedDirectUnread(directory.personas);
+  if (missed) {
+    const again = await api<{ personas: DirectPerson[] }>('/api/directos');
+    directory.personas = again.personas;
+    seedDirectUnread(again.personas);
+  }
+  stopArrival();
+  if (!root.isConnected) return;
   const channels = [{ id: '', name: t('chat.general') }, ...areas.filter((area) => session.membership.role === 'propietario' || area.id === session.membership.area?.id)];
   root.innerHTML = shell('chat', t('chat.title'), t('chat.subtitle'), `
     <div class="toolbar">
@@ -991,14 +1011,16 @@ async function renderChat(root: HTMLElement, session: Session, socket: Socket | 
     log.scrollTop = log.scrollHeight;
   };
   const paintPeers = () => {
-    const total = personas.reduce((sum, person) => sum + (Number(person.unread) || 0), 0);
+    const total = directUnreadTotal();
     badge.hidden = total === 0;
     badge.textContent = total ? String(total) : '';
-    window.dispatchEvent(new CustomEvent('hivex-unread', { detail: total }));
-    peerBox.innerHTML = personas.map((person) => `<button class="peer-row ${person.id === selected && mode === 'directos' ? 'on' : ''}" data-peer="${esc(person.id)}" type="button">
+    peerBox.innerHTML = personas.map((person) => {
+      const unread = directUnreadOf(person.id);
+      return `<button class="peer-row ${person.id === selected && mode === 'directos' ? 'on' : ''}" data-peer="${esc(person.id)}" type="button">
       <span><b>${esc(person.name)}</b><span class="muted">${esc(person.puesto || t('chat.coworker'))}${person.ultimo ? ' · ' + esc(person.ultimo.body) : ''}</span></span>
-      ${person.unread ? `<span class="count-badge">${person.unread}</span>` : ''}
-    </button>`).join('') || `<p class="muted">${t('chat.noPeople')}</p>`;
+      ${unread ? `<span class="count-badge">${unread}</span>` : ''}
+    </button>`;
+    }).join('') || `<p class="muted">${t('chat.noPeople')}</p>`;
     peerBox.querySelectorAll<HTMLButtonElement>('[data-peer]').forEach((button) => {
       button.onclick = () => {
         selected = button.dataset.peer || '';
@@ -1009,6 +1031,14 @@ async function renderChat(root: HTMLElement, session: Session, socket: Socket | 
     });
   };
   const show = async () => {
+    const opened = selected;
+    const viewingPeer = mode === 'directos' && !!opened && chatPanelVisible(root);
+    if (viewingPeer) {
+      watchDirect(opened);
+      clearDirect(opened);
+    } else {
+      watchDirect(null);
+    }
     channelBox.hidden = mode !== 'canales';
     peerBox.hidden = mode !== 'directos';
     (root.querySelector('#tab-canales') as HTMLButtonElement).className = mode === 'canales' ? 'btn primary' : 'btn';
@@ -1024,48 +1054,56 @@ async function renderChat(root: HTMLElement, session: Session, socket: Socket | 
       } catch (error) { noteError(out, error); }
       return;
     }
-    const person = personas.find((item) => item.id === selected);
+    const person = personas.find((item) => item.id === opened);
     title.textContent = person ? t('chat.with', { name: person.name }) : t('chat.directs');
-    if (!selected) {
+    if (!opened) {
       log.innerHTML = `<p class="muted">${t('chat.pick')}</p>`;
       return;
     }
     try {
-      const thread = await api<{ con: { name: string }; mensajes: DirectLine[] }>(`/api/directos/${encodeURIComponent(selected)}`);
+      const thread = await api<{ con: { name: string }; mensajes: DirectLine[] }>(`/api/directos/${encodeURIComponent(opened)}`);
+      if (!chatPanelVisible(root) || mode !== 'directos' || selected !== opened) {
+        watchDirect(null);
+        return;
+      }
       title.textContent = t('chat.with', { name: thread.con.name });
-      if (person) person.unread = 0;
+      clearDirect(opened);
       paintPeers();
       paintThread(thread.mensajes);
     } catch (error) {
+      watchDirect(null);
       log.innerHTML = '';
       noteError(out, error);
+      try {
+        const again = await api<{ personas: DirectPerson[] }>('/api/directos');
+        seedDirectUnread(again.personas);
+        paintPeers();
+      } catch { /* el aviso de arriba ya explica el fallo */ }
     }
   };
   root.querySelector('#tab-canales')!.addEventListener('click', () => { mode = 'canales'; history.replaceState(null, '', '#/chat'); void show(); });
   root.querySelector('#tab-directos')!.addEventListener('click', () => { mode = 'directos'; void show(); });
   channel.onchange = () => void show();
   socket?.off('chat:message');
-  socket?.off('dm:message');
   socket?.off('dm:error');
-  socket?.on('chat:message', () => { if (root.isConnected && mode === 'canales') void show(); });
-  socket?.on('dm:message', (message: DirectLine) => {
-    if (!root.isConnected) return;
+  socket?.on('chat:message', () => { if (chatPanelVisible(root) && mode === 'canales') void show(); });
+  chatDmHandler = (message: DirectLine) => {
+    if (!chatPanelVisible(root)) return;
     const mine = message.senderId === session.membership.id;
     const peerId = mine ? message.recipientId : message.senderId;
     const person = personas.find((item) => item.id === peerId);
-    if (person) {
-      person.ultimo = { body: message.body, createdAt: message.createdAt, mio: mine };
-      if (!mine && !(mode === 'directos' && selected === peerId)) person.unread += 1;
-      if (!mine && mode === 'directos' && selected === peerId) person.unread = 0;
-    }
-    if (mode === 'directos' && selected === peerId && !seen.has(message.id)) {
+    if (person) person.ultimo = { body: message.body, createdAt: message.createdAt, mio: mine };
+    const open = mode === 'directos' && selected === peerId && directConversationOpen(peerId);
+    if (open && !seen.has(message.id)) {
       seen.add(message.id);
+      if (!log.querySelector('.bubble')) log.innerHTML = '';
       log.insertAdjacentHTML('beforeend', `<div class="bubble ${mine ? 'mine' : ''}"><b>${esc(message.senderName)}</b> <span class="muted">${esc(formatClock(message.createdAt))}</span><div>${esc(message.body)}</div></div>`);
       log.scrollTop = log.scrollHeight;
       if (!mine) void api(`/api/directos/${encodeURIComponent(peerId)}`).catch(() => {});
     }
     paintPeers();
-  });
+  };
+  socket?.on('dm:message', chatDmHandler);
   socket?.on('dm:error', (payload: { error?: string }) => { if (root.isConnected) noteError(out, new Error(payload?.error || t('chat.sendFail'))); });
   root.querySelector('#send')!.addEventListener('submit', async (event) => {
     event.preventDefault();
