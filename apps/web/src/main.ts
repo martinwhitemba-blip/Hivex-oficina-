@@ -1,0 +1,518 @@
+import './styles.css';
+import './platform/platform.css';
+import { io, type Socket } from 'socket.io-client';
+import { BRAND_NAME } from './config';
+import { applyRooms, cloneOfficeMap } from './data/zones';
+import { Game } from './game/game';
+import { bootLocale, getLocale, pinLocale, t, type Locale } from './i18n';
+import type { AvatarLook, StatusId } from './game/types';
+import { notesFromGoals, notesFromTasks } from './game/crowd/boardFeed';
+import { withSpot } from './game/crowd/look';
+import { LiveKitMediaProvider } from './media/livekitMedia';
+import { P2PMediaProvider } from './media/p2pMedia';
+import type { ProximityMediaProvider } from './media/proximityMedia';
+import { SocketIoTransport } from './net/socketTransport';
+import { ApiError, api, clearToken, getToken } from './platform/api';
+import { applyMarca, type Marca } from './platform/brand';
+import { renderPublicForm } from './platform/planningPage';
+import { paintSessionNotice, renderAuth, renderPasswordGate, renderView, setProfileLocale, type Session } from './platform/pages';
+import { hintDirectUnread, receiveDirect, resetDirectUnread, watchDirect } from './platform/directUnread';
+import { applyNotifyNew, applyNotifyRead, refreshNotifyUnread, resetNotifyUnread } from './platform/notifyUnread';
+import { isAuthScreen, isPublicForm, isPublicJoin, viewForSession } from './routing';
+import { UI } from './ui/ui';
+import markUrl from './assets/hivex-mark.png';
+import wordmarkUrl from './assets/hivex-wordmark.png';
+import logoUrl from './assets/hivex-logo.png';
+import faviconUrl from './assets/hivex-favicon.png';
+
+bootLocale();
+function paintTitle() {
+  document.title = `${BRAND_NAME} · ${t('brand.tagline')}`;
+}
+paintTitle();
+(document.getElementById('favicon') as HTMLLinkElement).href = faviconUrl;
+
+if (import.meta.env.MODE !== 'single' && location.protocol.startsWith('http')) {
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = './manifest.webmanifest';
+  document.head.append(link);
+  if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  }
+}
+
+interface Hud {
+  officeName: string;
+  isDemo: boolean;
+  stats: { ventasHoy: number; importeHoy: number; citasHoy: number; seguimiento: number; demo: boolean };
+  rankings: { ventas: { title: string; subtitle: string; rows: { name: string; value: number; fmt: string }[] }; citas: { title: string; subtitle: string; rows: { name: string; value: number; fmt: string }[] } };
+  rooms: { mapRoomId: string; name: string; label: string; areaId?: string | null }[];
+  deskId: string | null;
+  directory: { id: string; name: string; role: string; photoUrl?: string | null; deskId?: string | null; look?: Session['membership']['look']; photoPlacement?: 'cara' | 'gafete' }[];
+  alertCount: number;
+  directUnread?: number;
+  media: { mode: 'livekit' | 'p2p'; notice: string };
+}
+
+const authEl = document.getElementById('auth')!;
+const appEl = document.getElementById('app')!;
+const pagesEl = document.getElementById('pages')!;
+const bootErrorEl = document.getElementById('boot-error')!;
+const bootErrorText = document.getElementById('boot-error-text')!;
+
+function showBootError(message: string) {
+  bootErrorText.textContent = message || t('common.bootFail');
+  bootErrorEl.hidden = false;
+}
+
+document.getElementById('boot-reload')?.addEventListener('click', () => location.reload());
+window.addEventListener('error', (event) => {
+  showBootError(event.message || t('common.unexpected'));
+});
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason;
+  showBootError(reason instanceof Error ? reason.message : t('common.unexpected'));
+});
+
+function withTimeout<T>(work: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(t('common.timeout', { label }))), ms);
+    work.then((value) => { window.clearTimeout(timer); resolve(value); }, (error) => { window.clearTimeout(timer); reject(error); });
+  });
+}
+
+function nextFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+let session: Session | null = null;
+let officeMedia: ProximityMediaProvider | null = null;
+let socket: Socket | null = null;
+let game: Game | null = null;
+let ui: UI | null = null;
+let pingTimer = 0;
+let enterRun = 0;
+let applyingLock = false;
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    const timer = window.setTimeout(() => reject(new Error('logo')), 2000);
+    img.onload = () => { window.clearTimeout(timer); resolve(img); };
+    img.onerror = () => { window.clearTimeout(timer); resolve(img); };
+    img.src = src;
+  });
+}
+
+function asLook(look: Session['membership']['look'], placement?: unknown): AvatarLook {
+  const hairStyle = (look.hairStyle === 1 || look.hairStyle === 2 || look.hairStyle === 3 ? look.hairStyle : 0) as 0 | 1 | 2 | 3;
+  return withSpot({
+    skin: look.skin, hair: look.hair, hairStyle, shirt: look.shirt, pants: look.pants, glasses: look.glasses,
+    usePhoto: look.usePhoto === true, photoUrl: look.photoUrl,
+  }, placement);
+}
+
+function revealAuth() {
+  document.body.classList.add('auth-mode');
+  authEl.hidden = false;
+  appEl.hidden = true;
+  pagesEl.classList.add('hidden');
+  pagesEl.hidden = true;
+}
+
+function revealApp() {
+  document.body.classList.remove('auth-mode');
+  authEl.hidden = true;
+  appEl.hidden = false;
+}
+
+function showAuth() {
+  revealAuth();
+  if (!isAuthScreen(location.hash)) location.hash = '#/entrar';
+  if (isPublicJoin(location.hash)) {
+    openPublicJoin();
+    return;
+  }
+  renderAuth(authEl, () => { void enter(); });
+}
+
+function openPublicJoin() {
+  // Cancela un enter() que ya iba hacia la oficina: si no, al terminar tapa el formulario.
+  enterRun += 1;
+  teardownOffice();
+  revealAuth();
+  renderAuth(authEl, () => { void enter(); });
+  if (session) {
+    paintSessionNotice(authEl, session.membership.name, () => logout({ keepHash: true }), () => { location.hash = '#/oficina'; });
+    return;
+  }
+  if (!getToken()) return;
+  void withTimeout(api<Session>('/api/auth/yo'), 12000, 'sesión').then((next) => {
+    session = next;
+    setProfileLocale(next.locale ?? null);
+    const before = getLocale();
+    bootLocale({ user: next.locale, company: next.companyLocale });
+    if (!isPublicJoin(location.hash)) return;
+    if (getLocale() !== before) renderAuth(authEl, () => { void enter(); });
+    paintSessionNotice(authEl, next.membership.name, () => logout({ keepHash: true }), () => { location.hash = '#/oficina'; });
+  }).catch((error) => {
+    if (error instanceof ApiError && error.status === 401) {
+      clearToken();
+      session = null;
+      setProfileLocale(null);
+      return;
+    }
+    showBootError(error instanceof Error ? error.message : t('common.sessionFail'));
+  });
+}
+
+function teardownOffice() {
+  window.clearInterval(pingTimer);
+  applyingLock = false;
+  game?.stop();
+  socket?.disconnect();
+  game = null;
+  ui = null;
+  socket = null;
+  document.getElementById('game')?.remove();
+  appEl.innerHTML = '';
+}
+
+function enterStale(run: number) {
+  return run !== enterRun || isPublicJoin(location.hash) || !getToken();
+}
+
+async function enter() {
+  const run = ++enterRun;
+  try {
+    if (isPublicJoin(location.hash)) {
+      openPublicJoin();
+      return;
+    }
+    session = await withTimeout(api<Session>('/api/auth/yo'), 12000, 'sesión');
+    if (enterStale(run)) return;
+    setProfileLocale(session.locale ?? null);
+    bootLocale({ user: session.locale, company: session.companyLocale });
+    if (session.debeCambiarContrasena) {
+      showPasswordGate();
+      return;
+    }
+    // La sesión ya se conoce: la interfaz sale antes de marca, fuentes o 3D.
+    revealApp();
+    await nextFrame();
+    if (enterStale(run)) return;
+    const [hud, marca] = await withTimeout(Promise.all([
+      api<Hud>('/api/oficina/hud'),
+      api<Marca>('/api/marca'),
+    ]), 12000, 'oficina');
+    if (enterStale(run)) return;
+    try { applyMarca(marca); } catch (error) { console.error(error); }
+    await startOffice(session, hud, marca, run);
+  } catch (error) {
+    if (enterStale(run)) return;
+    const message = error instanceof Error ? error.message : t('common.enterFail');
+    if (error instanceof ApiError && error.status === 401) {
+      clearToken();
+      session = null;
+      showAuth();
+      const err = authEl.querySelector('.err') as HTMLElement | null;
+      if (err) {
+        err.hidden = false;
+        err.textContent = message;
+      }
+      return;
+    }
+    showBootError(message);
+    if (isPublicJoin(location.hash)) openPublicJoin();
+    else if (session) revealApp();
+    else showAuth();
+  }
+}
+
+async function startOffice(current: Session, hud: Hud, marca: Marca | null, run = enterRun) {
+  if (enterStale(run)) return;
+  teardownOffice();
+  if (enterStale(run)) return;
+  revealApp();
+  const emblem = await loadImage(marca?.logoUrl || markUrl).catch(() => null);
+  if (enterStale(run)) return;
+  const canvas = document.createElement('canvas');
+  canvas.id = 'game';
+  document.body.append(canvas);
+
+  socket = io({ auth: { token: getToken() }, transports: ['websocket', 'polling'], withCredentials: true });
+  const media: ProximityMediaProvider = hud.media.mode === 'livekit'
+    ? new LiveKitMediaProvider()
+    : new P2PMediaProvider(socket, current.membership.id);
+  officeMedia = media;
+  (media as { notice: string }).notice = hud.media.notice;
+  const map = cloneOfficeMap();
+  applyRooms(map, hud.rooms);
+  game = new Game(canvas, map, {
+    transport: new SocketIoTransport(socket),
+    media,
+    emblem: emblem ?? undefined,
+    player: {
+      id: current.membership.id,
+      name: current.membership.name,
+      role: current.membership.jobTitle?.name || current.membership.roleLabel,
+      look: asLook(current.membership.look, current.membership.photoPlacement),
+    },
+    rankings: hud.rankings,
+    deskId: hud.deskId,
+    demoNpcs: false,
+  });
+  ui = new UI(appEl, game, media, { mark: markUrl, wordmark: wordmarkUrl, logo: logoUrl }, {
+    officeName: hud.officeName,
+    role: current.membership.role,
+    stats: hud.stats,
+    directory: hud.directory,
+    alertCount: hud.alertCount,
+    onNavigate: (view) => { location.hash = `#/${view}`; },
+    onLogout: logout,
+    onStatus: (status: StatusId) => { game?.setPlayerStatus(status); },
+    onToggleDemo: (on) => game?.setDemoMode(on),
+    onMessage: (id) => { location.hash = `#/chat?con=${encodeURIComponent(id)}`; },
+  });
+  game.on('dm', ({ id }) => { location.hash = `#/chat?con=${encodeURIComponent(id)}`; });
+  game.on('lock', ({ locked }) => {
+    if (applyingLock) return;
+    socket?.emit('office:lock', { locked });
+  });
+  game.on('emote', ({ emote }) => socket?.emit('office:emote', { emote }));
+  game.on('bubble', ({ text }) => socket?.emit('office:bubble', { text }));
+  socket.on('office:emote', (payload: { membershipId?: string; emote?: string }) => {
+    if (!payload?.membershipId || !payload.emote) return;
+    game?.receiveEmote(payload.membershipId, payload.emote);
+  });
+  socket.on('office:bubble', (payload: { membershipId?: string; text?: string }) => {
+    if (!payload?.membershipId || !payload.text) return;
+    game?.receiveBubble(payload.membershipId, payload.text);
+  });
+  socket.on('chat:message', (message: { authorId?: string; body?: string }) => {
+    if (!message?.authorId || !message.body) return;
+    game?.receiveBubble(message.authorId, message.body);
+  });
+  socket.on('office:lock', (payload: { locked?: boolean }) => {
+    if (!game) return;
+    applyingLock = true;
+    game.setPrivateLocked(Boolean(payload?.locked), false);
+    applyingLock = false;
+  });
+  game.setColleagues(hud.directory.flatMap((person) => {
+    if (!person.look || !person.deskId) return [];
+    return [{ id: person.id, name: person.name, role: person.role, deskId: person.deskId, look: asLook(person.look, person.photoPlacement) }];
+  }));
+  game.setAreas(hud.rooms.map((room) => ({ roomId: room.mapRoomId, areaId: room.areaId || null })));
+  game.on('openBoard', ({ taskId, areaId }) => {
+    const params = new URLSearchParams();
+    if (areaId) params.set('area', areaId);
+    if (taskId) params.set('tarea', taskId);
+    location.hash = params.toString() ? `#/tareas?${params}` : '#/tareas';
+  });
+  socket.on('task:update', (payload: { taskId?: string; title?: string; status?: string; areaId?: string; assigneeId?: string | null; parentId?: string | null; dueDate?: string | null; updatedAt?: string; deleted?: boolean }) => {
+    if (payload?.taskId) game?.applyTask({ ...payload, taskId: payload.taskId });
+  });
+  socket.on('task:handoff', (payload: { fromMembershipId?: string | null; toMembershipId?: string | null }) => game?.applyHandoff(payload || {}));
+  socket.on('goal:progress', (payload: { goalId?: string; areaId?: string | null; pct?: number }) => {
+    if (payload?.goalId) game?.applyGoal({ ...payload, goalId: payload.goalId });
+  });
+  try {
+    await withTimeout(game.mount3d(), 8000, 'webgl');
+  } catch (error) {
+    console.error(error);
+  }
+  if (enterStale(run)) return;
+  game.start();
+  const crowdCount = Number(new URLSearchParams(location.search).get('carga') || new URLSearchParams(location.search).get('load') || 0);
+  if (Number.isFinite(crowdCount) && crowdCount > 0) game.spawnCrowd(crowdCount);
+  void fillBoard(game);
+  resetDirectUnread();
+  hintDirectUnread(hud.directUnread ?? 0);
+  void refreshNotifyUnread().catch(() => {});
+  ui.applyMarca({ nombre: marca?.nombre || current.membership.company.name, oficina: marca?.oficina || hud.officeName, logoUrl: marca?.logoUrl || null });
+  socket.on('notify:new', (payload: { unread?: number }) => applyNotifyNew(payload));
+  socket.on('notify:read', (payload: { unread?: number }) => applyNotifyRead(payload));
+  socket.on('dm:message', (message: { id?: string; senderId?: string; recipientId?: string }) => {
+    if (!message?.id || !message.senderId || !message.recipientId) return;
+    receiveDirect({ id: message.id, senderId: message.senderId, recipientId: message.recipientId }, current.membership.id);
+  });
+  if (enterStale(run)) {
+    teardownOffice();
+    return;
+  }
+  route();
+  await nextFrame();
+  if (enterStale(run)) return;
+  if (marca?.logoUrl && emblem?.naturalWidth) game?.setPlazaLogo(emblem);
+  pingTimer = window.setInterval(() => socket?.emit('presence:ping'), 20000);
+  socket.emit('presence:ping');
+  (window as unknown as { __game?: Game }).__game = game;
+}
+
+/** Cartas y misión que ya existían, para que la burbuja y la pizarra salgan al entrar. */
+async function fillBoard(office: Game) {
+  try {
+    const [tasks, missions] = await Promise.all([
+      api<unknown>('/api/tareas?vista=lista'),
+      api<unknown>('/api/misiones'),
+    ]);
+    if (game !== office) return;
+    for (const note of notesFromTasks(tasks)) office.applyTask(note);
+    for (const note of notesFromGoals(missions)) office.applyGoal(note);
+  } catch {
+    // La oficina sigue. task:update y goal:progress rellenan lo que llegue después.
+  }
+}
+
+function showPasswordGate() {
+  teardownOffice();
+  document.body.classList.add('auth-mode');
+  authEl.hidden = false;
+  appEl.hidden = true;
+  pagesEl.classList.add('hidden');
+  pagesEl.hidden = true;
+  renderPasswordGate(authEl, () => { void enter(); });
+}
+
+window.addEventListener('hivex-marca', (event) => {
+  const next = (event as CustomEvent<Marca>).detail;
+  if (!next) return;
+  applyMarca(next);
+  ui?.applyMarca(next);
+  if (!next.logoUrl) {
+    game?.setPlazaLogo(null);
+    return;
+  }
+  void loadImage(next.logoUrl).then((image) => {
+    if (image.naturalWidth) game?.setPlazaLogo(image);
+  });
+});
+
+function logout(opts?: { keepHash?: boolean }) {
+  clearToken();
+  teardownOffice();
+  resetDirectUnread();
+  resetNotifyUnread();
+  session = null;
+  setProfileLocale(null);
+  officeMedia = null;
+  if (!opts?.keepHash) location.hash = '#/entrar';
+  if (isPublicJoin(location.hash)) openPublicJoin();
+  else showAuth();
+}
+
+function currentView() {
+  return viewForSession(location.hash, session?.membership.role);
+}
+
+function showPublicForm() {
+  watchDirect(null);
+  appEl.hidden = true;
+  authEl.hidden = true;
+  pagesEl.hidden = false;
+  pagesEl.classList.remove('hidden');
+  void renderPublicForm(pagesEl);
+}
+
+function route() {
+  if (isPublicForm(location.hash)) {
+    showPublicForm();
+    return;
+  }
+  if (isPublicJoin(location.hash)) {
+    watchDirect(null);
+    openPublicJoin();
+    return;
+  }
+  if (!getToken()) {
+    showAuth();
+    return;
+  }
+  if (!session || !game || !ui) {
+    void enter();
+    return;
+  }
+  const view = currentView();
+  if (!view.startsWith('chat')) watchDirect(null);
+  if (view === 'oficina') {
+    pagesEl.classList.add('hidden');
+    pagesEl.hidden = true;
+    appEl.hidden = false;
+    ui.setActive('oficina');
+    window.dispatchEvent(new Event('resize'));
+    game.focusKeyboard();
+    return;
+  }
+  pagesEl.hidden = false;
+  appEl.hidden = true;
+  pagesEl.classList.remove('hidden');
+  ui.setActive(view.split('/')[0]);
+  void renderView(pagesEl, view, session, socket);
+}
+
+document.addEventListener('change', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement) || !target.classList.contains('lang-switch')) return;
+  const locale = target.value as Locale;
+  if (!['es', 'en', 'fr', 'de'].includes(locale)) return;
+  pinLocale(locale);
+  if (getToken()) void api('/api/cuenta/idioma', { method: 'PATCH', body: JSON.stringify({ locale }) }).catch(() => {});
+  void refreshAfterLocale();
+});
+
+window.addEventListener('hivex-auth-rerender', () => {
+  if (!session || !isPublicJoin(location.hash)) return;
+  paintSessionNotice(authEl, session.membership.name, () => logout({ keepHash: true }), () => { location.hash = '#/oficina'; });
+});
+
+async function refreshAfterLocale() {
+  paintTitle();
+  if (isPublicForm(location.hash)) {
+    showPublicForm();
+    return;
+  }
+  if (session?.debeCambiarContrasena && !isPublicJoin(location.hash)) {
+    showPasswordGate();
+    return;
+  }
+  if (isPublicJoin(location.hash) || !getToken()) {
+    if (isPublicJoin(location.hash)) openPublicJoin();
+    else showAuth();
+    return;
+  }
+  ui?.relabel();
+  if (game) {
+    try {
+      const hud = await api<Hud>('/api/oficina/hud');
+      game.mapRenderer.setRankings(hud.rankings);
+      if (officeMedia) (officeMedia as { notice: string }).notice = hud.media.notice;
+    } catch { /* la oficina sigue en el idioma anterior para los datos del servidor */ }
+    game.mapRenderer.render();
+  }
+  route();
+}
+
+window.addEventListener('hivex-unread', (event) => {
+  const count = Number((event as CustomEvent<number>).detail);
+  if (Number.isFinite(count)) ui?.setDirectUnread(count);
+});
+
+window.addEventListener('hashchange', () => {
+  if (isPublicForm(location.hash)) {
+    showPublicForm();
+    return;
+  }
+  if (isPublicJoin(location.hash)) {
+    openPublicJoin();
+    return;
+  }
+  if (!getToken()) showAuth();
+  else route();
+});
+
+if (isPublicForm(location.hash)) showPublicForm();
+else if (isPublicJoin(location.hash)) openPublicJoin();
+else if (getToken()) void enter();
+else showAuth();

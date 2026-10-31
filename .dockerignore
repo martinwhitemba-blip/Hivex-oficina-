@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+dist
+**/dist
+dist-single
+.git
+*.db
+*.db-journal
+uploads
+.env
+.env.*
+!.env.example
+screenshots
