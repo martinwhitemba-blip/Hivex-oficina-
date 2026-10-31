@@ -16,6 +16,7 @@ model User {
   createdAt          DateTime     @default(now())
   memberships        Membership[]
   activations        Activation[]
+  holdings           Holding[]
 }
 
 model Company {
@@ -57,6 +58,7 @@ model Company {
   automationRules  AutomationRule[]
   intakeForms      IntakeForm[]
   areaWeekStatuses AreaWeekStatus[]
+  holdingLink      HoldingCompany?
 }
 
 model CompanyBranding {
@@ -577,6 +579,28 @@ model AreaWeekStatus {
 
   @@unique([companyId, areaId, weekStart])
   @@index([companyId, weekStart])
+}
+
+model Holding {
+  id          String           @id @default(cuid())
+  name        String
+  ownerUserId String
+  inviteCode  String           @unique
+  createdAt   DateTime         @default(now())
+  owner       User             @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  companies   HoldingCompany[]
+
+  @@index([ownerUserId])
+}
+
+model HoldingCompany {
+  id        String  @id @default(cuid())
+  holdingId String
+  companyId String  @unique
+  holding   Holding @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([holdingId])
 }
 
 model Badge {

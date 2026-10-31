@@ -100,7 +100,8 @@
     "plan": "Forfait",
     "leads": "Prospection",
     "menu": "Gestion",
-    "planning": "Planification"
+    "planning": "Planification",
+    "portfolio": "Portefeuille"
   },
   "common": {
     "loadFail": "Chargement impossible",
@@ -846,6 +847,10 @@
       "space": "Écrivez le nom de l'espace",
       "hex": "La couleur doit être hexadécimale"
     },
+    "phase3": {
+      "owner": "Seul le propriétaire consulte le portefeuille",
+      "grupo": "Le portefeuille fait partie du plan Groupe"
+    },
     "locale": "La langue doit être es, en, fr ou de"
   },
   "planning": {
@@ -923,5 +928,25 @@
     "satDown": "Tu es assis. Seules les personnes dans la salle s'entendent.",
     "stoodUp": "Tu t'es levé.",
     "sitFull": "Plus de chaise libre dans cette salle."
+  },
+  "phase3": {
+    "titlePortfolio": "Portefeuille",
+    "subPortfolio": "Compare les entreprises de ton groupe. Les autres restent à part.",
+    "needGrupo": "Le portefeuille fait partie du plan Groupe. Tu peux changer dans Plan ; le paiement en ligne n'est pas encore branché.",
+    "createHolding": "Créer le portefeuille",
+    "holdingName": "Nom du groupe",
+    "invite": "Code pour qu'une autre entreprise rejoigne",
+    "join": "Rattacher cette entreprise",
+    "joinPh": "Code du groupe",
+    "ownerOnly": "Le responsable du groupe voit la comparaison. Ici tu ne vois que ton entreprise.",
+    "addMine": "Ajouter",
+    "workers": "Personnes",
+    "areas": "Espaces",
+    "openTasks": "Tâches ouvertes",
+    "overdue": "En retard",
+    "doneWeek": "Terminées cette semaine",
+    "planLabel": "Plan",
+    "emptyHolding": "Il n'y a pas encore d'autre entreprise dans le groupe.",
+    "remove": "Retirer du groupe"
   }
 }

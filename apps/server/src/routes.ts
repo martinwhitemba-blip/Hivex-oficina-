@@ -32,6 +32,7 @@ import { assertJoinRate, clientIp } from './rateLimit';
 import { activationCsv, importPeople, rowsFromRecords } from './peopleImport';
 import { registerBrandRoutes } from './branding';
 import { companyScope, pageArgs } from './tenant';
+import { registerPhase3Routes } from './phase3Routes';
 import { registerPlanningRoutes } from './planningRoutes';
 import { registerTaskRoutes } from './taskRoutes';
 import { registerNotifyRoutes } from './notifyRoutes';
@@ -830,6 +831,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   registerTaskRoutes(app);
   registerPlanningRoutes(app);
+  registerPhase3Routes(app);
   registerNotifyRoutes(app);
   registerMissionRoutes(app);
 

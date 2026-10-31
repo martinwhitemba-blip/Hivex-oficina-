@@ -100,7 +100,8 @@
     "plan": "Plan",
     "leads": "Leads",
     "menu": "Manage",
-    "planning": "Planning"
+    "planning": "Planning",
+    "portfolio": "Portfolio"
   },
   "common": {
     "loadFail": "Could not load",
@@ -846,6 +847,10 @@
       "space": "Enter the space name",
       "hex": "The colour must be hexadecimal"
     },
+    "phase3": {
+      "owner": "Only the owner can open the portfolio",
+      "grupo": "The portfolio belongs to the Group plan"
+    },
     "locale": "The language must be es, en, fr or de"
   },
   "planning": {
@@ -923,5 +928,25 @@
     "satDown": "You sat down. Only people in this room can hear you.",
     "stoodUp": "You stood up.",
     "sitFull": "No free chair in this room."
+  },
+  "phase3": {
+    "titlePortfolio": "Portfolio",
+    "subPortfolio": "Compare the companies in your group. The others stay separate.",
+    "needGrupo": "The portfolio is part of the Group plan. You can switch in Plan; online billing is not connected yet.",
+    "createHolding": "Create portfolio",
+    "holdingName": "Group name",
+    "invite": "Code for another company to join",
+    "join": "Join this company",
+    "joinPh": "Group code",
+    "ownerOnly": "The group owner sees the comparison. Here you only see your company.",
+    "addMine": "Add",
+    "workers": "People",
+    "areas": "Areas",
+    "openTasks": "Open tasks",
+    "overdue": "Overdue",
+    "doneWeek": "Done this week",
+    "planLabel": "Plan",
+    "emptyHolding": "There is no other company in the group yet.",
+    "remove": "Remove from group"
   }
 }

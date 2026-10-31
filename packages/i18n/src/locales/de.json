@@ -100,7 +100,8 @@
     "plan": "Tarif",
     "leads": "Gewinnung",
     "menu": "Verwaltung",
-    "planning": "Planung"
+    "planning": "Planung",
+    "portfolio": "Portfolio"
   },
   "common": {
     "loadFail": "Laden fehlgeschlagen",
@@ -846,6 +847,10 @@
       "space": "Geben Sie den Namen des Raums ein",
       "hex": "Die Farbe muss hexadezimal sein"
     },
+    "phase3": {
+      "owner": "Nur der Inhaber sieht das Portfolio",
+      "grupo": "Das Portfolio gehört zum Plan Gruppe"
+    },
     "locale": "Die Sprache muss es, en, fr oder de sein"
   },
   "planning": {
@@ -923,5 +928,25 @@
     "satDown": "Du sitzt. Nur wer im Raum ist, hört dich.",
     "stoodUp": "Du bist aufgestanden.",
     "sitFull": "In diesem Raum ist kein Stuhl mehr frei."
+  },
+  "phase3": {
+    "titlePortfolio": "Portfolio",
+    "subPortfolio": "Vergleiche die Firmen deiner Gruppe. Die anderen bleiben getrennt.",
+    "needGrupo": "Das Portfolio gehört zum Plan Gruppe. Unter Plan kannst du wechseln; die Online-Zahlung ist noch nicht angeschlossen.",
+    "createHolding": "Portfolio anlegen",
+    "holdingName": "Name der Gruppe",
+    "invite": "Code, damit eine andere Firma beitritt",
+    "join": "Diese Firma anschließen",
+    "joinPh": "Gruppencode",
+    "ownerOnly": "Der Gruppeninhaber sieht den Vergleich. Hier siehst du nur deine Firma.",
+    "addMine": "Hinzufügen",
+    "workers": "Personen",
+    "areas": "Bereiche",
+    "openTasks": "Offene Aufgaben",
+    "overdue": "Überfällig",
+    "doneWeek": "Diese Woche erledigt",
+    "planLabel": "Plan",
+    "emptyHolding": "In der Gruppe ist noch keine weitere Firma.",
+    "remove": "Aus der Gruppe nehmen"
   }
 }
