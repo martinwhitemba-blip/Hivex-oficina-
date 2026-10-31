@@ -2,7 +2,18 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app';
 import { attachPlan, ensurePlans } from '../src/billing';
+import { cafeAward, seasonOf } from '../src/phase3Logic';
 import { prisma } from '../src/prisma';
+
+describe('café', () => {
+  it('dobla los puntos en octubre y en diciembre', () => {
+    expect(seasonOf('2026-10-23').multiplier).toBe(2);
+    expect(seasonOf('2026-12-01').name).toContain('Cierre');
+    expect(cafeAward('taza', { elapsedMs: 400 }, 2)).toBe(10);
+    expect(cafeAward('taza', { elapsedMs: 10 }, 2)).toBe(0);
+    expect(cafeAward('memoria', { moves: 8 }, 1)).toBe(5);
+  });
+});
 
 describe('portafolio del grupo', () => {
   let app: FastifyInstance;
@@ -77,5 +88,22 @@ describe('portafolio del grupo', () => {
     expect(JSON.stringify(stranger.body)).not.toContain(nameB);
     const wrong = await json('POST', '/api/portafolio/unirse', tokenC, { code: 'NOEXISTE' });
     expect(wrong.status).toBe(404);
+  });
+
+  it('una partida del café no suma en otra empresa', async () => {
+    const played = await json('POST', '/api/cafe/jugar', tokenA, { game: 'taza', elapsedMs: 400 });
+    expect(played.status).toBe(200);
+    expect(played.body.awarded).toBe(5 * played.body.season.multiplier);
+    const other = await json('GET', '/api/cafe', tokenB);
+    expect(other.status).toBe(200);
+    expect(other.body.rewarded).toBe(0);
+    for (let n = 0; n < 8; n += 1) {
+      const again = await json('POST', '/api/cafe/jugar', tokenA, { game: 'taza', elapsedMs: 500 });
+      if (again.body.capped) {
+        expect(again.body.awarded).toBe(0);
+        return;
+      }
+    }
+    throw new Error('el límite diario no cortó los puntos');
   });
 });

@@ -7,6 +7,7 @@ import { api, clock, esc, getToken, money, num } from './api';
 import { renderTasks } from './tasksPage';
 import { renderInbox } from './inboxPage';
 import { renderPlanning } from './planningPage';
+import { renderCafe } from './cafePage';
 import { renderPortfolio } from './portfolioPage';
 import { renderMissions } from './missionsPage';
 import { renderMyDay } from './myDayPage';
@@ -38,7 +39,7 @@ export function setProfileLocale(value: string | null | undefined) {
 const NAV: [string, MessageKey][] = [
   ['oficina', 'nav.office'], ['dueno', 'nav.owner'], ['negocio', 'nav.business'], ['equipo', 'nav.team'],
   ['areas', 'nav.areas'], ['mapa', 'nav.map'], ['tareas', 'nav.tasks'], ['misiones', 'nav.missions'], ['mi-dia', 'nav.myday'], ['avisos', 'nav.inbox'], ['jornada', 'nav.day'],
-  ['chat', 'nav.chat'], ['logros', 'nav.badges'], ['planificacion', 'nav.planning'], ['portafolio', 'nav.portfolio'], ['plan', 'nav.plan'], ['captacion', 'nav.leads'],
+  ['chat', 'nav.chat'], ['logros', 'nav.badges'], ['planificacion', 'nav.planning'], ['portafolio', 'nav.portfolio'], ['cafe', 'nav.cafe'], ['plan', 'nav.plan'], ['captacion', 'nav.leads'],
 ];
 
 export function shell(view: string, title: string, subtitle: string, body: string) {
@@ -231,6 +232,7 @@ export async function renderView(root: HTMLElement, view: string, session: Sessi
     else if (view === 'logros') await renderBadges(root);
     else if (view === 'planificacion') await renderPlanning(root, session);
     else if (view === 'portafolio') await renderPortfolio(root, session);
+    else if (view === 'cafe') await renderCafe(root, session);
     else if (view === 'plan') await renderPlan(root, session);
     else if (view === 'captacion') await renderLeads(root, session);
     else root.innerHTML = shell('oficina', t('nav.office'), '', '');

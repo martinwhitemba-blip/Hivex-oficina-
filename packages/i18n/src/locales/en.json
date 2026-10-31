@@ -101,7 +101,8 @@
     "leads": "Leads",
     "menu": "Manage",
     "planning": "Planning",
-    "portfolio": "Portfolio"
+    "portfolio": "Portfolio",
+    "cafe": "Café"
   },
   "common": {
     "loadFail": "Could not load",
@@ -947,6 +948,19 @@
     "doneWeek": "Done this week",
     "planLabel": "Plan",
     "emptyHolding": "There is no other company in the group yet.",
-    "remove": "Remove from group"
+    "remove": "Remove from group",
+    "titleCafe": "Café",
+    "subCafe": "Minigames in the café. The drawings are HIVEX's own.",
+    "season": "Season",
+    "plays": "Rewarded plays today",
+    "gameTaza": "Quick cup",
+    "gameMemo": "Memory",
+    "tazaWait": "Wait for gold",
+    "tazaNow": "Now!",
+    "tazaGo": "Start",
+    "memoStart": "Shuffle",
+    "result": "Points this round",
+    "capped": "No more points today. It resets tomorrow.",
+    "cafePlay": "Café games"
   }
 }

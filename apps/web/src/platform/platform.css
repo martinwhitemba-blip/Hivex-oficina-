@@ -115,6 +115,14 @@ svg.chart { width: 100%; height: 160px; background: #101012; border-radius: 12px
 .load-meter span { display: block; height: 100%; background: #F5C518; }
 .draft { color: #F7DC6F; }
 .cmp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.cup { width: 88px; height: 88px; border-radius: 50%; border: 3px solid #F5C518; background: #141416; display: block; margin: 8px 0; }
+.cup.now { background: #F5C518; }
+.memo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 64px)); gap: 8px; max-width: 290px; }
+.memo-card { aspect-ratio: 1; border-radius: 12px; border: 1px solid rgba(245,197,24,.45); background: #141416; }
+.memo-card.pat-gold { background: #F5C518; }
+.memo-card.pat-ring { background: radial-gradient(circle, transparent 42%, #F5C518 46%, #F5C518 62%, transparent 66%); }
+.memo-card.pat-stripe { background: repeating-linear-gradient(90deg, #F5C518 0 6px, #141416 6px 12px); }
+.memo-card.pat-dot { background: radial-gradient(circle, #F5C518 28%, transparent 30%); }
 .form input:focus, .form select:focus, .auth-card input:focus, .toolbar input:focus, .toolbar select:focus {
   outline: none;
   border-color: var(--gold);

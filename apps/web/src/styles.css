@@ -129,6 +129,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 
 .room-badge { bottom: 78px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 14px; background: rgba(11,11,12,.88); border: 1px solid var(--line); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .room-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+.cafe-link { color: var(--gold); margin-left: 6px; }
 .room-badge.meeting { border-color: var(--gold); color: var(--gold-soft); }
 
 .follow { top: 52px; left: 50%; transform: translateX(-50%); padding: 6px 12px; border-radius: 14px; background: var(--gold); color: #0B0B0C; font-weight: 700; font-size: 12px; display: none; white-space: nowrap; }

@@ -101,7 +101,8 @@
     "leads": "Prospection",
     "menu": "Gestion",
     "planning": "Planification",
-    "portfolio": "Portefeuille"
+    "portfolio": "Portefeuille",
+    "cafe": "Café"
   },
   "common": {
     "loadFail": "Chargement impossible",
@@ -947,6 +948,19 @@
     "doneWeek": "Terminées cette semaine",
     "planLabel": "Plan",
     "emptyHolding": "Il n'y a pas encore d'autre entreprise dans le groupe.",
-    "remove": "Retirer du groupe"
+    "remove": "Retirer du groupe",
+    "titleCafe": "Café",
+    "subCafe": "Mini-jeux du café. Les dessins sont ceux de HIVEX.",
+    "season": "Saison",
+    "plays": "Parties récompensées aujourd'hui",
+    "gameTaza": "Tasse rapide",
+    "gameMemo": "Mémoire",
+    "tazaWait": "Attends le doré",
+    "tazaNow": "Maintenant !",
+    "tazaGo": "Commencer",
+    "memoStart": "Mélanger",
+    "result": "Points de cette partie",
+    "capped": "Plus de points aujourd'hui. Ça revient demain.",
+    "cafePlay": "Jeux du café"
   }
 }

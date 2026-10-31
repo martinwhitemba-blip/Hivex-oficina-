@@ -419,7 +419,8 @@ export class UI {
     this.lastKind = kind;
     this.roomEl.className = 'overlay room-badge' + (kind === 'meeting' || kind === 'private' ? ' meeting' : '');
     const label = name ? t('office.inRoom', { name: knownPhrase(name) }) : t('office.common');
-    this.roomEl.innerHTML = `<span class="dot"></span>${label}`;
+    const cafe = kind === 'cafe' ? `<a class="cafe-link" href="#/cafe">${t('phase3.cafePlay')}</a>` : '';
+    this.roomEl.innerHTML = `<span class="dot"></span>${label}${cafe}`;
   }
 
   private renderProximity() {

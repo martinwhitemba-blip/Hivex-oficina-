@@ -101,7 +101,8 @@
     "leads": "Gewinnung",
     "menu": "Verwaltung",
     "planning": "Planung",
-    "portfolio": "Portfolio"
+    "portfolio": "Portfolio",
+    "cafe": "Café"
   },
   "common": {
     "loadFail": "Laden fehlgeschlagen",
@@ -947,6 +948,19 @@
     "doneWeek": "Diese Woche erledigt",
     "planLabel": "Plan",
     "emptyHolding": "In der Gruppe ist noch keine weitere Firma.",
-    "remove": "Aus der Gruppe nehmen"
+    "remove": "Aus der Gruppe nehmen",
+    "titleCafe": "Café",
+    "subCafe": "Minispiele in der Café-Zone. Die Zeichnungen sind von HIVEX.",
+    "season": "Saison",
+    "plays": "Prämierte Runden heute",
+    "gameTaza": "Schnelle Tasse",
+    "gameMemo": "Memory",
+    "tazaWait": "Warte auf Gold",
+    "tazaNow": "Jetzt!",
+    "tazaGo": "Start",
+    "memoStart": "Mischen",
+    "result": "Punkte dieser Runde",
+    "capped": "Heute gibt es keine Punkte mehr. Morgen geht es weiter.",
+    "cafePlay": "Café-Spiele"
   }
 }

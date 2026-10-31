@@ -59,6 +59,7 @@ model Company {
   intakeForms      IntakeForm[]
   areaWeekStatuses AreaWeekStatus[]
   holdingLink      HoldingCompany?
+  cafePlays        CafePlay[]
 }
 
 model CompanyBranding {
@@ -120,6 +121,7 @@ model Membership {
   notifications Notification[]
   weeklyGoals   WeeklyGoal[]
   badges        Badge[]
+  cafePlays     CafePlay[]
   messages        ChatMessage[]
   sentDirects     DirectMessage[] @relation("DmSender")
   receivedDirects DirectMessage[] @relation("DmRecipient")
@@ -601,6 +603,20 @@ model HoldingCompany {
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([holdingId])
+}
+
+model CafePlay {
+  id           String     @id @default(cuid())
+  companyId    String
+  membershipId String
+  game         String
+  score        Int        @default(0)
+  awarded      Int        @default(0)
+  createdAt    DateTime   @default(now())
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, membershipId, createdAt])
 }
 
 model Badge {
