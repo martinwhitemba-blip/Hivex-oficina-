@@ -68,7 +68,7 @@ export interface AssistantFacts {
 
 export function basicAnswer(facts: AssistantFacts, question: string) {
   const lines = [
-    `En ${facts.companyName} hay ${facts.openTasks} tareas abiertas y ${facts.overdue} atrasadas.`,
+    `En ${facts.companyName} quedan ${facts.openTasks} tareas abiertas. Atrasos: ${facts.overdue}.`,
   ];
   if (facts.busiest && facts.busiest.minutes > 0) {
     lines.push(`${facts.busiest.name} es quien más carga lleva: ${facts.busiest.minutes} minutos abiertos.`);

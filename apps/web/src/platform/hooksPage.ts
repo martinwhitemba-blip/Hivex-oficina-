@@ -11,13 +11,12 @@ interface HookRow {
   active: boolean;
 }
 
-export async function renderHooks(root: HTMLElement, session: Session) {
-  void session;
+export async function renderHooks(root: HTMLElement, session: Session, flashed = '') {
   const rows = await api<HookRow[]>('/api/conexiones');
   root.innerHTML = shell('conexiones', t('phase3.titleHooks'), t('phase3.subHooks'), `
     <p class="muted">${t('phase3.hookHint')}</p>
     <div id="hk-error" class="err" hidden></div>
-    <p class="draft" id="hk-secret" hidden></p>
+    ${flashed ? `<p class="draft" id="hk-secret">${esc(t('phase3.secretOnce'))} ${esc(flashed)}</p>` : ''}
     <form id="hk-new" class="cardx">
       <input name="name" required minlength="2" placeholder="${t('phase3.hookName')}">
       <input name="url" required type="url" placeholder="${t('phase3.hookUrl')}">
@@ -54,12 +53,7 @@ export async function renderHooks(root: HTMLElement, session: Session) {
         method: 'POST',
         body: JSON.stringify({ name: String(data.get('name') || ''), url: String(data.get('url') || ''), format: String(data.get('format') || 'generico'), events }),
       });
-      const note = root.querySelector<HTMLElement>('#hk-secret');
-      if (note) {
-        note.hidden = false;
-        note.textContent = `${t('phase3.secretOnce')} ${created.secret}`;
-      }
-      await renderHooks(root, session);
+      await renderHooks(root, session, created.secret);
     } catch (err) { fail(err); }
   });
   root.querySelectorAll<HTMLButtonElement>('[data-toggle]').forEach((button) => {
