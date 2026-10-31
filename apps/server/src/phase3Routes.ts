@@ -1,7 +1,8 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { actorFromRequest, parseBody } from './http';
+import { actorFromRequest, HttpError, parseBody } from './http';
 import { cafeHome, playCafe } from './cafe';
+import { addTaskFile, listTaskFiles, loadTaskFile, removeTaskFile } from './taskFiles';
 import { addOwnedCompany, createHolding, joinHolding, portfolioView, removeFromHolding } from './portfolio';
 
 export function registerPhase3Routes(app: FastifyInstance) {
@@ -41,4 +42,36 @@ export function registerPhase3Routes(app: FastifyInstance) {
     }), req.body);
     return playCafe(actor, body);
   });
+
+  app.get('/api/tareas/:id/archivos', async (req) => listTaskFiles(await actorFromRequest(req), (req.params as { id: string }).id));
+
+  app.post('/api/tareas/:id/archivos', async (req) => {
+    const actor = await actorFromRequest(req);
+    const file = await req.file();
+    if (!file) throw new HttpError(400, 'Ese archivo no se puede adjuntar. Usa PNG, JPG, WebP, PDF, TXT o CSV, hasta 4 MB.', 'errors.phase3.file');
+    const bytes = await file.toBuffer();
+    return addTaskFile(actor, (req.params as { id: string }).id, { name: file.filename, mime: file.mimetype, bytes });
+  });
+
+  app.get('/api/tareas/:id/archivos/:fileId', async (req, reply) => {
+    const actor = await actorFromRequest(req);
+    const params = req.params as { id: string; fileId: string };
+    const loaded = await loadTaskFile(actor, params.id, params.fileId);
+    return sendBytes(reply, loaded.row.mime, loaded.row.name, loaded.bytes);
+  });
+
+  app.delete('/api/tareas/:id/archivos/:fileId', async (req) => {
+    const actor = await actorFromRequest(req);
+    const params = req.params as { id: string; fileId: string };
+    return removeTaskFile(actor, params.id, params.fileId);
+  });
+}
+
+function sendBytes(reply: FastifyReply, mime: string, name: string, bytes: Buffer) {
+  const ascii = name.replace(/[^\w.\- ]+/g, '') || 'archivo';
+  return reply
+    .header('content-type', mime)
+    .header('content-disposition', `attachment; filename="${ascii}"`)
+    .header('cache-control', 'private, no-store')
+    .send(bytes);
 }

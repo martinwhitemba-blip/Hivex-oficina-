@@ -850,7 +850,9 @@
     },
     "phase3": {
       "owner": "Seul le propriétaire consulte le portefeuille",
-      "grupo": "Le portefeuille fait partie du plan Groupe"
+      "grupo": "Le portefeuille fait partie du plan Groupe",
+      "file": "Ce fichier ne peut pas être joint. Utilise PNG, JPG, WebP, PDF, TXT ou CSV, jusqu'à 4 Mo.",
+      "storage": "Le fichier n'a pas pu être enregistré"
     },
     "locale": "La langue doit être es, en, fr ou de"
   },
@@ -961,6 +963,11 @@
     "memoStart": "Mélanger",
     "result": "Points de cette partie",
     "capped": "Plus de points aujourd'hui. Ça revient demain.",
-    "cafePlay": "Jeux du café"
+    "cafePlay": "Jeux du café",
+    "files": "Fichiers",
+    "upload": "Joindre",
+    "noFiles": "Cette tâche n'a pas de fichier.",
+    "fileHint": "Sans stockage distant, le fichier reste sur le disque de cette installation.",
+    "removeFile": "Retirer"
   }
 }

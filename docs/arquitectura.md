@@ -24,7 +24,7 @@ Si `REDIS_URL` tiene valor, Socket.IO usa el adaptador de Redis y varios proceso
 
 ## Archivos
 
-Fotos y logos pasan por `ObjectStorage` (`storage.ts`) y hoy se escriben en disco (`UPLOAD_DIR`). `S3_BUCKET` y `S3_ENDPOINT` están reservados: si aparecen, el proceso avisa y sigue en disco. No hay cliente de objeto remoto conectado.
+Fotos, logos y archivos de tareas pasan por `ObjectStorage` (`storage.ts`). Si están `S3_BUCKET`, `S3_ACCESS_KEY` y `S3_SECRET_KEY`, se envían a S3 o a R2 (`S3_ENDPOINT`, `S3_REGION`). Si falta alguna clave, se escriben en disco (`UPLOAD_DIR`) y el proceso lo dice en el arranque.
 
 ## Prueba de carga
 
@@ -45,7 +45,7 @@ Para 100 empresas a la vez, de verdad, hace falta:
 - Un plan de Render de pago (o equivalente) con más de una instancia y disco que no se borre en cada despliegue. El plan gratis se duerme y pierde el disco.
 - Postgres gestionado. Delante, PgBouncer (o el pooler del proveedor) además del `connection_limit` de Prisma. SQLite no sirve para varios procesos.
 - Redis gestionado, y `REDIS_URL`, en cuanto haya más de un proceso de la API. Si no, la presencia de una instancia no llega a la otra.
-- Almacén de objetos (S3, R2 o compatible) para fotos y logos. Hoy el disco local se pierde al redesplegar. Las variables `S3_*` son el sitio, todavía sin código que las use.
+- Almacén de objetos (S3, R2 o compatible) para fotos, logos y archivos de tareas. El código ya lo usa cuando las variables `S3_*` están completas. Sin ellas, el disco local se pierde al redesplegar.
 - El cobro de los planes sigue siendo un aviso: no hay pasarela. Subir de plan, incluido Grupo (techo 1000, o un límite propio por empresa), no cobra.
 
 LiveKit, si se quiere audio de varias personas a la vez, también es un servicio aparte. Sin sus claves, la oficina usa audio directo entre navegadores.

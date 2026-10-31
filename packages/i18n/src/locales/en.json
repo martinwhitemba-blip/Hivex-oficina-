@@ -850,7 +850,9 @@
     },
     "phase3": {
       "owner": "Only the owner can open the portfolio",
-      "grupo": "The portfolio belongs to the Group plan"
+      "grupo": "The portfolio belongs to the Group plan",
+      "file": "That file cannot be attached. Use PNG, JPG, WebP, PDF, TXT or CSV, up to 4 MB.",
+      "storage": "The file could not be saved"
     },
     "locale": "The language must be es, en, fr or de"
   },
@@ -961,6 +963,11 @@
     "memoStart": "Shuffle",
     "result": "Points this round",
     "capped": "No more points today. It resets tomorrow.",
-    "cafePlay": "Café games"
+    "cafePlay": "Café games",
+    "files": "Files",
+    "upload": "Attach",
+    "noFiles": "This task has no files.",
+    "fileHint": "Without remote storage, the file stays on this installation's disk.",
+    "removeFile": "Remove"
   }
 }

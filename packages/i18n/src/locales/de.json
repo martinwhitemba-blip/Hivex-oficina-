@@ -850,7 +850,9 @@
     },
     "phase3": {
       "owner": "Nur der Inhaber sieht das Portfolio",
-      "grupo": "Das Portfolio gehört zum Plan Gruppe"
+      "grupo": "Das Portfolio gehört zum Plan Gruppe",
+      "file": "Diese Datei lässt sich nicht anhängen. Nutze PNG, JPG, WebP, PDF, TXT oder CSV, bis 4 MB.",
+      "storage": "Die Datei konnte nicht gespeichert werden"
     },
     "locale": "Die Sprache muss es, en, fr oder de sein"
   },
@@ -961,6 +963,11 @@
     "memoStart": "Mischen",
     "result": "Punkte dieser Runde",
     "capped": "Heute gibt es keine Punkte mehr. Morgen geht es weiter.",
-    "cafePlay": "Café-Spiele"
+    "cafePlay": "Café-Spiele",
+    "files": "Dateien",
+    "upload": "Anhängen",
+    "noFiles": "Diese Aufgabe hat keine Dateien.",
+    "fileHint": "Ohne entfernten Speicher bleibt die Datei auf der Festplatte dieser Installation.",
+    "removeFile": "Entfernen"
   }
 }

@@ -9,6 +9,7 @@ import { resolveMentions } from './mentions';
 import { notifyAchievement, notifyMember } from './notify';
 import { noteActivity, refreshTaskGoals } from './missions';
 import { assertCanFinish, runRules } from './planning';
+import { storage } from './storage';
 
 export const TASK_STATUSES = ['pendiente', 'en_curso', 'hecho'] as const;
 export const TASK_PRIORITIES = ['baja', 'media', 'alta'] as const;
@@ -374,7 +375,18 @@ export async function deleteTask(actor: Actor, id: string) {
     where: { ...companyScope(actor.company.id), currentTaskId: id },
     data: { currentTaskTitle: '', currentTaskId: null, currentTaskSince: null },
   });
+  const related = await prisma.task.findMany({
+    where: { ...companyScope(actor.company.id), OR: [{ id }, { parentId: id }] },
+    select: { id: true },
+  });
+  const blobs = await prisma.taskFile.findMany({
+    where: { ...companyScope(actor.company.id), taskId: { in: related.map((row) => row.id) } },
+    select: { storageKey: true },
+  });
   await prisma.task.delete({ where: { id } });
+  for (const blob of blobs) {
+    if (blob.storageKey !== 'pending') await storage.remove(blob.storageKey).catch(() => undefined);
+  }
   publishTaskUpdate(actor.company.id, { ...taskEvent(actor.company.id, task), deleted: true, updatedAt: new Date().toISOString() });
   await broadcastPanel(actor.company.id);
   return { ok: true as const };
@@ -479,7 +491,7 @@ function assertArea(actor: Actor, areaId: string) {
   throw new HttpError(403, 'Solo puedes mover tus tareas');
 }
 
-async function visibleTask(actor: Actor, id: string) {
+export async function visibleTask(actor: Actor, id: string) {
   const task = await prisma.task.findFirst({ where: { id, ...companyScope(actor.company.id) } });
   if (!task || !canSee(actor, task)) throw new HttpError(404, 'Tarea no encontrada');
   return task;

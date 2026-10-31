@@ -3,7 +3,22 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app';
 import { attachPlan, ensurePlans } from '../src/billing';
 import { cafeAward, seasonOf } from '../src/phase3Logic';
+import { s3Settings, signS3Request } from '../src/storageS3';
 import { prisma } from '../src/prisma';
+
+describe('almacén', () => {
+  it('no marca S3 como listo si falta una clave', () => {
+    expect(s3Settings({ S3_BUCKET: 'hivex' }).ready).toBe(false);
+    const ready = s3Settings({ S3_BUCKET: 'hivex', S3_ACCESS_KEY: 'demo', S3_SECRET_KEY: 'demo', S3_ENDPOINT: 'https://example.r2.cloudflarestorage.com' });
+    expect(ready.ready).toBe(true);
+    expect(ready.region).toBe('auto');
+    const now = new Date('2026-10-23T12:00:00.000Z');
+    const first = signS3Request({ method: 'PUT', host: 'example.r2.cloudflarestorage.com', path: '/hivex/a.txt', body: Buffer.from('hola'), now, settings: ready });
+    const second = signS3Request({ method: 'PUT', host: 'example.r2.cloudflarestorage.com', path: '/hivex/a.txt', body: Buffer.from('hola'), now, settings: ready });
+    expect(first.authorization).toBe(second.authorization);
+    expect(first.authorization.startsWith('AWS4-HMAC-SHA256')).toBe(true);
+  });
+});
 
 describe('café', () => {
   it('dobla los puntos en octubre y en diciembre', () => {
@@ -105,5 +120,65 @@ describe('portafolio del grupo', () => {
       }
     }
     throw new Error('el límite diario no cortó los puntos');
+  });
+});
+
+describe('archivos de tarea', () => {
+  let app: FastifyInstance;
+  let tokenA = '';
+  let tokenB = '';
+  let taskA = '';
+  const stamp = Date.now().toString(36);
+
+  async function json(method: string, url: string, token?: string, payload?: unknown, headers?: Record<string, string>) {
+    const response = await app.inject({
+      method: method as 'GET',
+      url,
+      payload: payload as object | undefined,
+      headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers },
+    });
+    const body = response.headers['content-type']?.includes('application/json') ? response.json() : response.body;
+    return { status: response.statusCode, body };
+  }
+
+  beforeAll(async () => {
+    app = (await buildApp()).app;
+    const a = await json('POST', '/api/auth/registro', undefined, {
+      name: 'Ana Archivo', email: `ana-${stamp}@files.test`, password: 'clave-segura', companyName: `Archivos A ${stamp}`,
+    });
+    const b = await json('POST', '/api/auth/registro', undefined, {
+      name: 'Beto Archivo', email: `beto-${stamp}@files.test`, password: 'clave-segura', companyName: `Archivos B ${stamp}`,
+    });
+    tokenA = a.body.token;
+    tokenB = b.body.token;
+    const area = await json('POST', '/api/areas', tokenA, { name: 'Ventas', color: '#F5C518' });
+    const task = await json('POST', '/api/tareas', tokenA, { title: 'Con archivo', areaId: area.body.id });
+    taskA = task.body.id;
+  });
+
+  afterAll(async () => {
+    const users = await prisma.user.findMany({ where: { email: { endsWith: '@files.test' } }, include: { memberships: true } });
+    const companyIds = [...new Set(users.flatMap((user) => user.memberships.map((member) => member.companyId)))];
+    if (companyIds.length) await prisma.company.deleteMany({ where: { id: { in: companyIds } } });
+    await prisma.user.deleteMany({ where: { email: { endsWith: '@files.test' } } });
+    await app.close();
+  });
+
+  it('otra empresa no lee ni lista el archivo', async () => {
+    const boundary = '----hivexform';
+    const payload = Buffer.concat([
+      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="archivo"; filename="nota.txt"\r\nContent-Type: text/plain\r\n\r\n`),
+      Buffer.from('solo-empresa-a'),
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+    const saved = await json('POST', `/api/tareas/${taskA}/archivos`, tokenA, payload, { 'content-type': `multipart/form-data; boundary=${boundary}` });
+    expect(saved.status).toBe(200);
+    const foreign = await json('GET', `/api/tareas/${taskA}/archivos`, tokenB);
+    expect(foreign.status).toBe(404);
+    const download = await json('GET', `/api/tareas/${taskA}/archivos/${saved.body.id}`, tokenB);
+    expect(download.status).toBe(404);
+    const own = await json('GET', `/api/tareas/${taskA}/archivos/${saved.body.id}`, tokenA);
+    expect(own.status).toBe(200);
+    expect(String(own.body)).toContain('solo-empresa-a');
   });
 });

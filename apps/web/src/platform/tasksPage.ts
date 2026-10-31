@@ -1,5 +1,5 @@
 import { t } from '../i18n';
-import { api, esc } from './api';
+import { api, esc, getToken } from './api';
 import { shell, type Session } from './pages';
 
 interface Step {
@@ -11,6 +11,8 @@ interface Step {
   overdue: boolean;
   priority: string;
 }
+
+interface FileRow { id: string; name: string; bytes: number }
 
 interface TaskCard {
   id: string;
@@ -133,11 +135,14 @@ export async function renderTasks(root: HTMLElement, session: Session) {
     query.set('orden', filters.orden);
     query.set('dir', filters.dir);
   }
-  const [tasks, areas, people, comments] = await Promise.all([
+  const [tasks, areas, people, comments, fileBox] = await Promise.all([
     api<TaskCard[]>(`/api/tareas?${query}`),
     api<{ id: string; name: string }[]>('/api/areas'),
     api<{ id: string; name: string }[]>('/api/empleados'),
     openTaskId ? api<CommentRow[]>(`/api/tareas/${openTaskId}/comentarios`).catch(() => [] as CommentRow[]) : Promise.resolve([] as CommentRow[]),
+    openTaskId
+      ? api<{ storage: string; items: FileRow[] }>(`/api/tareas/${openTaskId}/archivos`).catch(() => ({ storage: 'local', items: [] as FileRow[] }))
+      : Promise.resolve({ storage: 'local', items: [] as FileRow[] }),
   ]);
   const lead = session.membership.role !== 'empleado';
   const open = tasks.find((task) => task.id === openTaskId) || null;
@@ -167,7 +172,7 @@ export async function renderTasks(root: HTMLElement, session: Session) {
       <button class="btn primary" type="submit">${t('tasks.create')}</button>
     </form>` : ''}
     ${filters.vista === 'lista' ? listView(tasks, filters) : boardView(tasks, session, lead)}
-    ${open ? quest(open, comments, session) : ''}
+    ${open ? quest(open, comments, session, fileBox) : ''}
   `);
   bind(root, session, filters, tasks);
 }
@@ -216,7 +221,7 @@ function listView(tasks: TaskCard[], filters: Filters) {
   </table></div>`;
 }
 
-function quest(task: TaskCard, comments: CommentRow[], session: Session) {
+function quest(task: TaskCard, comments: CommentRow[], session: Session, fileBox: { storage: string; items: FileRow[] }) {
   return `<section class="cardx quest" id="quest">
     <h2>${esc(task.title)}</h2>
     <p class="muted">${t('tasks.mentionHint')}</p>
@@ -224,6 +229,10 @@ function quest(task: TaskCard, comments: CommentRow[], session: Session) {
       ${comment.authorId === session.membership.id || session.membership.role !== 'empleado' ? `<button class="btn ghost" data-del="${comment.id}" type="button">×</button>` : ''}
     </article>`).join('') || `<p class="muted">${t('tasks.noComments')}</p>`}</div>
     <form id="comment"><textarea name="body" required placeholder="${t('tasks.commentPh')}"></textarea><button class="btn primary" type="submit">${t('tasks.send')}</button></form>
+    <h3>${t('phase3.files')}</h3>
+    ${fileBox.storage === 'local' ? `<p class="muted">${t('phase3.fileHint')}</p>` : ''}
+    <ul class="quest-log">${fileBox.items.map((file) => `<li><button class="btn ghost" type="button" data-file="${file.id}">${esc(file.name)}</button> <button class="btn ghost" type="button" data-unfile="${file.id}">${t('phase3.removeFile')}</button></li>`).join('') || `<li class="muted">${t('phase3.noFiles')}</li>`}</ul>
+    <form id="file-form" class="toolbar"><input name="archivo" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,.csv"><button class="btn" type="submit">${t('phase3.upload')}</button></form>
   </section>`;
 }
 
@@ -308,6 +317,45 @@ function bind(root: HTMLElement, session: Session, filters: Filters, tasks: Task
       await api(`/api/tareas/${openTaskId}/comentarios`, { method: 'POST', body: JSON.stringify({ body }) });
       await renderTasks(root, session);
     } catch (err) { note(error, err); }
+  });
+  root.querySelector('#file-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!openTaskId) return;
+    const input = (event.target as HTMLFormElement).querySelector<HTMLInputElement>('input[type=file]');
+    const file = input?.files?.[0];
+    if (!file) return;
+    const data = new FormData();
+    data.set('archivo', file);
+    try {
+      await api(`/api/tareas/${openTaskId}/archivos`, { method: 'POST', body: data });
+      await renderTasks(root, session);
+    } catch (err) { note(error, err); }
+  });
+  root.querySelectorAll<HTMLButtonElement>('[data-file]').forEach((button) => {
+    button.onclick = async () => {
+      if (!openTaskId) return;
+      const headers = new Headers();
+      const token = getToken();
+      if (token) headers.set('X-HIVEX-Token', token);
+      const response = await fetch(`/api/tareas/${openTaskId}/archivos/${button.dataset.file}`, { headers });
+      if (!response.ok) { note(error, new Error(t('common.downloadFail'))); return; }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = button.textContent || 'archivo';
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+  });
+  root.querySelectorAll<HTMLButtonElement>('[data-unfile]').forEach((button) => {
+    button.onclick = async () => {
+      if (!openTaskId) return;
+      try {
+        await api(`/api/tareas/${openTaskId}/archivos/${button.dataset.unfile}`, { method: 'DELETE' });
+        await renderTasks(root, session);
+      } catch (err) { note(error, err); }
+    };
   });
   root.querySelectorAll<HTMLButtonElement>('[data-del]').forEach((button) => {
     button.onclick = async () => {

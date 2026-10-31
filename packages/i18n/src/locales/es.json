@@ -850,7 +850,9 @@
     },
     "phase3": {
       "owner": "Solo el propietario consulta el portafolio",
-      "grupo": "El portafolio es del plan Grupo"
+      "grupo": "El portafolio es del plan Grupo",
+      "file": "Ese archivo no se puede adjuntar. Usa PNG, JPG, WebP, PDF, TXT o CSV, hasta 4 MB.",
+      "storage": "No se pudo guardar el archivo"
     },
     "locale": "El idioma tiene que ser es, en, fr o de"
   },
@@ -961,6 +963,11 @@
     "memoStart": "Barajar",
     "result": "Puntos de esta partida",
     "capped": "Hoy ya no suma puntos. Mañana se renueva.",
-    "cafePlay": "Juegos del café"
+    "cafePlay": "Juegos del café",
+    "files": "Archivos",
+    "upload": "Adjuntar",
+    "noFiles": "Esta tarea no tiene archivos.",
+    "fileHint": "Sin almacén remoto, el archivo se queda en el disco de esta instalación.",
+    "removeFile": "Quitar"
   }
 }

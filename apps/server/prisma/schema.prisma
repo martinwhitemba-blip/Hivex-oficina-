@@ -60,6 +60,7 @@ model Company {
   areaWeekStatuses AreaWeekStatus[]
   holdingLink      HoldingCompany?
   cafePlays        CafePlay[]
+  taskFiles        TaskFile[]
 }
 
 model CompanyBranding {
@@ -262,6 +263,7 @@ model Task {
   blockedBy    TaskDependency[] @relation("TaskBlockedBy")
   blocks       TaskDependency[] @relation("TaskBlocks")
   fieldValues  TaskFieldValue[]
+  files        TaskFile[]
 
   @@index([companyId])
   @@index([companyId, areaId, status])
@@ -603,6 +605,22 @@ model HoldingCompany {
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([holdingId])
+}
+
+model TaskFile {
+  id          String   @id @default(cuid())
+  companyId   String
+  taskId      String
+  name        String
+  mime        String
+  bytes       Int
+  storageKey  String
+  createdById String?
+  createdAt   DateTime @default(now())
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, taskId])
 }
 
 model CafePlay {

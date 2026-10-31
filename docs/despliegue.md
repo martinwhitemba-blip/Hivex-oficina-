@@ -51,7 +51,7 @@ Límites del plan gratuito, para que no pillen por sorpresa:
 
 - El servicio se duerme si nadie entra durante un rato. La primera visita después puede tardar un minuto en despertar.
 - La base PostgreSQL gratuita caduca a los 30 días, más o menos. Antes de esa fecha hay que pasar a un plan de pago o exportar los datos.
-- Las fotos se guardan en el disco del contenedor. Un redespliegue borra ese disco y las fotos desaparecen. Más adelante se puede usar almacenamiento compatible con S3, con las variables `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY` y `S3_SECRET_KEY`. Hoy no están conectadas: son el sitio donde irá ese cambio.
+- Las fotos y los archivos de las tareas se guardan en el disco del contenedor si no hay almacén remoto. Un redespliegue borra ese disco. Con `S3_BUCKET`, `S3_ACCESS_KEY` y `S3_SECRET_KEY` (y `S3_ENDPOINT` si es R2) se envían a un almacén compatible con S3. Sin esas claves, la aplicación sigue funcionando en disco.
 
 ### Contraseña de la página (apagada)
 
