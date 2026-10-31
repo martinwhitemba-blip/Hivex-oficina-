@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { actorFromRequest, HttpError, parseBody } from './http';
 import { cafeHome, playCafe } from './cafe';
+import { createReport, deleteReport, listReports, reportData, reportPdf } from './reports';
 import { addTaskFile, listTaskFiles, loadTaskFile, removeTaskFile } from './taskFiles';
 import { addOwnedCompany, createHolding, joinHolding, portfolioView, removeFromHolding } from './portfolio';
 
@@ -41,6 +42,27 @@ export function registerPhase3Routes(app: FastifyInstance) {
       moves: z.number().int().min(0).max(80).optional(),
     }), req.body);
     return playCafe(actor, body);
+  });
+
+  app.get('/api/reportes', async (req) => listReports(await actorFromRequest(req)));
+
+  app.post('/api/reportes', async (req) => {
+    const actor = await actorFromRequest(req);
+    const body = parseBody(z.object({
+      name: z.string().trim().min(2).max(80),
+      widgets: z.array(z.string()).min(1).max(6),
+      rangeDays: z.number().int().optional(),
+    }), req.body);
+    return createReport(actor, { name: body.name, widgets: body.widgets, rangeDays: body.rangeDays || 7 });
+  });
+
+  app.delete('/api/reportes/:id', async (req) => deleteReport(await actorFromRequest(req), (req.params as { id: string }).id));
+
+  app.get('/api/reportes/:id', async (req) => reportData(await actorFromRequest(req), (req.params as { id: string }).id));
+
+  app.get('/api/reportes/:id/pdf', async (req, reply) => {
+    const file = await reportPdf(await actorFromRequest(req), (req.params as { id: string }).id);
+    return sendBytes(reply, 'application/pdf', file.name, file.bytes);
   });
 
   app.get('/api/tareas/:id/archivos', async (req) => listTaskFiles(await actorFromRequest(req), (req.params as { id: string }).id));

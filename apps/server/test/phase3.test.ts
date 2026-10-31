@@ -2,9 +2,17 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app';
 import { attachPlan, ensurePlans } from '../src/billing';
-import { cafeAward, seasonOf } from '../src/phase3Logic';
+import { buildReportPdf, cafeAward, seasonOf } from '../src/phase3Logic';
 import { s3Settings, signS3Request } from '../src/storageS3';
 import { prisma } from '../src/prisma';
+
+describe('pdf', () => {
+  it('abre como PDF', () => {
+    const bytes = buildReportPdf('Reportes', ['HIVEX', 'Abiertas  2']);
+    expect(bytes.subarray(0, 4).toString()).toBe('%PDF');
+    expect(bytes.toString('latin1')).toContain('HIVEX');
+  });
+});
 
 describe('almacén', () => {
   it('no marca S3 como listo si falta una clave', () => {
@@ -180,5 +188,60 @@ describe('archivos de tarea', () => {
     const own = await json('GET', `/api/tareas/${taskA}/archivos/${saved.body.id}`, tokenA);
     expect(own.status).toBe(200);
     expect(String(own.body)).toContain('solo-empresa-a');
+  });
+});
+
+describe('reportes', () => {
+  let app: FastifyInstance;
+  let tokenA = '';
+  let tokenB = '';
+  const stamp = Date.now().toString(36);
+  const nameA = `Reportes A ${stamp}`;
+
+  async function json(method: string, url: string, token?: string, payload?: unknown) {
+    const response = await app.inject({
+      method: method as 'GET',
+      url,
+      payload: payload as object | undefined,
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+    });
+    const type = response.headers['content-type'] || '';
+    const body = type.includes('application/json') ? response.json() : response.body;
+    return { status: response.statusCode, body, type };
+  }
+
+  beforeAll(async () => {
+    app = (await buildApp()).app;
+    tokenA = (await json('POST', '/api/auth/registro', undefined, {
+      name: 'Ana Reporte', email: `ana-${stamp}@rep.test`, password: 'clave-segura', companyName: nameA,
+    })).body.token;
+    tokenB = (await json('POST', '/api/auth/registro', undefined, {
+      name: 'Beto Reporte', email: `beto-${stamp}@rep.test`, password: 'clave-segura', companyName: `Reportes B ${stamp}`,
+    })).body.token;
+  });
+
+  afterAll(async () => {
+    const users = await prisma.user.findMany({ where: { email: { endsWith: '@rep.test' } }, include: { memberships: true } });
+    const companyIds = [...new Set(users.flatMap((user) => user.memberships.map((member) => member.companyId)))];
+    if (companyIds.length) await prisma.company.deleteMany({ where: { id: { in: companyIds } } });
+    await prisma.user.deleteMany({ where: { email: { endsWith: '@rep.test' } } });
+    await app.close();
+  });
+
+  it('un panel no se lee desde otra empresa y un empleado no entra', async () => {
+    const created = await json('POST', '/api/reportes', tokenA, { name: 'Semana', widgets: ['abiertas', 'vencidas'], rangeDays: 7 });
+    expect(created.status).toBe(200);
+    const foreign = await json('GET', `/api/reportes/${created.body.id}`, tokenB);
+    expect(foreign.status).toBe(404);
+    const listB = await json('GET', '/api/reportes', tokenB);
+    expect(JSON.stringify(listB.body)).not.toContain('Semana');
+    const pdf = await json('GET', `/api/reportes/${created.body.id}/pdf`, tokenA);
+    expect(pdf.status).toBe(200);
+    expect(String(pdf.body).startsWith('%PDF')).toBe(true);
+    expect(String(pdf.body)).toContain('Reportes');
+    const user = await prisma.user.findUnique({ where: { email: `ana-${stamp}@rep.test` }, include: { memberships: true } });
+    await prisma.membership.update({ where: { id: user!.memberships[0].id }, data: { role: 'empleado' } });
+    const blocked = await json('GET', '/api/reportes', tokenA);
+    expect(blocked.status).toBe(403);
   });
 });

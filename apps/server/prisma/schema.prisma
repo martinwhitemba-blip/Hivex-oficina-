@@ -61,6 +61,7 @@ model Company {
   holdingLink      HoldingCompany?
   cafePlays        CafePlay[]
   taskFiles        TaskFile[]
+  reportPanels     ReportPanel[]
 }
 
 model CompanyBranding {
@@ -605,6 +606,17 @@ model HoldingCompany {
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([holdingId])
+}
+
+model ReportPanel {
+  id        String  @id @default(cuid())
+  companyId String
+  name      String
+  widgets   String  @default("[\"abiertas\",\"hechas\",\"vencidas\"]")
+  rangeDays Int     @default(7)
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
 }
 
 model TaskFile {

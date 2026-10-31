@@ -102,7 +102,8 @@
     "menu": "Verwaltung",
     "planning": "Planung",
     "portfolio": "Portfolio",
-    "cafe": "Café"
+    "cafe": "Café",
+    "reports": "Berichte"
   },
   "common": {
     "loadFail": "Laden fehlgeschlagen",
@@ -852,7 +853,8 @@
       "owner": "Nur der Inhaber sieht das Portfolio",
       "grupo": "Das Portfolio gehört zum Plan Gruppe",
       "file": "Diese Datei lässt sich nicht anhängen. Nutze PNG, JPG, WebP, PDF, TXT oder CSV, bis 4 MB.",
-      "storage": "Die Datei konnte nicht gespeichert werden"
+      "storage": "Die Datei konnte nicht gespeichert werden",
+      "director": "Nur die Leitung sieht die Berichte"
     },
     "locale": "Die Sprache muss es, en, fr oder de sein"
   },
@@ -968,6 +970,19 @@
     "upload": "Anhängen",
     "noFiles": "Diese Aufgabe hat keine Dateien.",
     "fileHint": "Ohne entfernten Speicher bleibt die Datei auf der Festplatte dieser Installation.",
-    "removeFile": "Entfernen"
+    "removeFile": "Entfernen",
+    "titleReports": "Berichte",
+    "subReports": "Wähle die Zahlen und lade ein PDF herunter.",
+    "panelName": "Name der Tafel",
+    "days": "Tage",
+    "savePanel": "Tafel speichern",
+    "downloadPdf": "PDF herunterladen",
+    "noPanels": "Noch keine Tafeln.",
+    "widgetOpen": "Offen",
+    "widgetDone": "Erledigt",
+    "widgetLate": "Überfällig",
+    "widgetPeople": "Personen",
+    "widgetMissions": "Missionen",
+    "widgetAreas": "Bereiche"
   }
 }

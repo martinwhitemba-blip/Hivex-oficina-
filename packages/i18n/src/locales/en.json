@@ -102,7 +102,8 @@
     "menu": "Manage",
     "planning": "Planning",
     "portfolio": "Portfolio",
-    "cafe": "Café"
+    "cafe": "Café",
+    "reports": "Reports"
   },
   "common": {
     "loadFail": "Could not load",
@@ -852,7 +853,8 @@
       "owner": "Only the owner can open the portfolio",
       "grupo": "The portfolio belongs to the Group plan",
       "file": "That file cannot be attached. Use PNG, JPG, WebP, PDF, TXT or CSV, up to 4 MB.",
-      "storage": "The file could not be saved"
+      "storage": "The file could not be saved",
+      "director": "Only leads can see the reports"
     },
     "locale": "The language must be es, en, fr or de"
   },
@@ -968,6 +970,19 @@
     "upload": "Attach",
     "noFiles": "This task has no files.",
     "fileHint": "Without remote storage, the file stays on this installation's disk.",
-    "removeFile": "Remove"
+    "removeFile": "Remove",
+    "titleReports": "Reports",
+    "subReports": "Choose which numbers you see and download a PDF.",
+    "panelName": "Panel name",
+    "days": "Days",
+    "savePanel": "Save panel",
+    "downloadPdf": "Download PDF",
+    "noPanels": "There are no panels yet.",
+    "widgetOpen": "Open",
+    "widgetDone": "Done",
+    "widgetLate": "Overdue",
+    "widgetPeople": "People",
+    "widgetMissions": "Missions",
+    "widgetAreas": "Areas"
   }
 }

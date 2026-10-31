@@ -102,7 +102,8 @@
     "menu": "Gestión",
     "planning": "Planificación",
     "portfolio": "Portafolio",
-    "cafe": "Café"
+    "cafe": "Café",
+    "reports": "Reportes"
   },
   "common": {
     "loadFail": "No se pudo cargar",
@@ -852,7 +853,8 @@
       "owner": "Solo el propietario consulta el portafolio",
       "grupo": "El portafolio es del plan Grupo",
       "file": "Ese archivo no se puede adjuntar. Usa PNG, JPG, WebP, PDF, TXT o CSV, hasta 4 MB.",
-      "storage": "No se pudo guardar el archivo"
+      "storage": "No se pudo guardar el archivo",
+      "director": "Solo dirección puede ver los reportes"
     },
     "locale": "El idioma tiene que ser es, en, fr o de"
   },
@@ -968,6 +970,19 @@
     "upload": "Adjuntar",
     "noFiles": "Esta tarea no tiene archivos.",
     "fileHint": "Sin almacén remoto, el archivo se queda en el disco de esta instalación.",
-    "removeFile": "Quitar"
+    "removeFile": "Quitar",
+    "titleReports": "Reportes",
+    "subReports": "Elige qué números ves y descarga un PDF.",
+    "panelName": "Nombre del panel",
+    "days": "Días",
+    "savePanel": "Guardar panel",
+    "downloadPdf": "Descargar PDF",
+    "noPanels": "Aún no hay paneles.",
+    "widgetOpen": "Abiertas",
+    "widgetDone": "Hechas",
+    "widgetLate": "Atrasadas",
+    "widgetPeople": "Personas",
+    "widgetMissions": "Misiones",
+    "widgetAreas": "Áreas"
   }
 }
