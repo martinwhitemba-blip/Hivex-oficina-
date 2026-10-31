@@ -2,9 +2,18 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app';
 import { attachPlan, ensurePlans } from '../src/billing';
-import { buildReportPdf, cafeAward, seasonOf } from '../src/phase3Logic';
+import { basicAnswer, buildReportPdf, cafeAward, seasonOf } from '../src/phase3Logic';
 import { s3Settings, signS3Request } from '../src/storageS3';
 import { prisma } from '../src/prisma';
+
+describe('asistente básico', () => {
+  it('responde con los números de esa empresa', () => {
+    const text = basicAnswer({ companyName: 'Acme', openTasks: 3, overdue: 1, missionPct: 40, busiest: { name: 'Ana', minutes: 90 } }, 'qué está atrasado');
+    expect(text).toContain('Acme');
+    expect(text).toContain('Ana');
+    expect(text).toContain('Modo básico');
+  });
+});
 
 describe('pdf', () => {
   it('abre como PDF', () => {
@@ -243,5 +252,62 @@ describe('reportes', () => {
     await prisma.membership.update({ where: { id: user!.memberships[0].id }, data: { role: 'empleado' } });
     const blocked = await json('GET', '/api/reportes', tokenA);
     expect(blocked.status).toBe(403);
+  });
+});
+
+describe('asistente', () => {
+  let app: FastifyInstance;
+  let tokenA = '';
+  let tokenB = '';
+  const stamp = Date.now().toString(36);
+  const secret = `SECRETO-AI-${stamp}`;
+
+  async function json(method: string, url: string, token?: string, payload?: unknown) {
+    const response = await app.inject({
+      method: method as 'GET',
+      url,
+      payload: payload as object | undefined,
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+    });
+    const body = response.headers['content-type']?.includes('application/json') ? response.json() : response.body;
+    return { status: response.statusCode, body };
+  }
+
+  beforeAll(async () => {
+    delete process.env.HIVEX_AI_BASE_URL;
+    delete process.env.HIVEX_AI_API_KEY;
+    app = (await buildApp()).app;
+    tokenA = (await json('POST', '/api/auth/registro', undefined, {
+      name: 'Ana IA', email: `ana-${stamp}@ai.test`, password: 'clave-segura', companyName: `IA A ${stamp}`,
+    })).body.token;
+    tokenB = (await json('POST', '/api/auth/registro', undefined, {
+      name: 'Beto IA', email: `beto-${stamp}@ai.test`, password: 'clave-segura', companyName: `IA B ${stamp}`,
+    })).body.token;
+    const area = await json('POST', '/api/areas', tokenB, { name: 'Ventas', color: '#F5C518' });
+    await json('POST', '/api/tareas', tokenB, { title: secret, areaId: area.body.id });
+  });
+
+  afterAll(async () => {
+    const users = await prisma.user.findMany({ where: { email: { endsWith: '@ai.test' } }, include: { memberships: true } });
+    const companyIds = [...new Set(users.flatMap((user) => user.memberships.map((member) => member.companyId)))];
+    if (companyIds.length) await prisma.company.deleteMany({ where: { id: { in: companyIds } } });
+    await prisma.user.deleteMany({ where: { email: { endsWith: '@ai.test' } } });
+    await app.close();
+  });
+
+  it('el modo básico no menciona la tarea de otra empresa y corta el ritmo', async () => {
+    const answer = await json('POST', '/api/asistente', tokenA, { question: 'qué está atrasado' });
+    expect(answer.status).toBe(200);
+    expect(answer.body.mode).toBe('basico');
+    expect(answer.body.answer).not.toContain(secret);
+    const user = await prisma.user.findUnique({ where: { email: `beto-${stamp}@ai.test` }, include: { memberships: true } });
+    await prisma.membership.update({ where: { id: user!.memberships[0].id }, data: { role: 'empleado' } });
+    expect((await json('POST', '/api/asistente', tokenB, { question: 'hola equipo' })).status).toBe(403);
+    let limited = 0;
+    for (let n = 0; n < 10; n += 1) {
+      const again = await json('POST', '/api/asistente', tokenA, { question: 'cómo vamos' });
+      if (again.status === 429) limited += 1;
+    }
+    expect(limited).toBeGreaterThan(0);
   });
 });

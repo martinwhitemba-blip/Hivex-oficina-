@@ -103,7 +103,8 @@
     "planning": "Planification",
     "portfolio": "Portefeuille",
     "cafe": "Café",
-    "reports": "Rapports"
+    "reports": "Rapports",
+    "assistant": "Assistant"
   },
   "common": {
     "loadFail": "Chargement impossible",
@@ -854,7 +855,9 @@
       "grupo": "Le portefeuille fait partie du plan Groupe",
       "file": "Ce fichier ne peut pas être joint. Utilise PNG, JPG, WebP, PDF, TXT ou CSV, jusqu'à 4 Mo.",
       "storage": "Le fichier n'a pas pu être enregistré",
-      "director": "Seule la direction voit les rapports"
+      "director": "Seule la direction voit les rapports",
+      "assistant": "L'assistant est pour le propriétaire",
+      "busy": "Trop de questions. Attends un moment."
     },
     "locale": "La langue doit être es, en, fr ou de"
   },
@@ -983,6 +986,13 @@
     "widgetLate": "En retard",
     "widgetPeople": "Personnes",
     "widgetMissions": "Missions",
-    "widgetAreas": "Espaces"
+    "widgetAreas": "Espaces",
+    "titleAssistant": "Assistant",
+    "subAssistant": "Pose une question sur ton entreprise. Sans clé externe, il répond en mode simple.",
+    "askPh": "Qu'est-ce qui est en retard ?",
+    "send": "Demander",
+    "modeBasic": "Mode simple",
+    "modeExternal": "Modèle externe",
+    "modeHint": "Le mode simple utilise les tâches et la charge de cette entreprise. Ça ne sort pas d'ici."
   }
 }

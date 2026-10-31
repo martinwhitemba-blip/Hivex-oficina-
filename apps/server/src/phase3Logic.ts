@@ -22,6 +22,30 @@ export function cafeAward(game: 'taza' | 'memoria', input: { elapsedMs?: number;
   return moves >= 4 && moves <= 16 ? CAFE_POINTS * factor : 0;
 }
 
+export interface AssistantFacts {
+  companyName: string;
+  openTasks: number;
+  overdue: number;
+  missionPct: number | null;
+  busiest: { name: string; minutes: number } | null;
+}
+
+export function basicAnswer(facts: AssistantFacts, question: string) {
+  const lines = [
+    `En ${facts.companyName} hay ${facts.openTasks} tareas abiertas y ${facts.overdue} atrasadas.`,
+  ];
+  if (facts.busiest && facts.busiest.minutes > 0) {
+    lines.push(`${facts.busiest.name} es quien más carga lleva: ${facts.busiest.minutes} minutos abiertos.`);
+  }
+  if (facts.missionPct != null) lines.push(`Las misiones de esta semana van al ${facts.missionPct} %.`);
+  const q = question.toLowerCase();
+  if (q.includes('atras') || q.includes('venc')) {
+    lines.push(facts.overdue > 0 ? 'Yo empezaría por las atrasadas.' : 'Ahora mismo no hay atrasos.');
+  }
+  lines.push('Modo básico: estos números son solo de tu empresa y no pasa por un modelo externo.');
+  return lines.join(' ');
+}
+
 export function cleanWidgets(input: string[]): ReportWidget[] {
   const out: ReportWidget[] = [];
   for (const item of input) {

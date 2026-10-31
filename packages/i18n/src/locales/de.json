@@ -103,7 +103,8 @@
     "planning": "Planung",
     "portfolio": "Portfolio",
     "cafe": "Café",
-    "reports": "Berichte"
+    "reports": "Berichte",
+    "assistant": "Assistent"
   },
   "common": {
     "loadFail": "Laden fehlgeschlagen",
@@ -854,7 +855,9 @@
       "grupo": "Das Portfolio gehört zum Plan Gruppe",
       "file": "Diese Datei lässt sich nicht anhängen. Nutze PNG, JPG, WebP, PDF, TXT oder CSV, bis 4 MB.",
       "storage": "Die Datei konnte nicht gespeichert werden",
-      "director": "Nur die Leitung sieht die Berichte"
+      "director": "Nur die Leitung sieht die Berichte",
+      "assistant": "Der Assistent ist für den Inhaber",
+      "busy": "Zu viele Fragen. Warte einen Moment."
     },
     "locale": "Die Sprache muss es, en, fr oder de sein"
   },
@@ -983,6 +986,13 @@
     "widgetLate": "Überfällig",
     "widgetPeople": "Personen",
     "widgetMissions": "Missionen",
-    "widgetAreas": "Bereiche"
+    "widgetAreas": "Bereiche",
+    "titleAssistant": "Assistent",
+    "subAssistant": "Frag nach deiner Firma. Ohne externen Schlüssel antwortet er im einfachen Modus.",
+    "askPh": "Was ist überfällig?",
+    "send": "Fragen",
+    "modeBasic": "Einfacher Modus",
+    "modeExternal": "Externes Modell",
+    "modeHint": "Der einfache Modus nutzt Aufgaben und Last dieser Firma. Es bleibt hier."
   }
 }

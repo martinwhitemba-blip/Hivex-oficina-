@@ -103,7 +103,8 @@
     "planning": "Planificación",
     "portfolio": "Portafolio",
     "cafe": "Café",
-    "reports": "Reportes"
+    "reports": "Reportes",
+    "assistant": "Asistente"
   },
   "common": {
     "loadFail": "No se pudo cargar",
@@ -854,7 +855,9 @@
       "grupo": "El portafolio es del plan Grupo",
       "file": "Ese archivo no se puede adjuntar. Usa PNG, JPG, WebP, PDF, TXT o CSV, hasta 4 MB.",
       "storage": "No se pudo guardar el archivo",
-      "director": "Solo dirección puede ver los reportes"
+      "director": "Solo dirección puede ver los reportes",
+      "assistant": "El asistente es para el propietario",
+      "busy": "Demasiadas preguntas. Espera un momento."
     },
     "locale": "El idioma tiene que ser es, en, fr o de"
   },
@@ -983,6 +986,13 @@
     "widgetLate": "Atrasadas",
     "widgetPeople": "Personas",
     "widgetMissions": "Misiones",
-    "widgetAreas": "Áreas"
+    "widgetAreas": "Áreas",
+    "titleAssistant": "Asistente",
+    "subAssistant": "Pregunta por tu empresa. Sin una clave externa responde en modo básico.",
+    "askPh": "¿Qué está atrasado?",
+    "send": "Preguntar",
+    "modeBasic": "Modo básico",
+    "modeExternal": "Modelo externo",
+    "modeHint": "El modo básico usa las tareas y la carga de esta empresa. No sale de aquí."
   }
 }

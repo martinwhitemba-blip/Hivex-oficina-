@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { actorFromRequest, HttpError, parseBody } from './http';
+import { askAssistant } from './assistant';
 import { cafeHome, playCafe } from './cafe';
 import { createReport, deleteReport, listReports, reportData, reportPdf } from './reports';
 import { addTaskFile, listTaskFiles, loadTaskFile, removeTaskFile } from './taskFiles';
@@ -42,6 +43,12 @@ export function registerPhase3Routes(app: FastifyInstance) {
       moves: z.number().int().min(0).max(80).optional(),
     }), req.body);
     return playCafe(actor, body);
+  });
+
+  app.post('/api/asistente', async (req) => {
+    const actor = await actorFromRequest(req);
+    const body = parseBody(z.object({ question: z.string().trim().min(2).max(400) }), req.body);
+    return askAssistant(actor, body.question);
   });
 
   app.get('/api/reportes', async (req) => listReports(await actorFromRequest(req)));

@@ -103,7 +103,8 @@
     "planning": "Planning",
     "portfolio": "Portfolio",
     "cafe": "Café",
-    "reports": "Reports"
+    "reports": "Reports",
+    "assistant": "Assistant"
   },
   "common": {
     "loadFail": "Could not load",
@@ -854,7 +855,9 @@
       "grupo": "The portfolio belongs to the Group plan",
       "file": "That file cannot be attached. Use PNG, JPG, WebP, PDF, TXT or CSV, up to 4 MB.",
       "storage": "The file could not be saved",
-      "director": "Only leads can see the reports"
+      "director": "Only leads can see the reports",
+      "assistant": "The assistant is for the owner",
+      "busy": "Too many questions. Wait a moment."
     },
     "locale": "The language must be es, en, fr or de"
   },
@@ -983,6 +986,13 @@
     "widgetLate": "Overdue",
     "widgetPeople": "People",
     "widgetMissions": "Missions",
-    "widgetAreas": "Areas"
+    "widgetAreas": "Areas",
+    "titleAssistant": "Assistant",
+    "subAssistant": "Ask about your company. Without an external key it answers in basic mode.",
+    "askPh": "What is overdue?",
+    "send": "Ask",
+    "modeBasic": "Basic mode",
+    "modeExternal": "External model",
+    "modeHint": "Basic mode uses this company's tasks and workload. It stays here."
   }
 }
