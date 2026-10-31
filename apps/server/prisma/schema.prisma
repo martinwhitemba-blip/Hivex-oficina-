@@ -62,6 +62,7 @@ model Company {
   cafePlays        CafePlay[]
   taskFiles        TaskFile[]
   reportPanels     ReportPanel[]
+  outboundHooks    OutboundHook[]
 }
 
 model CompanyBranding {
@@ -606,6 +607,20 @@ model HoldingCompany {
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([holdingId])
+}
+
+model OutboundHook {
+  id        String  @id @default(cuid())
+  companyId String
+  name      String
+  url       String
+  secret    String
+  events    String  @default("[\"tarea_creada\",\"tarea_hecha\"]")
+  format    String  @default("generico")
+  active    Boolean @default(true)
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
 }
 
 model ReportPanel {

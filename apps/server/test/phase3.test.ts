@@ -1,10 +1,20 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import crypto from 'node:crypto';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app';
 import { attachPlan, ensurePlans } from '../src/billing';
-import { basicAnswer, buildReportPdf, cafeAward, seasonOf } from '../src/phase3Logic';
+import { basicAnswer, buildReportPdf, cafeAward, seasonOf, webhookUrlProblem } from '../src/phase3Logic';
 import { s3Settings, signS3Request } from '../src/storageS3';
 import { prisma } from '../src/prisma';
+
+describe('urls de conexión', () => {
+  it('rechaza direcciones privadas', () => {
+    expect(webhookUrlProblem('http://127.0.0.1/meta', true)).toBe('privada');
+    expect(webhookUrlProblem('https://169.254.169.254/', false)).toBe('privada');
+    expect(webhookUrlProblem('http://hooks.example/hivex', false)).toBe('https');
+    expect(webhookUrlProblem('https://hooks.example/hivex', false)).toBeNull();
+  });
+});
 
 describe('asistente básico', () => {
   it('responde con los números de esa empresa', () => {
@@ -309,5 +319,72 @@ describe('asistente', () => {
       if (again.status === 429) limited += 1;
     }
     expect(limited).toBeGreaterThan(0);
+  });
+});
+
+describe('conexiones', () => {
+  let app: FastifyInstance;
+  let tokenA = '';
+  let tokenB = '';
+  const stamp = Date.now().toString(36);
+  const calls: { url: string; body: string; sig: string }[] = [];
+
+  async function json(method: string, url: string, token?: string, payload?: unknown) {
+    const response = await app.inject({
+      method: method as 'GET',
+      url,
+      payload: payload as object | undefined,
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+    });
+    const body = response.headers['content-type']?.includes('application/json') ? response.json() : response.body;
+    return { status: response.statusCode, body };
+  }
+
+  beforeAll(async () => {
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      calls.push({ url: String(url), body: String(init?.body || ''), sig: headers.get('x-hivex-signature') || '' });
+      return new Response('ok', { status: 200 });
+    });
+    app = (await buildApp()).app;
+    tokenA = (await json('POST', '/api/auth/registro', undefined, {
+      name: 'Ana Hook', email: `ana-${stamp}@hook.test`, password: 'clave-segura', companyName: `Hook A ${stamp}`,
+    })).body.token;
+    tokenB = (await json('POST', '/api/auth/registro', undefined, {
+      name: 'Beto Hook', email: `beto-${stamp}@hook.test`, password: 'clave-segura', companyName: `Hook B ${stamp}`,
+    })).body.token;
+  });
+
+  afterAll(async () => {
+    vi.unstubAllGlobals();
+    const users = await prisma.user.findMany({ where: { email: { endsWith: '@hook.test' } }, include: { memberships: true } });
+    const companyIds = [...new Set(users.flatMap((user) => user.memberships.map((member) => member.companyId)))];
+    if (companyIds.length) await prisma.company.deleteMany({ where: { id: { in: companyIds } } });
+    await prisma.user.deleteMany({ where: { email: { endsWith: '@hook.test' } } });
+    await app.close();
+  });
+
+  it('firma el aviso de una empresa y no llama a la otra', async () => {
+    expect((await json('POST', '/api/conexiones', tokenA, { name: 'Mala', url: 'http://127.0.0.1/latest', events: ['tarea_creada'] })).status).toBe(400);
+    const hookA = await json('POST', '/api/conexiones', tokenA, {
+      name: 'Sala', url: 'https://hooks.example/a', events: ['tarea_creada'], format: 'slack',
+    });
+    const hookB = await json('POST', '/api/conexiones', tokenB, {
+      name: 'Otra', url: 'https://hooks.example/b', events: ['tarea_creada'], format: 'generico',
+    });
+    expect(hookA.status).toBe(200);
+    expect(hookB.status).toBe(200);
+    const listed = await json('GET', '/api/conexiones', tokenA);
+    expect(JSON.stringify(listed.body)).not.toContain(hookA.body.secret);
+    expect(JSON.stringify(listed.body)).not.toContain('hooks.example/b');
+    const area = await json('POST', '/api/areas', tokenA, { name: 'Ventas', color: '#F5C518' });
+    calls.length = 0;
+    const task = await json('POST', '/api/tareas', tokenA, { title: `Aviso ${stamp}`, areaId: area.body.id });
+    expect(task.status).toBe(200);
+    expect(calls.map((call) => call.url)).toEqual(['https://hooks.example/a']);
+    const expected = crypto.createHmac('sha256', hookA.body.secret).update(calls[0].body).digest('hex');
+    expect(calls[0].sig).toBe(expected);
+    expect(calls[0].body).toContain('"text"');
+    expect((await json('DELETE', `/api/conexiones/${hookA.body.id}`, tokenB)).status).toBe(404);
   });
 });

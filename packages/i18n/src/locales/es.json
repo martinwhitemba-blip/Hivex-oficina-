@@ -104,7 +104,8 @@
     "portfolio": "Portafolio",
     "cafe": "Café",
     "reports": "Reportes",
-    "assistant": "Asistente"
+    "assistant": "Asistente",
+    "hooks": "Conexiones"
   },
   "common": {
     "loadFail": "No se pudo cargar",
@@ -857,7 +858,9 @@
       "storage": "No se pudo guardar el archivo",
       "director": "Solo dirección puede ver los reportes",
       "assistant": "El asistente es para el propietario",
-      "busy": "Demasiadas preguntas. Espera un momento."
+      "busy": "Demasiadas preguntas. Espera un momento.",
+      "hooks": "Solo el propietario conecta avisos externos",
+      "url": "La URL tiene que ser https y pública"
     },
     "locale": "El idioma tiene que ser es, en, fr o de"
   },
@@ -993,6 +996,21 @@
     "send": "Preguntar",
     "modeBasic": "Modo básico",
     "modeExternal": "Modelo externo",
-    "modeHint": "El modo básico usa las tareas y la carga de esta empresa. No sale de aquí."
+    "modeHint": "El modo básico usa las tareas y la carga de esta empresa. No sale de aquí.",
+    "titleHooks": "Conexiones",
+    "subHooks": "Avisa a una URL cuando se crea o se termina una tarea.",
+    "hookHint": "Pega un webhook de Slack o una URL propia. Google Calendar necesita un puente: el permiso con cuenta de Google no está conectado.",
+    "hookName": "Nombre",
+    "hookUrl": "URL https",
+    "format": "Formato",
+    "formatGeneric": "Genérico",
+    "formatSlack": "Slack",
+    "eventCreated": "Tarea creada",
+    "eventDone": "Tarea terminada",
+    "saveHook": "Guardar conexión",
+    "secretOnce": "Secreto para firmar. Cópialo ahora: no se vuelve a mostrar.",
+    "active": "Activa",
+    "paused": "En pausa",
+    "noHooks": "No hay conexiones."
   }
 }

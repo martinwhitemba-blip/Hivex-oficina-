@@ -1,5 +1,6 @@
 import { addDays, isoDate } from './domain';
 import type { Actor } from './http';
+import { overNoticeCap } from './phase3Logic';
 import { prisma } from './prisma';
 import { emitToMember } from './socket';
 import { companyScope } from './tenant';
@@ -28,6 +29,14 @@ export async function notifyMember(input: {
     where: { id: input.recipientId, ...companyScope(input.companyId), active: true },
   });
   if (!member) return null;
+  const recent = await prisma.notification.count({
+    where: {
+      ...companyScope(input.companyId),
+      recipientId: input.recipientId,
+      createdAt: { gte: new Date(Date.now() - 60_000) },
+    },
+  });
+  if (overNoticeCap(recent)) return null;
   const row = await prisma.notification.create({
     data: {
       companyId: input.companyId,

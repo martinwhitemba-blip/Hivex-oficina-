@@ -1,9 +1,45 @@
 /** Reglas puras de la Fase 3. No tocan la base ni la red. */
 
+export const NOTICE_PER_MINUTE = 40;
 export const CAFE_DAILY_REWARDS = 6;
 export const CAFE_POINTS = 5;
 export const REPORT_WIDGETS = ['abiertas', 'hechas', 'vencidas', 'personas', 'misiones', 'areas'] as const;
 export type ReportWidget = (typeof REPORT_WIDGETS)[number];
+
+export function overNoticeCap(recent: number) {
+  return recent >= NOTICE_PER_MINUTE;
+}
+
+export type WebhookUrlIssue = 'forma' | 'https' | 'privada';
+
+export function webhookUrlProblem(raw: string, allowInsecureHttp: boolean): WebhookUrlIssue | null {
+  let url: URL;
+  try { url = new URL(raw.trim()); } catch { return 'forma'; }
+  if (url.username || url.password) return 'forma';
+  const https = url.protocol === 'https:';
+  const httpOk = allowInsecureHttp && url.protocol === 'http:';
+  if (!https && !httpOk) return 'https';
+  const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host === 'metadata.google.internal' || host === '0.0.0.0') return 'privada';
+  if (isPrivateHost(host)) return 'privada';
+  return null;
+}
+
+function isPrivateHost(host: string) {
+  if (host.includes(':')) {
+    const bare = host.split('%')[0];
+    return bare === '::1' || bare === '::' || bare.startsWith('::ffff:') || bare.startsWith('fe80:') || bare.startsWith('fc') || bare.startsWith('fd');
+  }
+  const parts = host.split('.').map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  const [a, b] = parts;
+  if (a === 10 || a === 127 || a === 0) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true;
+  return false;
+}
 
 export function seasonOf(day: string): { code: string; name: string; multiplier: number } {
   const month = Number(day.slice(5, 7));

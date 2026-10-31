@@ -10,6 +10,7 @@ import { notifyAchievement, notifyMember } from './notify';
 import { noteActivity, refreshTaskGoals } from './missions';
 import { assertCanFinish, runRules } from './planning';
 import { storage } from './storage';
+import { dispatchCompanyEvent } from './webhooks';
 
 export const TASK_STATUSES = ['pendiente', 'en_curso', 'hecho'] as const;
 export const TASK_PRIORITIES = ['baja', 'media', 'alta'] as const;
@@ -196,6 +197,7 @@ export async function createTask(actor: Actor, input: {
     priority: task.priority,
     actorId: actor.membership.id,
   });
+  await dispatchCompanyEvent(actor.company.id, 'tarea_creada', { taskId: task.id, title: task.title });
   return taskDto(task, true);
 }
 
@@ -347,6 +349,7 @@ export async function updateTask(actor: Actor, id: string, input: {
       priority: updated.priority,
       actorId: actor.membership.id,
     });
+    await dispatchCompanyEvent(actor.company.id, 'tarea_hecha', { taskId: updated.id, title: updated.title });
   } else if (input.priority === 'alta' && task.priority !== 'alta') {
     await runRules(actor.company.id, {
       kind: 'prioridad_alta',

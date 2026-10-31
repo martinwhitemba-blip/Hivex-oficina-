@@ -104,7 +104,8 @@
     "portfolio": "Portfolio",
     "cafe": "Café",
     "reports": "Berichte",
-    "assistant": "Assistent"
+    "assistant": "Assistent",
+    "hooks": "Verbindungen"
   },
   "common": {
     "loadFail": "Laden fehlgeschlagen",
@@ -857,7 +858,9 @@
       "storage": "Die Datei konnte nicht gespeichert werden",
       "director": "Nur die Leitung sieht die Berichte",
       "assistant": "Der Assistent ist für den Inhaber",
-      "busy": "Zu viele Fragen. Warte einen Moment."
+      "busy": "Zu viele Fragen. Warte einen Moment.",
+      "hooks": "Nur der Inhaber verbindet externe Hinweise",
+      "url": "Die URL muss öffentliches https sein"
     },
     "locale": "Die Sprache muss es, en, fr oder de sein"
   },
@@ -993,6 +996,21 @@
     "send": "Fragen",
     "modeBasic": "Einfacher Modus",
     "modeExternal": "Externes Modell",
-    "modeHint": "Der einfache Modus nutzt Aufgaben und Last dieser Firma. Es bleibt hier."
+    "modeHint": "Der einfache Modus nutzt Aufgaben und Last dieser Firma. Es bleibt hier.",
+    "titleHooks": "Verbindungen",
+    "subHooks": "Meldet einer URL, wenn eine Aufgabe entsteht oder fertig wird.",
+    "hookHint": "Füge einen Slack-Webhook oder eine eigene URL ein. Google Calendar braucht eine Brücke: die Anmeldung mit Google ist nicht verbunden.",
+    "hookName": "Name",
+    "hookUrl": "https-URL",
+    "format": "Format",
+    "formatGeneric": "Allgemein",
+    "formatSlack": "Slack",
+    "eventCreated": "Aufgabe erstellt",
+    "eventDone": "Aufgabe fertig",
+    "saveHook": "Verbindung speichern",
+    "secretOnce": "Geheimnis zum Signieren. Jetzt kopieren: es wird nicht wieder gezeigt.",
+    "active": "An",
+    "paused": "Pause",
+    "noHooks": "Keine Verbindungen."
   }
 }

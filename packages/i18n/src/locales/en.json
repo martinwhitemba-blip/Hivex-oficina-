@@ -104,7 +104,8 @@
     "portfolio": "Portfolio",
     "cafe": "Café",
     "reports": "Reports",
-    "assistant": "Assistant"
+    "assistant": "Assistant",
+    "hooks": "Connections"
   },
   "common": {
     "loadFail": "Could not load",
@@ -857,7 +858,9 @@
       "storage": "The file could not be saved",
       "director": "Only leads can see the reports",
       "assistant": "The assistant is for the owner",
-      "busy": "Too many questions. Wait a moment."
+      "busy": "Too many questions. Wait a moment.",
+      "hooks": "Only the owner connects outside notices",
+      "url": "The URL must be public https"
     },
     "locale": "The language must be es, en, fr or de"
   },
@@ -993,6 +996,21 @@
     "send": "Ask",
     "modeBasic": "Basic mode",
     "modeExternal": "External model",
-    "modeHint": "Basic mode uses this company's tasks and workload. It stays here."
+    "modeHint": "Basic mode uses this company's tasks and workload. It stays here.",
+    "titleHooks": "Connections",
+    "subHooks": "Notify a URL when a task is created or finished.",
+    "hookHint": "Paste a Slack webhook or your own URL. Google Calendar needs a bridge: signing in with Google is not connected.",
+    "hookName": "Name",
+    "hookUrl": "https URL",
+    "format": "Format",
+    "formatGeneric": "Generic",
+    "formatSlack": "Slack",
+    "eventCreated": "Task created",
+    "eventDone": "Task finished",
+    "saveHook": "Save connection",
+    "secretOnce": "Signing secret. Copy it now: it is not shown again.",
+    "active": "On",
+    "paused": "Paused",
+    "noHooks": "There are no connections."
   }
 }

@@ -5,6 +5,7 @@ import { askAssistant } from './assistant';
 import { cafeHome, playCafe } from './cafe';
 import { createReport, deleteReport, listReports, reportData, reportPdf } from './reports';
 import { addTaskFile, listTaskFiles, loadTaskFile, removeTaskFile } from './taskFiles';
+import { createHook, deleteHook, listHooks, setHookActive } from './webhooks';
 import { addOwnedCompany, createHolding, joinHolding, portfolioView, removeFromHolding } from './portfolio';
 
 export function registerPhase3Routes(app: FastifyInstance) {
@@ -44,6 +45,27 @@ export function registerPhase3Routes(app: FastifyInstance) {
     }), req.body);
     return playCafe(actor, body);
   });
+
+  app.get('/api/conexiones', async (req) => listHooks(await actorFromRequest(req)));
+
+  app.post('/api/conexiones', async (req) => {
+    const actor = await actorFromRequest(req);
+    const body = parseBody(z.object({
+      name: z.string().trim().min(2).max(80),
+      url: z.string().trim().min(8).max(300),
+      events: z.array(z.enum(['tarea_creada', 'tarea_hecha'])).min(1),
+      format: z.enum(['generico', 'slack']).optional(),
+    }), req.body);
+    return createHook(actor, { name: body.name, url: body.url, events: body.events, format: body.format || 'generico' });
+  });
+
+  app.patch('/api/conexiones/:id', async (req) => {
+    const actor = await actorFromRequest(req);
+    const body = parseBody(z.object({ active: z.boolean() }), req.body);
+    return setHookActive(actor, (req.params as { id: string }).id, body.active);
+  });
+
+  app.delete('/api/conexiones/:id', async (req) => deleteHook(await actorFromRequest(req), (req.params as { id: string }).id));
 
   app.post('/api/asistente', async (req) => {
     const actor = await actorFromRequest(req);
